@@ -129,6 +129,7 @@ assert(css.includes('verification-chip'), 'dashboard should style verification c
 assert(css.includes('connector-reference-item'), 'dashboard should style connector reference items');
 assert(js.includes('Observed') && js.includes('Inferred'), 'dashboard should show observed/inferred label text');
 assert(runs.some(run => run.artifacts.length > 0), 'at least one run needs artifacts');
+assert(runs.some(run => run.artifacts.some(artifact => artifact.type === 'pr_summary')), 'sample data should include PR summary artifacts');
 assert(runs.every(run => /^[a-f0-9]{64}$/.test(run.audit.hash)), 'audit hashes must be sha256-like hex');
 assert(js.includes('new URLSearchParams(window.location.search)'), 'dashboard should read API query parameter');
 assert(js.includes('fetch(`${base}/runs`)'), 'dashboard should load API runs');

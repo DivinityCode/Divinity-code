@@ -13,7 +13,7 @@
 - [x] Local run timeline and structured progress events.
   - Acceptance: emits JSON event envelope with status transitions.
 - [x] Patch artifact generation and summary export.
-  - Acceptance: outputs artifact metadata containing patch/log/summary URIs.
+  - Acceptance: outputs artifact metadata containing patch/log/summary/PR-summary URIs.
 
 ## Epic 2: Operator Dashboard (M2-M3)
 - [x] Task list with status filtering.
@@ -61,7 +61,7 @@
 - Hard budget cap excess now maps to `paused` for CLI/API runs and pauses an API run when a proposed step exceeds the hard cap.
 - CLI and API expose structured run events; dashboard can subscribe to live selected-run updates through API server-sent events.
 - API step execution records `execution_lock_acquired`/`execution_lock_recovered`/`execution_lock_released`/`step_executed`/`step_verified` events and `execution_lock_record`/`execution_record`/`verification_record` audit entries.
-- CLI and API expose patch/log/summary artifact metadata; patch artifacts include deterministic unified-diff payloads generated from run context.
+- CLI and API expose patch/log/summary/PR-summary artifact metadata; patch artifacts include deterministic unified-diff payloads and PR summary artifacts include GitHub-ready Markdown generated from run context.
 - CLI and API run payloads include deterministic planner/executor/verifier orchestration traces with evidence references.
 - CLI and API run payloads include planner/executor/verifier activity records with actor, reason, status, evidence references, and budget estimates.
 - CLI and API run payloads include session/project/team memory entries with provenance, confidence, and stable IDs.
@@ -111,4 +111,4 @@
 2. Submit task from CLI and receive run ID.
 3. Observe run entering `awaiting_approval` for high-risk step.
 4. Approve from dashboard and watch run continue.
-5. Export patch/log/summary artifacts and audit record.
+5. Export patch/log/summary/PR-summary artifacts and audit record.

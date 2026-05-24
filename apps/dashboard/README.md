@@ -7,7 +7,7 @@ Implemented views:
 - Task queue with status filtering and search.
 - Run detail timeline with contract-shaped run events.
 - Approval queue with local approve/reject state transitions.
-- Cost, risk, artifact, and audit metadata panels.
+- Cost, risk, artifact, PR summary artifact, and audit metadata panels.
 - Observability summary with run health, heartbeat liveness, org/project budget rollups, budget pressure, and failure taxonomy.
 - Decision trace panel with chosen path, rejected alternative, rationale, and supporting evidence.
 - Connector reference panel for attached ticket, docs, and CI context.

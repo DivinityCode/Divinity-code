@@ -1,4 +1,4 @@
-const ARTIFACT_TYPES = ['patch', 'log', 'summary'];
+const ARTIFACT_TYPES = ['patch', 'log', 'summary', 'pr_summary'];
 
 function decisionTrace({ status, preflight }) {
   if (status === 'awaiting_approval') {
@@ -67,10 +67,35 @@ function generatedPatch({ task, status, preflight }) {
 }
 
 function artifactContent({ run_id, task, status, type, preflight }) {
+  const trace = decisionTrace({ status, preflight });
+
   if (type === 'summary') {
     return {
       summary: `Run ${run_id} for task ${task.task_id || 'unknown'} is ${status}: ${task.objective || 'No objective provided'}`,
-      decision_trace: decisionTrace({ status, preflight })
+      decision_trace: trace
+    };
+  }
+
+  if (type === 'pr_summary') {
+    return {
+      format: 'github_pull_request_summary',
+      title: `Divinity task: ${patchText(task.objective, 'No objective provided')}`,
+      body: [
+        '## Summary',
+        `- Objective: ${patchText(task.objective, 'No objective provided')}`,
+        `- Run: ${patchText(run_id)}`,
+        `- Status: ${patchText(status)}`,
+        '',
+        '## Validation',
+        `- Preflight decision: ${patchText(preflight?.decision, 'not_evaluated')}`,
+        `- Risk level: ${patchText(preflight?.risk_level, 'unknown')}`,
+        '',
+        '## Decision Trace',
+        `- Chosen path: ${trace.chosen_path}`,
+        `- Rejected alternative: ${trace.rejected_alternative}`,
+        `- Rationale: ${trace.rationale}`
+      ].join('\n'),
+      decision_trace: trace
     };
   }
 
