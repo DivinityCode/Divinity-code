@@ -39,11 +39,11 @@
 - CLI `run` now returns `run_id`, status, task payload, and preflight decision metadata.
 - CLI `init` supports default, flag-driven, and prompt-driven project config creation for policy preset and soft/hard budget caps.
 - API exposes `POST /preflight`; `POST /tasks` records preflight metadata and moves high-risk allowed work to `awaiting_approval`.
-- API exposes `GET /approvals` and `POST /runs/:id/approval` for approve/reject transitions; API-backed dashboard wiring is still pending.
+- API exposes `GET /runs`, `GET /approvals`, and `POST /runs/:id/approval` for dashboard loading and approve/reject transitions.
 - CLI and API expose structured run events; live dashboard timeline wiring is still pending.
 - CLI and API expose patch/log/summary artifact metadata; real patch payload generation is still pending.
 - API exposes `GET /audit` for hash-backed run audit exports with optional timeframe filters.
-- Dashboard shell exists at `apps/dashboard` with contract-shaped local sample data for task filtering, run timeline, approval decisions, cost/risk badges, artifacts, and audit metadata; API-backed loading and live updates are still pending.
+- Dashboard shell exists at `apps/dashboard` with contract-shaped local sample data plus opt-in API loading through `?api=<base-url>` for task filtering, run timeline, approval decisions, cost/risk badges, artifacts, and audit metadata; live updates are still pending.
 - Hard budget cap excess and missing permissions currently produce blocked preflight decisions; soft caps are surfaced but do not pause runs yet.
 
 ## Epic 4: Explainability (M2-M3)

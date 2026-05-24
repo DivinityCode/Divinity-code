@@ -1,4 +1,4 @@
-const runs = [
+const sampleRuns = [
   {
     run_id: 'run_2026_05_24_0012',
     task_id: 'task_users_pagination',
@@ -135,6 +135,8 @@ const runs = [
   }
 ];
 
+let runs = sampleRuns;
+
 const state = {
   filter: 'all',
   search: '',
@@ -163,6 +165,87 @@ function event(event_id, type, status, message, detail, created_at, duration) {
 
 function artifact(artifact_id, type, uri) {
   return { artifact_id, run_id: '', type, uri };
+}
+
+function apiBaseUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const base = params.get('api') || '';
+  return base.replace(/\/$/, '');
+}
+
+function normalizeApiEvent(runEvent) {
+  return {
+    ...runEvent,
+    metadata: {
+      ...runEvent.metadata,
+      detail: runEvent.metadata?.detail || runEvent.message,
+      duration: runEvent.metadata?.duration || '-'
+    }
+  };
+}
+
+function normalizeApiRun(run) {
+  const budget = run.task?.budget || run.preflight?.budget || {};
+  const createdAt = run.created_at || run.events?.[0]?.created_at || new Date().toISOString();
+  return {
+    run_id: run.run_id,
+    task_id: run.task_id,
+    objective: run.task?.objective || run.task_id || run.run_id,
+    status: run.status,
+    risk_level: run.risk_level,
+    created_at: createdAt,
+    budget: {
+      spent: run.preflight?.budget?.estimated_cost_usd || 0,
+      soft: budget.soft_limit_usd || 0,
+      hard: budget.hard_limit_usd || 0
+    },
+    actor: run.approval?.actor || 'api',
+    events: (run.events || []).map(normalizeApiEvent),
+    artifacts: run.artifacts || [],
+    audit: {
+      hash: run.audit?.hash || '0'.repeat(64),
+      recorded_at: run.audit?.recorded_at || createdAt
+    }
+  };
+}
+
+function replaceRun(nextRun) {
+  const index = runs.findIndex(run => run.run_id === nextRun.run_id);
+  if (index === -1) {
+    runs = [nextRun, ...runs];
+  } else {
+    runs = runs.map(run => run.run_id === nextRun.run_id ? nextRun : run);
+  }
+}
+
+function hydrateRunReferences(sourceRuns) {
+  for (const run of sourceRuns) {
+    for (const runEvent of run.events) runEvent.run_id = run.run_id;
+    for (const runArtifact of run.artifacts) runArtifact.run_id = run.run_id;
+  }
+}
+
+async function loadApiRuns() {
+  const base = apiBaseUrl();
+  if (!base) return;
+
+  try {
+    const response = await fetch(`${base}/runs`);
+    if (!response.ok) throw new Error(`GET /runs returned ${response.status}`);
+    const payload = await response.json();
+    const apiRuns = (payload.runs || []).map(normalizeApiRun);
+    if (!apiRuns.length) {
+      showToast('API connected; no runs are available yet');
+      return;
+    }
+    hydrateRunReferences(apiRuns);
+    runs = apiRuns;
+    state.selectedRunId = apiRuns[0].run_id;
+    showToast(`Loaded ${apiRuns.length} run${apiRuns.length === 1 ? '' : 's'} from API`);
+    render();
+  } catch (error) {
+    showToast(`API unavailable; using sample data (${error.message})`);
+  }
 }
 
 function formatCurrency(value) {
@@ -213,6 +296,7 @@ function countByStatus(status) {
 }
 
 function budgetPercent(run) {
+  if (!run.budget.soft) return 0;
   return Math.min(100, Math.round((run.budget.spent / run.budget.soft) * 100));
 }
 
@@ -360,9 +444,35 @@ function selectRun(runId) {
   render();
 }
 
-function decideApproval(runId, decision) {
+async function decideApproval(runId, decision) {
   const run = runs.find(item => item.run_id === runId);
   if (!run || run.status !== 'awaiting_approval') return;
+
+  const base = apiBaseUrl();
+  if (base) {
+    try {
+      const response = await fetch(`${base}/runs/${runId}/approval`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          decision,
+          actor: 'dashboard',
+          reason: `Dashboard ${decision} action`
+        })
+      });
+      if (!response.ok) throw new Error(`POST approval returned ${response.status}`);
+      const updated = normalizeApiRun(await response.json());
+      hydrateRunReferences([updated]);
+      replaceRun(updated);
+      state.selectedRunId = updated.run_id;
+      showToast(`${updated.run_id.replace('run_', 'RUN-')} ${decision === 'approve' ? 'approved' : 'rejected'} by dashboard`);
+      render();
+      return;
+    } catch (error) {
+      showToast(`Approval API failed: ${error.message}`);
+      return;
+    }
+  }
 
   run.status = decision === 'approve' ? 'queued' : 'failed';
   run.events.push(event(
@@ -418,12 +528,15 @@ selectors.search.addEventListener('input', (event) => {
 });
 
 document.querySelector('[data-refresh-button]').addEventListener('click', () => {
-  showToast('Dashboard refreshed from local contract sample data');
+  const base = apiBaseUrl();
+  if (base) {
+    loadApiRuns();
+  } else {
+    showToast('Dashboard refreshed from local contract sample data');
+  }
 });
 
-for (const run of runs) {
-  for (const runEvent of run.events) runEvent.run_id = run.run_id;
-  for (const runArtifact of run.artifacts) runArtifact.run_id = run.run_id;
-}
+hydrateRunReferences(runs);
 
 render();
+loadApiRuns();

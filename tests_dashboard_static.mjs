@@ -24,7 +24,7 @@ for (const token of ['--indigo', '--teal', '--amber', '--red', '--row-height']) 
   assert(css.includes(token), `missing CSS token ${token}`);
 }
 
-const runDataMatch = js.match(/const runs = (\[[\s\S]*?\n\]);\n\nconst state =/);
+const runDataMatch = js.match(/const sampleRuns = (\[[\s\S]*?\n\]);\n\nlet runs =/);
 assert(runDataMatch, 'dashboard sample run data not found');
 
 const runs = vm.runInNewContext(runDataMatch[1], {
@@ -55,5 +55,8 @@ assert(runs.every(run => run.budget && Number.isFinite(run.budget.soft) && Numbe
 assert(runs.every(run => Array.isArray(run.events) && run.events.length > 0), 'runs need timelines');
 assert(runs.some(run => run.artifacts.length > 0), 'at least one run needs artifacts');
 assert(runs.every(run => /^[a-f0-9]{64}$/.test(run.audit.hash)), 'audit hashes must be sha256-like hex');
+assert(js.includes('new URLSearchParams(window.location.search)'), 'dashboard should read API query parameter');
+assert(js.includes('fetch(`${base}/runs`)'), 'dashboard should load API runs');
+assert(js.includes('fetch(`${base}/runs/${runId}/approval`'), 'dashboard should post approval decisions to API');
 
 console.log(JSON.stringify({ ok: true, dashboard: 'static-shell', runs: runs.length }));
