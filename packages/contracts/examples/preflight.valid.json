@@ -1,0 +1,21 @@
+{
+  "decision": "requires_approval",
+  "risk_level": "high",
+  "approval_required": true,
+  "policy_id": "safe_exec",
+  "predicted_actions": [
+    {
+      "type": "shell",
+      "risk_level": "high",
+      "permission": "shell:execute"
+    }
+  ],
+  "budget": {
+    "estimated_cost_usd": 1.5,
+    "soft_limit_usd": 2.5,
+    "hard_limit_usd": 5,
+    "soft_cap_exceeded": false,
+    "hard_cap_exceeded": false
+  },
+  "blocked_reasons": []
+}

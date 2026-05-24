@@ -1,6 +1,16 @@
 import http from 'http';
 
+import { evaluatePreflight } from '../../../packages/policy-engine/src/index.mjs';
+
 const runs = new Map();
+
+function readJson(req, callback) {
+  let body = '';
+  req.on('data', chunk => body += chunk);
+  req.on('end', () => {
+    callback(JSON.parse(body || '{}'));
+  });
+}
 
 const server = http.createServer((req, res) => {
   res.setHeader('Content-Type', 'application/json');
@@ -10,16 +20,26 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (req.method === 'POST' && req.url === '/preflight') {
+    readJson(req, (task) => {
+      res.end(JSON.stringify(evaluatePreflight({ task })));
+    });
+    return;
+  }
+
   if (req.method === 'POST' && req.url === '/tasks') {
-    let body = '';
-    req.on('data', chunk => body += chunk);
-    req.on('end', () => {
-      const task = JSON.parse(body || '{}');
+    readJson(req, (task) => {
+      const preflight = evaluatePreflight({ task });
       const run = {
         run_id: `run_${Date.now()}`,
         task_id: task.task_id || 'unknown',
-        status: 'queued',
-        risk_level: 'low'
+        status: preflight.decision === 'requires_approval'
+          ? 'awaiting_approval'
+          : preflight.decision === 'block'
+            ? 'failed'
+            : 'queued',
+        risk_level: preflight.risk_level,
+        preflight
       };
       runs.set(run.run_id, run);
       res.statusCode = 201;
