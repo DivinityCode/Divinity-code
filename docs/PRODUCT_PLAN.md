@@ -28,6 +28,7 @@ Build a best-in-class AI engineering platform that combines:
    - CLI session lifecycle.
    - Repo-aware task execution.
    - Patch + PR summary artifacts.
+   - Bootstrap status: CLI and IDE command surfaces are present, with IDE commands delegating to CLI workflows.
 2. **Operator Mode**
    - Task queue dashboard.
    - Approval queue for high-risk steps.
