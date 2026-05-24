@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.25.0
+- Added `scope_rollups` to `ObservabilitySummary` for org/project run counts, approval backlog, and budget utilization.
+
 ## v1.24.0
 - Added `ConnectorReference` schema and examples for run-level ticket, docs, and CI context.
 - Added optional Task `connector_references` requests and `connector_reference_attached` run events.

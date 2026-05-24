@@ -42,5 +42,62 @@
       "count": 1,
       "run_ids": ["run_budget"]
     }
+  ],
+  "scope_rollups": [
+    {
+      "scope": {
+        "level": "org",
+        "org_id": "default-org"
+      },
+      "run_count": 4,
+      "approvals_pending": 1,
+      "estimated_cost_usd": 4.75,
+      "soft_limit_usd": 10.1,
+      "hard_limit_usd": 20.1,
+      "soft_limit_utilization": 0.47,
+      "hard_limit_utilization": 0.24,
+      "status_counts": {
+        "queued": 1,
+        "running": 0,
+        "awaiting_approval": 1,
+        "paused": 1,
+        "completed": 0,
+        "failed": 1
+      },
+      "risk_counts": {
+        "low": 1,
+        "medium": 0,
+        "high": 3,
+        "critical": 0
+      }
+    },
+    {
+      "scope": {
+        "level": "project",
+        "org_id": "default-org",
+        "project_id": "default-project"
+      },
+      "run_count": 4,
+      "approvals_pending": 1,
+      "estimated_cost_usd": 4.75,
+      "soft_limit_usd": 10.1,
+      "hard_limit_usd": 20.1,
+      "soft_limit_utilization": 0.47,
+      "hard_limit_utilization": 0.24,
+      "status_counts": {
+        "queued": 1,
+        "running": 0,
+        "awaiting_approval": 1,
+        "paused": 1,
+        "completed": 0,
+        "failed": 1
+      },
+      "risk_counts": {
+        "low": 1,
+        "medium": 0,
+        "high": 3,
+        "critical": 0
+      }
+    }
   ]
 }

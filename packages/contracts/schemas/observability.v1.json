@@ -10,7 +10,8 @@
     "risk_counts",
     "budget",
     "liveness",
-    "failure_taxonomy"
+    "failure_taxonomy",
+    "scope_rollups"
   ],
   "properties": {
     "format": { "const": "divinity.observability.v1" },
@@ -93,6 +94,68 @@
           "run_ids": {
             "type": "array",
             "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "scope_rollups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "scope",
+          "run_count",
+          "approvals_pending",
+          "estimated_cost_usd",
+          "soft_limit_usd",
+          "hard_limit_usd",
+          "soft_limit_utilization",
+          "hard_limit_utilization",
+          "status_counts",
+          "risk_counts"
+        ],
+        "properties": {
+          "scope": {
+            "type": "object",
+            "required": ["level", "org_id"],
+            "properties": {
+              "level": { "type": "string", "enum": ["org", "project"] },
+              "org_id": { "type": "string", "minLength": 1 },
+              "project_id": { "type": "string", "minLength": 1 }
+            },
+            "additionalProperties": false
+          },
+          "run_count": { "type": "integer", "minimum": 0 },
+          "approvals_pending": { "type": "integer", "minimum": 0 },
+          "estimated_cost_usd": { "type": "number", "minimum": 0 },
+          "soft_limit_usd": { "type": "number", "minimum": 0 },
+          "hard_limit_usd": { "type": "number", "minimum": 0 },
+          "soft_limit_utilization": { "type": "number", "minimum": 0 },
+          "hard_limit_utilization": { "type": "number", "minimum": 0 },
+          "status_counts": {
+            "type": "object",
+            "required": ["queued", "running", "awaiting_approval", "paused", "completed", "failed"],
+            "properties": {
+              "queued": { "type": "integer", "minimum": 0 },
+              "running": { "type": "integer", "minimum": 0 },
+              "awaiting_approval": { "type": "integer", "minimum": 0 },
+              "paused": { "type": "integer", "minimum": 0 },
+              "completed": { "type": "integer", "minimum": 0 },
+              "failed": { "type": "integer", "minimum": 0 }
+            },
+            "additionalProperties": false
+          },
+          "risk_counts": {
+            "type": "object",
+            "required": ["low", "medium", "high", "critical"],
+            "properties": {
+              "low": { "type": "integer", "minimum": 0 },
+              "medium": { "type": "integer", "minimum": 0 },
+              "high": { "type": "integer", "minimum": 0 },
+              "critical": { "type": "integer", "minimum": 0 }
+            },
+            "additionalProperties": false
           }
         },
         "additionalProperties": false

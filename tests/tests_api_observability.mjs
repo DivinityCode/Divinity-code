@@ -70,6 +70,15 @@ try {
   assert.equal(body.totals.estimated_cost_usd, 4.75);
   assert.equal(body.failure_taxonomy.find(item => item.category === 'policy').count, 1);
   assert.equal(body.failure_taxonomy.find(item => item.category === 'budget').count, 1);
+  assert.deepEqual(body.scope_rollups.map(item => (
+    item.scope.level === 'org'
+      ? `org:${item.scope.org_id}`
+      : `project:${item.scope.org_id}/${item.scope.project_id}`
+  )), ['org:default-org', 'project:default-org/default-project']);
+  assert.equal(body.scope_rollups[0].run_count, 4);
+  assert.equal(body.scope_rollups[0].approvals_pending, 1);
+  assert.equal(body.scope_rollups[0].estimated_cost_usd, 4.75);
+  assert.equal(body.scope_rollups[1].run_count, 4);
 
   console.log(JSON.stringify({ ok: true, test: 'api-observability' }));
 } finally {
