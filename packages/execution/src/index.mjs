@@ -79,11 +79,104 @@ function executeGitStatus({ run, step, cwd, started_at }) {
   });
 }
 
+function packageScriptNameForAction(action) {
+  const text = action || '';
+  return text.match(/\b(?:package|npm|pnpm)\s+script\s+([a-zA-Z0-9:_-]+)/i)?.[1]
+    || text.match(/\b(?:npm|pnpm)\s+run\s+([a-zA-Z0-9:_-]+)/i)?.[1]
+    || null;
+}
+
 function nodeTestScriptForAction(action) {
   const text = action || '';
   if (/\bfixture\b/i.test(text) && /\bnode\s+test\b/i.test(text)) return 'tests_execution_fixture.mjs';
   if (/\bdashboard\s+static\s+test\b/i.test(text)) return 'tests/tests_dashboard_static.mjs';
   return null;
+}
+
+function readPackageScript(root, scriptName) {
+  const packagePath = path.join(root, 'package.json');
+  const manifest = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+  const script = manifest.scripts?.[scriptName];
+  if (!script) throw new Error(`package script not found: ${scriptName}`);
+  return script;
+}
+
+function nodeCommandsForScript(script) {
+  return script.split(/\s+&&\s+/).map(command => {
+    const parts = command.trim().split(/\s+/).filter(Boolean);
+    if (parts[0] !== 'node' || parts.length !== 2 || !parts[1].endsWith('.mjs')) {
+      throw new Error(`unsupported package script command: ${command}`);
+    }
+    return parts[1];
+  });
+}
+
+function assertWorkspaceRelative(root, targetPath) {
+  const absolutePath = path.resolve(root, targetPath);
+  const relativePath = path.relative(root, absolutePath);
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    throw new Error(`package script target escapes workspace: ${targetPath}`);
+  }
+  return relativePath;
+}
+
+function executePackageScript({ run, step, cwd, started_at }) {
+  const root = workspacePath({ run, cwd });
+  const scriptName = packageScriptNameForAction(step?.action);
+  const targetPath = `package.json#scripts.${scriptName || 'unknown'}`;
+
+  try {
+    const script = readPackageScript(root, scriptName);
+    const commands = nodeCommandsForScript(script);
+    let stdout = '';
+    let stderr = '';
+
+    for (const commandTarget of commands) {
+      const relativeTarget = assertWorkspaceRelative(root, commandTarget);
+      const result = spawnSync(process.execPath, [relativeTarget], {
+        cwd: root,
+        encoding: 'utf8'
+      });
+      stdout += result.stdout || '';
+      stderr += result.stderr || result.error?.message || '';
+      if (result.status !== 0) {
+        return executionEnvelope({
+          run,
+          step,
+          adapter: 'package_script',
+          status: 'failed',
+          exit_code: result.status ?? 1,
+          target_path: targetPath,
+          stdout,
+          stderr,
+          started_at
+        });
+      }
+    }
+
+    return executionEnvelope({
+      run,
+      step,
+      adapter: 'package_script',
+      status: 'completed',
+      exit_code: 0,
+      target_path: targetPath,
+      stdout,
+      stderr,
+      started_at
+    });
+  } catch (error) {
+    return executionEnvelope({
+      run,
+      step,
+      adapter: 'package_script',
+      status: 'failed',
+      exit_code: 1,
+      target_path: targetPath,
+      stderr: error.message,
+      started_at
+    });
+  }
 }
 
 function executeNodeTest({ run, step, cwd, started_at }) {
@@ -111,6 +204,7 @@ export function resolveExecutionAdapter(step) {
   if (actionTypes.has('file_read')) return 'file_read';
   if (actionTypes.has('shell') && /\bgit\s+status\b/i.test(step?.action || '')) return 'git_status';
   if (actionTypes.has('shell') && nodeTestScriptForAction(step?.action)) return 'node_test';
+  if (actionTypes.has('shell') && packageScriptNameForAction(step?.action)) return 'package_script';
   return 'manual';
 }
 
@@ -129,6 +223,10 @@ export function executeStep({ run, step, cwd }) {
 
   if (adapter === 'node_test') {
     return executeNodeTest({ run, step, cwd, started_at });
+  }
+
+  if (adapter === 'package_script') {
+    return executePackageScript({ run, step, cwd, started_at });
   }
 
   return executionEnvelope({

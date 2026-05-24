@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.17.0
+- Added `package_script` as an ExecutionRecord adapter for constrained Node-based package script execution.
+
 ## v1.16.0
 - Added `ObservabilitySummary` schema and examples for run health, budget utilization, approval backlog, and failure taxonomy reporting.
 

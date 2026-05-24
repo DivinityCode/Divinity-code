@@ -29,7 +29,7 @@ Build a best-in-class AI engineering platform that combines:
    - Repo-aware task execution.
    - Patch + PR summary artifacts.
    - Bootstrap status: CLI and IDE command surfaces are present, with IDE commands delegating to CLI workflows.
-   - Bootstrap status: API can execute policy-approved file-read, git-status, and Node test steps through the execution adapter surface.
+   - Bootstrap status: API can execute policy-approved file-read, git-status, Node test, and constrained package-script steps through the execution adapter surface.
    - Bootstrap status: local-directory tasks execute from per-run workspace snapshots rather than directly from the source path, and explicit Git URLs are shallow-cloned into run workspaces.
    - Bootstrap status: run workspaces can be cleaned through the API with timeline/audit evidence.
    - Bootstrap status: API run state can persist to a file-backed store when `DIVINITY_RUN_STORE_PATH` is configured.

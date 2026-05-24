@@ -1,6 +1,6 @@
 import assert from 'assert/strict';
 import { execFileSync } from 'child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 
@@ -20,6 +20,13 @@ const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-api-execution-test-'));
 
 try {
   writeFileSync(path.join(tmpDir, 'README.md'), '# API Execution Fixture\n\nExecuted by adapter.\n');
+  mkdirSync(path.join(tmpDir, 'scripts'));
+  writeFileSync(path.join(tmpDir, 'scripts', 'api-package.mjs'), "console.log('api package script ok');\n");
+  writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify({
+    scripts: {
+      'fixture:api': 'node scripts/api-package.mjs'
+    }
+  }, null, 2));
   execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
   writeFileSync(path.join(tmpDir, 'changed.txt'), 'pending API change\n');
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -131,6 +138,36 @@ try {
   assert.equal(nodeExecuted.execution.status, 'completed');
   assert.equal(nodeExecuted.execution.target_path, 'tests/tests_dashboard_static.mjs');
   assert.match(nodeExecuted.execution.stdout, /dashboard/);
+
+  const { body: packageRun } = await requestJson(`${baseUrl}/tasks`, {
+    method: 'POST',
+    body: JSON.stringify({
+      task_id: 'task_api_package_script',
+      objective: 'Run package script fixture:api',
+      repo: tmpDir,
+      policy_id: 'full_exec',
+      budget: { soft_limit_usd: 2.5, hard_limit_usd: 5 },
+      created_at: '2026-05-24T00:00:00Z'
+    })
+  });
+  assert.equal(packageRun.status, 'queued');
+
+  const { response: packageStepRes, body: packageStepResult } = await requestJson(`${baseUrl}/runs/${packageRun.run_id}/steps`, {
+    method: 'POST',
+    body: JSON.stringify({ step_id: 'step_package_script', action: 'Run package script fixture:api' })
+  });
+  assert.equal(packageStepRes.status, 201);
+  assert.equal(packageStepResult.step.status, 'pending');
+
+  const { response: packageExecuteRes, body: packageExecuted } = await requestJson(`${baseUrl}/runs/${packageRun.run_id}/steps/step_package_script/execute`, {
+    method: 'POST',
+    body: JSON.stringify({})
+  });
+  assert.equal(packageExecuteRes.status, 200);
+  assert.equal(packageExecuted.execution.adapter, 'package_script');
+  assert.equal(packageExecuted.execution.status, 'completed');
+  assert.equal(packageExecuted.execution.target_path, 'package.json#scripts.fixture:api');
+  assert.match(packageExecuted.execution.stdout, /api package script ok/);
 
   console.log(JSON.stringify({ ok: true, test: 'api-execution' }));
 } finally {

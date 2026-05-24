@@ -10,8 +10,16 @@ const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-execution-test-'));
 
 try {
   mkdirSync(path.join(tmpDir, 'docs'));
+  mkdirSync(path.join(tmpDir, 'scripts'));
   writeFileSync(path.join(tmpDir, 'README.md'), '# Fixture README\n\nExecution evidence.\n');
   writeFileSync(path.join(tmpDir, 'tests_execution_fixture.mjs'), "console.log('fixture node test ok');\n");
+  writeFileSync(path.join(tmpDir, 'scripts', 'fixture-package.mjs'), "console.log('fixture package script ok');\n");
+  writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify({
+    scripts: {
+      'fixture:ok': 'node scripts/fixture-package.mjs',
+      'fixture:unsafe': 'echo unsafe'
+    }
+  }, null, 2));
   execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
   writeFileSync(path.join(tmpDir, 'changed.txt'), 'pending change\n');
 
@@ -80,6 +88,37 @@ try {
   assert.equal(nodeTest.exit_code, 0);
   assert.equal(nodeTest.target_path, 'tests_execution_fixture.mjs');
   assert.match(nodeTest.stdout, /fixture node test ok/);
+
+  const packageScriptStep = {
+    step_id: 'step_package_script',
+    run_id: run.run_id,
+    action: 'Run package script fixture:ok',
+    status: 'pending',
+    pre_execution_check: {
+      decision: 'allow',
+      predicted_actions: [{ type: 'shell', risk_level: 'high', permission: 'shell:execute' }]
+    }
+  };
+  const packageScript = executeStep({ run, step: packageScriptStep, cwd: tmpDir });
+  assert.equal(packageScript.adapter, 'package_script');
+  assert.equal(packageScript.status, 'completed');
+  assert.equal(packageScript.exit_code, 0);
+  assert.equal(packageScript.target_path, 'package.json#scripts.fixture:ok');
+  assert.match(packageScript.stdout, /fixture package script ok/);
+
+  const unsafePackageScript = executeStep({
+    run,
+    cwd: tmpDir,
+    step: {
+      ...packageScriptStep,
+      step_id: 'step_package_script_unsafe',
+      action: 'Run package script fixture:unsafe'
+    }
+  });
+  assert.equal(unsafePackageScript.adapter, 'package_script');
+  assert.equal(unsafePackageScript.status, 'failed');
+  assert.equal(unsafePackageScript.exit_code, 1);
+  assert.match(unsafePackageScript.stderr, /unsupported package script command/);
 
   assert.throws(() => executeStep({
     run,
