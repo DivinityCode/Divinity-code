@@ -6,6 +6,7 @@ import { createInterface } from 'readline/promises';
 import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
 import { createInitialRunEvents } from '../../../packages/events/src/index.mjs';
 import { evaluatePreflight, POLICY_PRESETS } from '../../../packages/policy-engine/src/index.mjs';
+import { publicStarterRecipes } from '../../../packages/recipes/src/index.mjs';
 
 const [, , command, ...args] = process.argv;
 const cwd = process.cwd();
@@ -146,7 +147,7 @@ async function init() {
     const config = buildConfig(options.wizard ? await askForConfig(options) : options);
 
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-    print({ ok: true, command: 'init', config_path: configPath, config });
+    print({ ok: true, command: 'init', config_path: configPath, config, starter_recipes: publicStarterRecipes() });
   } catch (error) {
     print({ ok: false, command: 'init', error: error.message });
     process.exitCode = 1;
@@ -191,14 +192,19 @@ function approve() {
   print({ ok: true, command: 'approve', status: 'approved' });
 }
 
+function recipes() {
+  print({ ok: true, command: 'recipes', recipes: publicStarterRecipes() });
+}
+
 switch (command) {
   case 'init': await init(); break;
   case 'run': run(); break;
   case 'status': status(); break;
   case 'approve': approve(); break;
+  case 'recipes': recipes(); break;
   default:
     print({
       ok: false,
-      usage: 'divinity <init|run|status|approve> [args]'
+      usage: 'divinity <init|run|status|approve|recipes> [args]'
     });
 }

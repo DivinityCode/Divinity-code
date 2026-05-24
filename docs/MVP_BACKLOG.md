@@ -51,6 +51,7 @@
 - Preflight and step-gate decision payloads include evidence references for the objective/action, policy permissions, and budget limits.
 - Summary artifacts include decision traces with chosen path, rejected alternative, rationale, and evidence references.
 - Evidence references label objective/action classifications as `inferred` and policy/budget values as `observed`; dashboard timeline events render observed/inferred chips.
+- CLI onboarding exposes four guided starter recipes through `init` output and the `recipes` command.
 
 ## Epic 4: Explainability (M2-M3)
 - [x] Action-to-evidence linking model.
@@ -79,7 +80,7 @@
 - End-to-end flow: create task -> run -> approval -> artifact output.
 - Reproducible logs for each run.
 - Budget and policy checks enforced in all execution paths.
-- Minimum 4 guided starter recipes in onboarding.
+- Minimum 4 guided starter recipes in onboarding. `[x]`
 
 ## Demo Script
 1. Initialize project with safe policy preset.

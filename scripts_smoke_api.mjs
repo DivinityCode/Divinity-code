@@ -29,6 +29,7 @@ try {
   assert(initResult.ok === true, 'CLI init did not return ok=true');
   assert(initResult.command === 'init', 'CLI init command name mismatch');
   assert(initResult.config_path === configPath, 'CLI init config path mismatch');
+  assert(initResult.starter_recipes?.length >= 4, 'CLI init starter recipe count mismatch');
   assert(existsSync(configPath), 'CLI init did not create config in temp dir');
 
   const config = JSON.parse(readFileSync(configPath, 'utf8'));
@@ -48,6 +49,10 @@ try {
   assert(runResult.task?.repo === tmpDir, 'CLI run repo should be the temp dir');
   assert(runResult.task?.scope?.org_id === 'default-org', 'CLI run org scope mismatch');
   assert(runResult.task?.scope?.project_id === 'default-project', 'CLI run project scope mismatch');
+
+  const recipesResult = runCli(tmpDir, 'recipes');
+  assert(recipesResult.ok === true, 'CLI recipes did not return ok=true');
+  assert(recipesResult.recipes?.length >= 4, 'CLI recipes count mismatch');
 
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address();
