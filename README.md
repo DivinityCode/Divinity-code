@@ -3,7 +3,7 @@
 Divinity Code is an AI engineering platform designed to combine best-in-class coding execution, multi-agent orchestration, and a user-friendly trust-first UX.
 
 ## Current Status
-Project bootstrapping is in progress. Initial planning and architecture artifacts are available in [`docs/`](docs).
+Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows, policy and budget gates, approval transitions, artifacts, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, and team policy packs.
 
 ## Documents
 - [Product Plan](docs/PRODUCT_PLAN.md)
@@ -12,10 +12,10 @@ Project bootstrapping is in progress. Initial planning and architecture artifact
 - [Competitive Repository Research](docs/REPOSITORY_RESEARCH.md)
 - [Week 1 Execution Plan](docs/WEEK1_EXECUTION_PLAN.md)
 
-## Near-Term Focus
-1. Bootstrap codebase structure for CLI + Dashboard.
-2. Implement task/run domain contracts.
-3. Build first end-to-end runnable workflow.
+## Implemented Surfaces
+1. Builder CLI: `init`, `run`, `status`, `approve`, `recipes`, and `doctor`.
+2. Control Plane API: health, preflight, task creation, run retrieval, approvals, steps, artifacts, audit export, and live run streams.
+3. Operator dashboard: run queue, approvals, run timeline, decision trace, artifacts, audit metadata, and API-backed live updates.
 
 
 ## Repo Layout
@@ -25,6 +25,12 @@ Project bootstrapping is in progress. Initial planning and architecture artifact
 - `packages/contracts` - versioned task/run/policy schemas
 - `packages/policy-engine` - trust and budget gate evaluation
 - `packages/events` - shared run event model
+- `packages/artifacts` - patch/log/summary artifact payloads
+- `packages/audit` - hash-backed audit records and exports
+- `packages/recipes` - guided starter recipes
+- `packages/orchestration` - planner/executor/verifier traces
+- `packages/memory` - session/project/team memory entries with provenance
+- `packages/policy-packs` - org-scoped team policy pack metadata
 
 
 ## Validation
