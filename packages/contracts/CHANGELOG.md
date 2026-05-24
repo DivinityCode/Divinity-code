@@ -1,5 +1,9 @@
 # Contracts Changelog
 
+## v1.3.0
+- Added ApprovalDecision schema and examples for approve/reject transitions.
+- Added repository-level validation checks for approval valid/invalid examples.
+
 ## v1.2.0
 - Added PreflightDecision schema and examples for risk, budget, approval, and block decisions.
 - Added repository-level validation checks for preflight valid/invalid examples.

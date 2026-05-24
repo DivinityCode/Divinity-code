@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ApprovalDecision",
+  "type": "object",
+  "required": ["decision", "actor", "reason", "decided_at"],
+  "properties": {
+    "decision": {
+      "type": "string",
+      "enum": ["approve", "reject"]
+    },
+    "actor": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reason": {
+      "type": "string"
+    },
+    "decided_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

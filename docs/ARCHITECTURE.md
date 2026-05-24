@@ -49,6 +49,12 @@
 - Decisions are `allow`, `requires_approval`, or `block`.
 - High-risk actions under `safe_exec` enter `awaiting_approval`; missing permissions or hard budget overruns block execution.
 
+## Approval Flow
+- Runs in `awaiting_approval` appear in `GET /approvals`.
+- Operators approve or reject a pending run with `POST /runs/:id/approval`.
+- Approval moves the run back to `queued`; rejection marks the run `failed`.
+- Each transition records decision, actor, reason, and timestamp metadata.
+
 ## Security and Governance
 - Principle of least privilege by default.
 - Scoped credentials per workspace.

@@ -12,17 +12,38 @@ function readJson(req, callback) {
   });
 }
 
+function sendJson(res, statusCode, payload) {
+  res.statusCode = statusCode;
+  res.end(JSON.stringify(payload));
+}
+
+function approvalPayload(body) {
+  return {
+    decision: body.decision,
+    actor: body.actor || 'operator',
+    reason: body.reason || '',
+    decided_at: new Date().toISOString()
+  };
+}
+
 const server = http.createServer((req, res) => {
   res.setHeader('Content-Type', 'application/json');
 
   if (req.method === 'GET' && req.url === '/health') {
-    res.end(JSON.stringify({ ok: true }));
+    sendJson(res, 200, { ok: true });
+    return;
+  }
+
+  if (req.method === 'GET' && req.url === '/approvals') {
+    sendJson(res, 200, {
+      runs: Array.from(runs.values()).filter(run => run.status === 'awaiting_approval')
+    });
     return;
   }
 
   if (req.method === 'POST' && req.url === '/preflight') {
     readJson(req, (task) => {
-      res.end(JSON.stringify(evaluatePreflight({ task })));
+      sendJson(res, 200, evaluatePreflight({ task }));
     });
     return;
   }
@@ -42,8 +63,33 @@ const server = http.createServer((req, res) => {
         preflight
       };
       runs.set(run.run_id, run);
-      res.statusCode = 201;
-      res.end(JSON.stringify(run));
+      sendJson(res, 201, run);
+    });
+    return;
+  }
+
+  const approvalMatch = req.url.match(/^\/runs\/([^/]+)\/approval$/);
+  if (req.method === 'POST' && approvalMatch) {
+    const run = runs.get(approvalMatch[1]);
+    if (!run) {
+      sendJson(res, 404, { error: 'run not found' });
+      return;
+    }
+
+    if (run.status !== 'awaiting_approval') {
+      sendJson(res, 409, { error: 'run is not awaiting approval' });
+      return;
+    }
+
+    readJson(req, (body) => {
+      if (body.decision !== 'approve' && body.decision !== 'reject') {
+        sendJson(res, 400, { error: 'approval decision must be approve or reject' });
+        return;
+      }
+
+      run.approval = approvalPayload(body);
+      run.status = body.decision === 'approve' ? 'queued' : 'failed';
+      sendJson(res, 200, run);
     });
     return;
   }
@@ -52,16 +98,14 @@ const server = http.createServer((req, res) => {
     const runId = req.url.split('/').pop();
     const run = runs.get(runId);
     if (!run) {
-      res.statusCode = 404;
-      res.end(JSON.stringify({ error: 'run not found' }));
+      sendJson(res, 404, { error: 'run not found' });
       return;
     }
-    res.end(JSON.stringify(run));
+    sendJson(res, 200, run);
     return;
   }
 
-  res.statusCode = 404;
-  res.end(JSON.stringify({ error: 'not found' }));
+  sendJson(res, 404, { error: 'not found' });
 });
 
 if (process.env.DIVINITY_API_AUTOSTART !== '0') {
