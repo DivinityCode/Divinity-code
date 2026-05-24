@@ -27,6 +27,26 @@ async function requestJson(url, options = {}) {
   return { response, body };
 }
 
+function assertPatchPayload(patchContent, expectedObjective) {
+  assert.equal(patchContent.format, 'unified-diff');
+  assert.equal(patchContent.target_path, 'DIVINITY_TASK.md');
+  assert.match(patchContent.patch, /^diff --git a\/DIVINITY_TASK\.md b\/DIVINITY_TASK\.md/);
+  assert.match(patchContent.patch, /\n\+\+\+ b\/DIVINITY_TASK\.md\n/);
+  assert.ok(patchContent.patch.includes(`+- Objective: ${expectedObjective}`));
+
+  const gitDir = mkdtempSync(path.join(tmpdir(), 'divinity-patch-apply-test-'));
+  try {
+    execFileSync('git', ['init'], { cwd: gitDir, stdio: 'ignore' });
+    execFileSync('git', ['apply', '--check', '-'], {
+      cwd: gitDir,
+      input: patchContent.patch,
+      encoding: 'utf8'
+    });
+  } finally {
+    rmSync(gitDir, { recursive: true, force: true });
+  }
+}
+
 {
   const artifacts = createRunArtifacts({
     run_id: 'run_123',
@@ -58,6 +78,7 @@ async function requestJson(url, options = {}) {
   assert.equal(artifacts[2].content.decision_trace.chosen_path, 'queue_for_execution');
   assert.equal(artifacts[2].content.decision_trace.rejected_alternative, 'pause_or_request_approval');
   assert.equal(artifacts[2].content.decision_trace.evidence_refs[0].source, 'task.objective');
+  assertPatchPayload(artifacts[0].content, 'Review README');
 }
 
 const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-artifacts-test-'));
@@ -108,6 +129,13 @@ try {
   assert.equal(artifact.content.decision_trace.chosen_path, 'queue_for_execution');
   assert.equal(artifact.content.decision_trace.rejected_alternative, 'pause_or_request_approval');
   assert.ok(artifact.content.decision_trace.evidence_refs.some(evidence => evidence.source === 'task.objective'));
+
+  const patchId = list.artifacts.find(artifact => artifact.type === 'patch').artifact_id;
+  const { response: patchRes, body: patchArtifact } = await requestJson(`${baseUrl}/artifacts/${patchId}`);
+  assert.equal(patchRes.status, 200);
+  assert.equal(patchArtifact.artifact_id, patchId);
+  assert.equal(patchArtifact.type, 'patch');
+  assertPatchPayload(patchArtifact.content, task.objective);
 
   console.log(JSON.stringify({ ok: true, test: 'artifacts' }));
 } finally {

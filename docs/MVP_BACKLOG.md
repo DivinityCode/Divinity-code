@@ -44,7 +44,7 @@
 - API exposes `POST /runs/:id/steps` to run policy and budget gates before a step can enter pending execution.
 - Hard budget cap excess now maps to `paused` for CLI/API runs and pauses an API run when a proposed step exceeds the hard cap.
 - CLI and API expose structured run events; dashboard can subscribe to live selected-run updates through API server-sent events.
-- CLI and API expose patch/log/summary artifact metadata; real patch payload generation is still pending.
+- CLI and API expose patch/log/summary artifact metadata; patch artifacts include deterministic unified-diff payloads generated from run context.
 - API exposes `GET /audit` for hash-backed run audit exports with optional timeframe filters.
 - Dashboard shell exists at `apps/dashboard` with contract-shaped local sample data plus opt-in API loading through `?api=<base-url>` for task filtering, run timeline, approval decisions, cost/risk badges, artifacts, audit metadata, and live updates.
 - Missing permissions still produce blocked preflight decisions; soft caps emit `estimated_cost_exceeds_soft_limit` warnings.
