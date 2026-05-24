@@ -147,7 +147,7 @@ function run() {
     run_id,
     status,
     preflight,
-    artifacts: createRunArtifacts({ run_id, task: payload, status }).map(publicArtifactMetadata),
+    artifacts: createRunArtifacts({ run_id, task: payload, status, preflight }).map(publicArtifactMetadata),
     events: createInitialRunEvents({ run_id, task: payload, preflight, status }),
     task: payload
   });

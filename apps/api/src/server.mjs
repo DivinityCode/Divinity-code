@@ -171,7 +171,7 @@ const server = http.createServer((req, res) => {
       const preflight = evaluatePreflight({ task });
       const runId = `run_${Date.now()}`;
       const status = preflight.run_status;
-      const runArtifacts = createRunArtifacts({ run_id: runId, task, status });
+      const runArtifacts = createRunArtifacts({ run_id: runId, task, status, preflight });
       const events = createInitialRunEvents({ run_id: runId, task, preflight, status });
       const run = {
         run_id: runId,

@@ -31,7 +31,21 @@ async function requestJson(url, options = {}) {
   const artifacts = createRunArtifacts({
     run_id: 'run_123',
     task: { task_id: 'task_123', objective: 'Review README' },
-    status: 'queued'
+    status: 'queued',
+    preflight: {
+      decision: 'allow',
+      run_status: 'queued',
+      blocked_reasons: [],
+      warnings: [],
+      evidence_refs: [
+        {
+          evidence_id: 'evidence_task_objective',
+          source: 'task.objective',
+          summary: 'Objective indicates review work.',
+          supports: ['decision']
+        }
+      ]
+    }
   });
 
   assert.deepEqual(artifacts.map(artifact => artifact.type), ['patch', 'log', 'summary']);
@@ -41,6 +55,9 @@ async function requestJson(url, options = {}) {
     'artifact://run_123/summary'
   ]);
   assert.equal(artifacts[2].content.summary, 'Run run_123 for task task_123 is queued: Review README');
+  assert.equal(artifacts[2].content.decision_trace.chosen_path, 'queue_for_execution');
+  assert.equal(artifacts[2].content.decision_trace.rejected_alternative, 'pause_or_request_approval');
+  assert.equal(artifacts[2].content.decision_trace.evidence_refs[0].source, 'task.objective');
 }
 
 const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-artifacts-test-'));
@@ -88,6 +105,9 @@ try {
   assert.equal(artifact.artifact_id, summaryId);
   assert.equal(artifact.type, 'summary');
   assert.equal(artifact.content.summary, `Run ${run.run_id} for task ${task.task_id} is queued: ${task.objective}`);
+  assert.equal(artifact.content.decision_trace.chosen_path, 'queue_for_execution');
+  assert.equal(artifact.content.decision_trace.rejected_alternative, 'pause_or_request_approval');
+  assert.ok(artifact.content.decision_trace.evidence_refs.some(evidence => evidence.source === 'task.objective'));
 
   console.log(JSON.stringify({ ok: true, test: 'artifacts' }));
 } finally {

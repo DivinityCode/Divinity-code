@@ -64,6 +64,7 @@
 ## Artifact Model
 - CLI and API runs expose patch, log, and summary artifact metadata.
 - Artifact metadata contains `artifact_id`, `run_id`, `type`, and `uri`.
+- Summary artifact content carries the run decision trace: chosen path, rejected alternative, rationale, and supporting evidence references.
 - API artifact lists are available from `GET /runs/:id/artifacts`; full scaffolded artifact content is available from `GET /artifacts/:artifact_id`.
 
 ## Audit Export
