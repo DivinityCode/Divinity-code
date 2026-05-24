@@ -1,10 +1,13 @@
 import assert from 'assert/strict';
+import { execFileSync } from 'child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 
 const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-api-workspaces-test-'));
 const sourceDir = path.join(tmpDir, 'source');
+const remoteSourceDir = path.join(tmpDir, 'remote-source');
+const bareRemoteDir = path.join(tmpDir, 'remote.git');
 const workspaceRoot = path.join(tmpDir, 'workspaces');
 
 process.env.DIVINITY_API_AUTOSTART = '0';
@@ -81,6 +84,54 @@ try {
   assert.equal(secondCleanupRes.status, 409);
   assert.equal(secondCleanup.error, 'workspace cleanup skipped');
   assert.equal(secondCleanup.workspace.reason, 'workspace_not_found');
+
+  mkdirSync(remoteSourceDir, { recursive: true });
+  writeFileSync(path.join(remoteSourceDir, 'README.md'), '# API Remote Fixture\n\nRemote clone read.\n');
+  execFileSync('git', ['init'], { cwd: remoteSourceDir, stdio: 'ignore' });
+  execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: remoteSourceDir });
+  execFileSync('git', ['config', 'user.name', 'Divinity Test'], { cwd: remoteSourceDir });
+  execFileSync('git', ['add', 'README.md'], { cwd: remoteSourceDir });
+  execFileSync('git', ['commit', '-m', 'seed remote'], { cwd: remoteSourceDir, stdio: 'ignore' });
+  execFileSync('git', ['clone', '--bare', remoteSourceDir, bareRemoteDir], { stdio: 'ignore' });
+
+  const remoteUrl = `file://${bareRemoteDir}`;
+  const { response: remoteCreateRes, body: remoteRun } = await requestJson(`${baseUrl}/tasks`, {
+    method: 'POST',
+    body: JSON.stringify({
+      task_id: 'task_api_remote_workspace',
+      objective: 'Read the repository README',
+      repo: remoteUrl,
+      policy_id: 'safe_exec',
+      budget: { soft_limit_usd: 2.5, hard_limit_usd: 5 },
+      created_at: '2026-05-24T00:00:00Z'
+    })
+  });
+  assert.equal(remoteCreateRes.status, 201);
+  assert.equal(remoteRun.workspace.kind, 'remote_git_clone');
+  assert.equal(remoteRun.workspace.repo_url, remoteUrl);
+  assert.match(readFileSync(path.join(remoteRun.workspace.path, 'README.md'), 'utf8'), /Remote clone read/);
+
+  const { response: remoteStepRes } = await requestJson(`${baseUrl}/runs/${remoteRun.run_id}/steps`, {
+    method: 'POST',
+    body: JSON.stringify({ step_id: 'step_remote_read', action: 'Read README' })
+  });
+  assert.equal(remoteStepRes.status, 201);
+
+  const { response: remoteExecuteRes, body: remoteExecuted } = await requestJson(`${baseUrl}/runs/${remoteRun.run_id}/steps/step_remote_read/execute`, {
+    method: 'POST',
+    body: JSON.stringify({})
+  });
+  assert.equal(remoteExecuteRes.status, 200);
+  assert.equal(remoteExecuted.execution.adapter, 'file_read');
+  assert.match(remoteExecuted.execution.stdout, /Remote clone read/);
+
+  const { response: remoteCleanupRes, body: remoteCleanup } = await requestJson(`${baseUrl}/runs/${remoteRun.run_id}/workspace/cleanup`, {
+    method: 'POST',
+    body: JSON.stringify({})
+  });
+  assert.equal(remoteCleanupRes.status, 200);
+  assert.equal(remoteCleanup.workspace.cleaned, true);
+  assert.equal(existsSync(remoteRun.workspace.path), false);
 
   console.log(JSON.stringify({ ok: true, test: 'api-workspaces' }));
 } finally {
