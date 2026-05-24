@@ -9,4 +9,5 @@ Planned endpoints: task creation, run retrieval, preflight checks.
 - `POST /tasks`
 - `GET /approvals`
 - `GET /runs/:id`
+- `GET /runs/:id/events`
 - `POST /runs/:id/approval`

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RunEvent",
+  "type": "object",
+  "required": ["event_id", "run_id", "type", "status", "message", "metadata", "created_at"],
+  "properties": {
+    "event_id": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["task_created", "preflight_completed", "status_changed", "approval_decided"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["queued", "running", "awaiting_approval", "completed", "failed"]
+    },
+    "message": {
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

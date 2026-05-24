@@ -14,6 +14,8 @@ const checks = [
   ['packages/contracts/schemas/preflight.v1.json','packages/contracts/examples/preflight.invalid.json',false],
   ['packages/contracts/schemas/approval.v1.json','packages/contracts/examples/approval.valid.json',true],
   ['packages/contracts/schemas/approval.v1.json','packages/contracts/examples/approval.invalid.json',false],
+  ['packages/contracts/schemas/event.v1.json','packages/contracts/examples/event.valid.json',true],
+  ['packages/contracts/schemas/event.v1.json','packages/contracts/examples/event.invalid.json',false],
 ];
 
 let failed = false;
