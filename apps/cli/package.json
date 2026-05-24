@@ -1,0 +1,9 @@
+{
+  "name": "@divinity/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "divinity": "src/index.mjs"
+  }
+}
