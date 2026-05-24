@@ -37,7 +37,7 @@
 1. Task created
 2. Preflight analysis (risk + cost estimate)
 3. Policy checks
-4. Plan generation
+4. Planner/executor/verifier orchestration trace generated
 5. Execution (single or parallel)
 6. Verification
 7. Approval gates (if needed)
@@ -50,6 +50,12 @@
 - Decisions are `allow`, `requires_approval`, or `block`, with a derived run status for lifecycle handling.
 - High-risk actions under `safe_exec` enter `awaiting_approval`; missing permissions fail the run before execution; hard budget overruns pause the run.
 - Decision payloads include evidence references for the objective or step action, policy permissions, and budget limits that supported the outcome. Objective and step-action classifications are labeled `inferred`; policy and budget inputs are labeled `observed`.
+
+## Orchestration Trace
+- CLI and API run payloads include a planner/executor/verifier trace.
+- The planner stage records deterministic planned steps and carries preflight evidence references.
+- The executor stage reports readiness or gate status without side effects.
+- The verifier stage records whether the run is verified for queued execution or waiting for approval/budget gate resolution.
 
 ## Approval Flow
 - Runs in `awaiting_approval` appear in `GET /approvals`.

@@ -6,6 +6,7 @@ import { createInterface } from 'readline/promises';
 
 import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
 import { createInitialRunEvents } from '../../../packages/events/src/index.mjs';
+import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
 import { evaluatePreflight, POLICY_PRESETS } from '../../../packages/policy-engine/src/index.mjs';
 import { publicStarterRecipes } from '../../../packages/recipes/src/index.mjs';
 
@@ -199,6 +200,7 @@ function run() {
     run_id,
     status,
     preflight,
+    orchestration: createOrchestrationTrace({ run_id, task: payload, status, preflight }),
     artifacts: createRunArtifacts({ run_id, task: payload, status, preflight }).map(publicArtifactMetadata),
     events: createInitialRunEvents({ run_id, task: payload, preflight, status }),
     task: payload

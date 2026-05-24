@@ -3,6 +3,7 @@ import http from 'http';
 import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
 import { createAuditRecord, exportAuditLog } from '../../../packages/audit/src/index.mjs';
 import { createInitialRunEvents, createRunEvent } from '../../../packages/events/src/index.mjs';
+import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
 import { evaluatePreflight, evaluateStepGate } from '../../../packages/policy-engine/src/index.mjs';
 
 const runs = new Map();
@@ -229,6 +230,7 @@ const server = http.createServer((req, res) => {
         status,
         risk_level: preflight.risk_level,
         preflight,
+        orchestration: createOrchestrationTrace({ run_id: runId, task: scopedTask, status, preflight }),
         artifacts: runArtifacts.map(publicArtifactMetadata),
         events,
         steps: []
