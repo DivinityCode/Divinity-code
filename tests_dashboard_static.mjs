@@ -14,6 +14,7 @@ for (const selector of [
   'data-run-list',
   'data-event-timeline',
   'data-decision-trace',
+  'data-execution-list',
   'data-approval-list',
   'data-artifact-list',
   'data-audit-hash'
@@ -67,9 +68,12 @@ assert(runs.some(run => run.status === 'awaiting_approval'), 'approval queue nee
 assert(runs.every(run => run.budget && Number.isFinite(run.budget.soft) && Number.isFinite(run.budget.hard)), 'runs need soft and hard budgets');
 assert(runs.every(run => Array.isArray(run.events) && run.events.length > 0), 'runs need timelines');
 assert(runs.every(run => run.decision_trace?.chosen_path && run.decision_trace?.rejected_alternative), 'runs need decision traces');
+assert(runs.some(run => Array.isArray(run.executions) && run.executions.length > 0), 'sample data should include execution records');
 assert(js.includes('claim_type'), 'dashboard sample data should include fact/inference labels');
 assert(js.includes('renderEvidenceLabels'), 'dashboard should render evidence labels');
 assert(js.includes('renderDecisionTrace'), 'dashboard should render decision trace panel');
+assert(js.includes('renderExecutions'), 'dashboard should render execution records');
+assert(js.includes('git_status') && js.includes('file_read'), 'dashboard should show execution adapter names');
 assert(js.includes('Observed') && js.includes('Inferred'), 'dashboard should show observed/inferred label text');
 assert(runs.some(run => run.artifacts.length > 0), 'at least one run needs artifacts');
 assert(runs.every(run => /^[a-f0-9]{64}$/.test(run.audit.hash)), 'audit hashes must be sha256-like hex');

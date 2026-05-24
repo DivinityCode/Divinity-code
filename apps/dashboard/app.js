@@ -73,6 +73,30 @@ const sampleRuns = [
     decision_trace: decisionTrace('queue_for_execution', 'pause_or_request_approval', 'Preflight allowed the run to enter the execution queue.', [
       evidence('inferred', 'task.objective', 'No high-risk action predicted.')
     ]),
+    executions: [
+      {
+        execution_id: 'exec_0010_readme',
+        step_id: 'step_readme',
+        adapter: 'file_read',
+        status: 'completed',
+        exit_code: 0,
+        target_path: 'README.md',
+        stdout: '# Divinity Code',
+        stderr: '',
+        completed_at: '2026-05-24T08:38:21.000Z'
+      },
+      {
+        execution_id: 'exec_0010_git',
+        step_id: 'step_git_status',
+        adapter: 'git_status',
+        status: 'completed',
+        exit_code: 0,
+        target_path: null,
+        stdout: ' M apps/api/src/server.mjs',
+        stderr: '',
+        completed_at: '2026-05-24T08:39:03.000Z'
+      }
+    ],
     artifacts: [
       artifact('artifact_patch_0010', 'patch', 'artifact://run_2026_05_24_0010/patch.diff'),
       artifact('artifact_log_0010', 'log', 'artifact://run_2026_05_24_0010/run.log'),
@@ -225,6 +249,7 @@ function normalizeApiEvent(runEvent) {
 function normalizeApiRun(run) {
   const budget = run.task?.budget || run.preflight?.budget || {};
   const createdAt = run.created_at || run.events?.[0]?.created_at || new Date().toISOString();
+  const stepExecutions = (run.steps || []).map(step => step.execution).filter(Boolean);
   return {
     run_id: run.run_id,
     task_id: run.task_id,
@@ -240,6 +265,7 @@ function normalizeApiRun(run) {
     actor: run.approval?.actor || 'api',
     events: (run.events || []).map(normalizeApiEvent),
     decision_trace: decisionTraceForRun(run),
+    executions: run.executions || stepExecutions,
     artifacts: run.artifacts || [],
     audit: {
       hash: run.audit?.hash || '0'.repeat(64),
@@ -463,6 +489,7 @@ function renderRunDetail() {
 
   document.querySelector('[data-event-timeline]').innerHTML = run.events.map(renderEvent).join('');
   document.querySelector('[data-decision-trace]').innerHTML = renderDecisionTrace(run.decision_trace);
+  document.querySelector('[data-execution-list]').innerHTML = renderExecutions(run);
   document.querySelector('[data-artifact-list]').innerHTML = renderArtifacts(run);
   document.querySelector('[data-audit-hash]').textContent = run.audit.hash;
   document.querySelector('[data-audit-recorded]').textContent = formatDate(run.audit.recorded_at);
@@ -531,6 +558,25 @@ function renderArtifacts(run) {
       <span class="artifact-icon" aria-hidden="true">[]</span>
       <span>${item.uri.split('/').pop()}</span>
       <span>${item.type}</span>
+    </li>
+  `).join('');
+}
+
+function renderExecutions(run) {
+  const executions = run.executions || [];
+  if (!executions.length) {
+    return '<li class="empty-state">Execution records appear after approved steps run.</li>';
+  }
+
+  return executions.map(item => `
+    <li class="execution-item">
+      <span class="execution-main">
+        <strong>${item.adapter}</strong>
+        <span>${item.step_id}</span>
+      </span>
+      <span class="status-pill ${item.status === 'completed' ? 'status-completed' : 'status-failed'}">${item.status}</span>
+      <span class="execution-meta">exit ${item.exit_code}${item.target_path ? ` - ${item.target_path}` : ''}</span>
+      <code class="execution-output">${(item.stdout || item.stderr || '').split('\n')[0] || '-'}</code>
     </li>
   `).join('');
 }

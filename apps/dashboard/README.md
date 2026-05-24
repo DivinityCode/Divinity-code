@@ -12,7 +12,8 @@ Implemented views:
 
 Open `index.html` directly in a browser for local inspection. The shell uses
 sample data shaped after the current API contracts and does not require a build
-step.
+step. Run detail renders execution records from `run.executions` or completed
+step execution payloads when API data is loaded.
 
 To load local API data instead, start the API and open:
 
