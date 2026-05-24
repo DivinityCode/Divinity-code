@@ -734,6 +734,72 @@ dd {
   margin-top: 10px;
 }
 
+.execution-panel {
+  margin: 0 18px 18px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.execution-panel h3 {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.execution-panel ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.execution-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-alt);
+}
+
+.execution-main {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.execution-main span,
+.execution-meta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.execution-main strong,
+.execution-main span,
+.execution-meta,
+.execution-output {
+  overflow-wrap: anywhere;
+}
+
+.execution-output {
+  grid-column: 1 / -1;
+  display: block;
+  max-height: 54px;
+  overflow: auto;
+  padding: 8px;
+  border-radius: 6px;
+  background: #111827;
+  color: #e5e7eb;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .artifact-strip {
   margin-top: auto;
   display: grid;

@@ -16,7 +16,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 1. Builder CLI: `init`, `run`, `status`, `approve`, `recipes`, and `doctor`.
 2. IDE extension scaffold: task run, dashboard launch, and doctor commands delegated to the repo-local CLI.
 3. Control Plane API: health, preflight, task creation, run retrieval, approvals, step gates and execution, artifacts, audit export, and live run streams.
-4. Operator dashboard: run queue, approvals, run timeline, decision trace, artifacts, audit metadata, and API-backed live updates.
+4. Operator dashboard: run queue, approvals, run timeline, decision trace, execution evidence, artifacts, audit metadata, and API-backed live updates.
 
 
 ## Repo Layout
