@@ -6,7 +6,7 @@ const html = fs.readFileSync('apps/dashboard/index.html', 'utf8');
 const css = fs.readFileSync('apps/dashboard/styles.css', 'utf8');
 const js = fs.readFileSync('apps/dashboard/app.js', 'utf8');
 
-for (const status of ['all', 'queued', 'running', 'awaiting_approval', 'completed', 'failed']) {
+for (const status of ['all', 'queued', 'running', 'awaiting_approval', 'paused', 'completed', 'failed']) {
   assert(html.includes(`data-filter="${status}"`), `missing ${status} filter`);
 }
 
@@ -42,7 +42,7 @@ const runs = vm.runInNewContext(runDataMatch[1], {
 const statuses = new Set(runs.map(run => run.status));
 const riskLevels = new Set(runs.map(run => run.risk_level));
 
-for (const status of ['queued', 'running', 'awaiting_approval', 'completed', 'failed']) {
+for (const status of ['queued', 'running', 'awaiting_approval', 'paused', 'completed', 'failed']) {
   assert(statuses.has(status), `sample data missing ${status}`);
 }
 

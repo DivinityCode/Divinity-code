@@ -68,6 +68,7 @@ const baseTask = {
 
   assert.equal(decision.decision, 'block');
   assert.equal(decision.budget.hard_cap_exceeded, true);
+  assert.equal(decision.run_status, 'paused');
   assert.ok(decision.blocked_reasons.includes('estimated_cost_exceeds_hard_limit'));
   assert.ok(decision.warnings.includes('estimated_cost_exceeds_soft_limit'));
 }

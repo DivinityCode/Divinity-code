@@ -4,6 +4,7 @@
   "type": "object",
   "required": [
     "decision",
+    "run_status",
     "risk_level",
     "approval_required",
     "policy_id",
@@ -16,6 +17,10 @@
     "decision": {
       "type": "string",
       "enum": ["allow", "requires_approval", "block"]
+    },
+    "run_status": {
+      "type": "string",
+      "enum": ["queued", "running", "awaiting_approval", "paused", "completed", "failed"]
     },
     "risk_level": {
       "type": "string",

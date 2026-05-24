@@ -453,6 +453,12 @@ h3 {
   color: var(--amber);
 }
 
+.status-paused {
+  border: 1px solid #b9b5ff;
+  background: #f2f1ff;
+  color: var(--indigo);
+}
+
 .status-failed {
   border: 1px solid #f5b5b2;
   background: var(--red-bg);

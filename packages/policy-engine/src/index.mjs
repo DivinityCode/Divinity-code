@@ -86,6 +86,13 @@ function estimateCost(actions) {
   ), 0).toFixed(2));
 }
 
+export function runStatusForDecision(decision) {
+  if (decision?.budget?.hard_cap_exceeded) return 'paused';
+  if (decision?.decision === 'requires_approval') return 'awaiting_approval';
+  if (decision?.decision === 'block') return 'failed';
+  return 'queued';
+}
+
 export function resolvePolicy(policyOrId) {
   if (!policyOrId) return POLICY_PRESETS.safe_exec;
   if (typeof policyOrId === 'string') return POLICY_PRESETS[policyOrId] || POLICY_PRESETS.safe_exec;
@@ -135,7 +142,7 @@ export function evaluatePreflight({ task, policy }) {
       ? 'requires_approval'
       : 'allow';
 
-  return {
+  const result = {
     decision,
     risk_level,
     approval_required,
@@ -144,6 +151,10 @@ export function evaluatePreflight({ task, policy }) {
     budget,
     warnings,
     blocked_reasons
+  };
+  return {
+    ...result,
+    run_status: runStatusForDecision(result)
   };
 }
 

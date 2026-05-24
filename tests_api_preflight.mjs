@@ -46,6 +46,24 @@ try {
   assert.equal(storedRun.run_id, run.run_id);
   assert.equal(storedRun.preflight.decision, 'requires_approval');
 
+  const hardCapRes = await fetch(`${baseUrl}/tasks`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      ...task,
+      task_id: 'task_hard_cap',
+      objective: 'Update source files',
+      budget: { soft_limit_usd: 0.1, hard_limit_usd: 0.1 }
+    })
+  });
+  assert.equal(hardCapRes.status, 201);
+  const pausedRun = await hardCapRes.json();
+  assert.equal(pausedRun.status, 'paused');
+  assert.equal(pausedRun.preflight.decision, 'block');
+  assert.equal(pausedRun.preflight.run_status, 'paused');
+  assert.equal(pausedRun.preflight.budget.hard_cap_exceeded, true);
+  assert.ok(pausedRun.preflight.blocked_reasons.includes('estimated_cost_exceeds_hard_limit'));
+
   console.log(JSON.stringify({ ok: true, test: 'api-preflight' }));
 } finally {
   if (server.listening) {

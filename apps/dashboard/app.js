@@ -115,15 +115,15 @@ const sampleRuns = [
     run_id: 'run_2026_05_24_0007',
     task_id: 'task_rate_limit',
     objective: 'Implement rate limiting for login endpoint',
-    status: 'running',
+    status: 'paused',
     risk_level: 'high',
     created_at: '2026-05-24T06:58:32.000Z',
-    budget: { spent: 15.67, soft: 60, hard: 90 },
+    budget: { spent: 92.14, soft: 60, hard: 90 },
     actor: 'ai-agent@divinity',
     events: [
       event('evt_071', 'task_created', 'queued', 'Task created', 'Security-sensitive endpoint flagged.', '2026-05-24T06:58:32.000Z', '130ms'),
-      event('evt_072', 'preflight_completed', 'running', 'Preflight allowed', 'Scoped edit and safe exec permissions granted.', '2026-05-24T06:58:51.000Z', '2.1s'),
-      event('evt_073', 'status_changed', 'running', 'Execution running', 'Tests are being generated.', '2026-05-24T07:02:17.000Z', '6.12s')
+      event('evt_072', 'preflight_completed', 'queued', 'Preflight allowed', 'Scoped edit and safe exec permissions granted.', '2026-05-24T06:58:51.000Z', '2.1s'),
+      event('evt_073', 'status_changed', 'paused', 'Paused by budget cap', 'Hard budget cap was exceeded before the next execution step.', '2026-05-24T07:02:17.000Z', '6.12s')
     ],
     artifacts: [
       artifact('artifact_log_0007', 'log', 'artifact://run_2026_05_24_0007/run.log')

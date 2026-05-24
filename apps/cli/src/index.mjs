@@ -139,11 +139,7 @@ function run() {
   };
   const preflight = evaluatePreflight({ task: payload });
   const run_id = `run_${Date.now()}`;
-  const status = preflight.decision === 'requires_approval'
-    ? 'awaiting_approval'
-    : preflight.decision === 'block'
-      ? 'failed'
-      : 'queued';
+  const status = preflight.run_status;
 
   print({
     ok: true,
