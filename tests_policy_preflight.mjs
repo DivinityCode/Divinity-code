@@ -21,6 +21,7 @@ const baseTask = {
   assert.equal(decision.risk_level, 'low');
   assert.equal(decision.approval_required, false);
   assert.equal(decision.budget.hard_cap_exceeded, false);
+  assert.deepEqual(decision.warnings, []);
 }
 
 {
@@ -36,6 +37,23 @@ const baseTask = {
   assert.equal(decision.risk_level, 'high');
   assert.equal(decision.approval_required, true);
   assert.ok(decision.predicted_actions.some(action => action.type === 'shell'));
+  assert.deepEqual(decision.warnings, []);
+}
+
+{
+  const decision = evaluatePreflight({
+    task: {
+      ...baseTask,
+      objective: 'Review source files',
+      budget: { soft_limit_usd: 0.1, hard_limit_usd: 5 }
+    },
+    policy: POLICY_PRESETS.safe_exec
+  });
+
+  assert.equal(decision.decision, 'allow');
+  assert.equal(decision.budget.soft_cap_exceeded, true);
+  assert.equal(decision.budget.hard_cap_exceeded, false);
+  assert.deepEqual(decision.warnings, ['estimated_cost_exceeds_soft_limit']);
 }
 
 {
@@ -51,6 +69,7 @@ const baseTask = {
   assert.equal(decision.decision, 'block');
   assert.equal(decision.budget.hard_cap_exceeded, true);
   assert.ok(decision.blocked_reasons.includes('estimated_cost_exceeds_hard_limit'));
+  assert.ok(decision.warnings.includes('estimated_cost_exceeds_soft_limit'));
 }
 
 {
