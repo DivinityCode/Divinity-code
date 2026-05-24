@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'os';
 import path from 'path';
 
-import { createRunWorkspace } from './packages/workspaces/src/index.mjs';
+import { cleanupRunWorkspace, createRunWorkspace } from './packages/workspaces/src/index.mjs';
 
 const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-workspaces-test-'));
 const sourceDir = path.join(tmpDir, 'source');
@@ -37,6 +37,22 @@ try {
 
   writeFileSync(path.join(sourceDir, 'README.md'), '# Source README\n\nSource changed after snapshot.\n');
   assert.match(readFileSync(path.join(workspace.path, 'README.md'), 'utf8'), /Snapshot content/);
+
+  const cleanup = cleanupRunWorkspace(workspace);
+  assert.equal(cleanup.cleaned, true);
+  assert.equal(cleanup.path, workspace.path);
+  assert.match(cleanup.cleaned_at, /^\d{4}-\d{2}-\d{2}T/);
+  assert.equal(existsSync(workspace.path), false);
+
+  const secondCleanup = cleanupRunWorkspace(workspace);
+  assert.equal(secondCleanup.cleaned, false);
+  assert.equal(secondCleanup.reason, 'workspace_not_found');
+
+  assert.equal(cleanupRunWorkspace({
+    kind: 'local_snapshot',
+    path: sourceDir,
+    source_path: sourceDir
+  }).cleaned, false);
 
   assert.equal(createRunWorkspace({
     runId: 'run_remote',

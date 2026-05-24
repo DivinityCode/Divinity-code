@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, statSync } from 'fs';
+import { cpSync, existsSync, mkdirSync, rmSync, statSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 
@@ -25,6 +25,11 @@ function shouldCopy(source) {
   return !EXCLUDED_DIRECTORIES.has(path.basename(source));
 }
 
+function isPathInside(childPath, parentPath) {
+  const relative = path.relative(parentPath, childPath);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
 export function createRunWorkspace({ runId, repoPath, rootDir = process.env.DIVINITY_WORKSPACE_ROOT || DEFAULT_WORKSPACE_ROOT } = {}) {
   if (!isLocalDirectory(repoPath)) return null;
 
@@ -42,6 +47,7 @@ export function createRunWorkspace({ runId, repoPath, rootDir = process.env.DIVI
     run_id: runId,
     kind: 'local_snapshot',
     source_path: sourcePath,
+    root_path: workspaceRoot,
     path: workspacePath,
     created_at: new Date().toISOString()
   };
@@ -49,4 +55,50 @@ export function createRunWorkspace({ runId, repoPath, rootDir = process.env.DIVI
 
 export function executionCwdForRun(run) {
   return run?.workspace?.path || run?.task?.repo || process.cwd();
+}
+
+export function cleanupRunWorkspace(workspace) {
+  if (!workspace || workspace.kind !== 'local_snapshot' || !workspace.path || !workspace.root_path) {
+    return {
+      cleaned: false,
+      reason: 'workspace_unmanaged',
+      path: workspace?.path || null
+    };
+  }
+
+  const targetPath = path.resolve(workspace.path);
+  const rootPath = path.resolve(workspace.root_path);
+  const sourcePath = workspace.source_path ? path.resolve(workspace.source_path) : null;
+
+  if (!isPathInside(targetPath, rootPath) || targetPath === rootPath) {
+    return {
+      cleaned: false,
+      reason: 'workspace_outside_root',
+      path: targetPath
+    };
+  }
+
+  if (sourcePath && targetPath === sourcePath) {
+    return {
+      cleaned: false,
+      reason: 'workspace_matches_source',
+      path: targetPath
+    };
+  }
+
+  if (!existsSync(targetPath)) {
+    return {
+      cleaned: false,
+      reason: 'workspace_not_found',
+      path: targetPath
+    };
+  }
+
+  rmSync(targetPath, { recursive: true, force: true });
+
+  return {
+    cleaned: true,
+    path: targetPath,
+    cleaned_at: new Date().toISOString()
+  };
 }

@@ -93,6 +93,6 @@ The goal is to translate repo-level patterns into product and implementation dec
 1. **Approval queue:** implemented run storage with an in-memory default, opt-in file-backed persistence, approval-required runs, and approve/reject transitions.
 2. **Run event envelope:** implemented structured status events across CLI/API and dashboard consumption.
 3. **Artifact metadata and payloads:** implemented patch/log/summary artifact records with retrievable patch, log, and summary content.
-4. **Execution workspaces:** implemented per-run local workspace snapshots for API execution against local repository paths.
+4. **Execution workspaces:** implemented per-run local workspace snapshots and cleanup for API execution against local repository paths.
 5. **Operator dashboard shell:** implemented task filtering, run detail, approval queue, cost/risk badges, artifacts, audit metadata, and live API updates.
 6. **Diagnostics:** implemented `divinity doctor` for Node, npm, git, package manifest, and API server source readiness checks.

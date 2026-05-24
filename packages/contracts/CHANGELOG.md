@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.15.0
+- Added `workspace_cleaned` run events for execution workspace lifecycle tracking.
+
 ## v1.14.0
 - Added `node_test` as an ExecutionRecord adapter for constrained Node test command execution.
 
