@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.10.0
+- Added `claim_type` to evidence references so outputs can distinguish observed facts from inferred classifications.
+
 ## v1.9.0
 - Added `evidence_refs` to PreflightDecision and Step pre-execution checks.
 - Evidence references identify the source, summary, and supported decision fields for policy and budget outcomes.

@@ -10,7 +10,10 @@ const sampleRuns = [
     actor: 'ai-agent@divinity',
     events: [
       event('evt_001', 'task_created', 'queued', 'Task created', 'Task payload accepted by API.', '2026-05-24T10:12:43.000Z', '120ms'),
-      event('evt_002', 'preflight_completed', 'awaiting_approval', 'Preflight requires approval', 'Predicted write and test execution actions.', '2026-05-24T10:12:58.000Z', '2.34s'),
+      event('evt_002', 'preflight_completed', 'awaiting_approval', 'Preflight requires approval', 'Predicted write and test execution actions.', '2026-05-24T10:12:58.000Z', '2.34s', [
+        evidence('inferred', 'task.objective', 'Predicted write and test execution actions.'),
+        evidence('observed', 'policy.permissions', 'safe_exec policy grants scoped write and shell execution.')
+      ]),
       event('evt_003', 'status_changed', 'awaiting_approval', 'Awaiting approval', 'Manual approval required before execution.', '2026-05-24T10:13:28.000Z', '-')
     ],
     artifacts: [
@@ -122,7 +125,10 @@ const sampleRuns = [
     actor: 'ai-agent@divinity',
     events: [
       event('evt_071', 'task_created', 'queued', 'Task created', 'Security-sensitive endpoint flagged.', '2026-05-24T06:58:32.000Z', '130ms'),
-      event('evt_072', 'preflight_completed', 'queued', 'Preflight allowed', 'Scoped edit and safe exec permissions granted.', '2026-05-24T06:58:51.000Z', '2.1s'),
+      event('evt_072', 'preflight_completed', 'queued', 'Preflight allowed', 'Scoped edit and safe exec permissions granted.', '2026-05-24T06:58:51.000Z', '2.1s', [
+        evidence('inferred', 'task.objective', 'Security-sensitive endpoint work was classified from objective text.'),
+        evidence('observed', 'task.budget', 'Budget limits and spend are loaded from run state.')
+      ]),
       event('evt_073', 'status_changed', 'paused', 'Paused by budget cap', 'Hard budget cap was exceeded before the next execution step.', '2026-05-24T07:02:17.000Z', '6.12s')
     ],
     artifacts: [
@@ -154,15 +160,23 @@ const selectors = {
   toast: document.querySelector('[data-toast]')
 };
 
-function event(event_id, type, status, message, detail, created_at, duration) {
+function event(event_id, type, status, message, detail, created_at, duration, evidence_refs = []) {
   return {
     event_id,
     run_id: '',
     type,
     status,
     message,
-    metadata: { detail, duration },
+    metadata: { detail, duration, evidence_refs },
     created_at
+  };
+}
+
+function evidence(claim_type, source, summary) {
+  return {
+    claim_type,
+    source,
+    summary
   };
 }
 
@@ -427,9 +441,24 @@ function renderEvent(runEvent) {
       <span class="event-copy">
         <strong>${runEvent.message}</strong>
         <span>${runEvent.metadata.detail}</span>
+        ${renderEvidenceLabels(runEvent.metadata.evidence_refs)}
       </span>
       <span class="event-duration">${runEvent.metadata.duration}</span>
     </li>
+  `;
+}
+
+function renderEvidenceLabels(evidenceRefs = []) {
+  if (!evidenceRefs.length) return '';
+
+  return `
+    <span class="claim-list">
+      ${evidenceRefs.map(evidence => `
+        <span class="claim-chip claim-${evidence.claim_type}" title="${evidence.source}: ${evidence.summary}">
+          ${evidence.claim_type === 'observed' ? 'Observed' : 'Inferred'}
+        </span>
+      `).join('')}
+    </span>
   `;
 }
 

@@ -25,7 +25,8 @@ try {
   assert.equal(result.status, 'awaiting_approval');
   assert.equal(result.preflight.decision, 'requires_approval');
   assert.equal(result.preflight.risk_level, 'high');
-  assert.ok(result.preflight.evidence_refs.some(evidence => evidence.source === 'task.objective'));
+  assert.ok(result.preflight.evidence_refs.some(evidence => evidence.source === 'task.objective' && evidence.claim_type === 'inferred'));
+  assert.ok(result.preflight.evidence_refs.some(evidence => evidence.source === 'policy.permissions' && evidence.claim_type === 'observed'));
   assert.equal(result.task.repo, tmpDir);
 
   runCli(tmpDir, 'init', '--soft-limit', '0.1', '--hard-limit', '0.1');
@@ -36,7 +37,7 @@ try {
   assert.equal(paused.preflight.run_status, 'paused');
   assert.equal(paused.preflight.budget.hard_cap_exceeded, true);
   assert.ok(paused.preflight.blocked_reasons.includes('estimated_cost_exceeds_hard_limit'));
-  assert.ok(paused.preflight.evidence_refs.some(evidence => evidence.source === 'task.budget'));
+  assert.ok(paused.preflight.evidence_refs.some(evidence => evidence.source === 'task.budget' && evidence.claim_type === 'observed'));
 
   console.log(JSON.stringify({ ok: true, test: 'cli-preflight' }));
 } finally {

@@ -24,6 +24,7 @@
     {
       "evidence_id": "evidence_task_objective",
       "source": "task.objective",
+      "claim_type": "inferred",
       "summary": "Objective indicates shell execution.",
       "supports": ["predicted_actions", "risk_level", "decision"]
     }

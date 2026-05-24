@@ -37,10 +37,14 @@
           "minItems": 1,
           "items": {
             "type": "object",
-            "required": ["evidence_id", "source", "summary", "supports"],
+            "required": ["evidence_id", "source", "claim_type", "summary", "supports"],
             "properties": {
               "evidence_id": { "type": "string" },
               "source": { "type": "string" },
+              "claim_type": {
+                "type": "string",
+                "enum": ["observed", "inferred"]
+              },
               "summary": { "type": "string" },
               "supports": {
                 "type": "array",
