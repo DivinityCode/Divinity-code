@@ -102,6 +102,36 @@ try {
   assert.equal(gitExecuted.execution.status, 'completed');
   assert.match(gitExecuted.execution.stdout, /\?\? changed\.txt/);
 
+  const { body: nodeTestRun } = await requestJson(`${baseUrl}/tasks`, {
+    method: 'POST',
+    body: JSON.stringify({
+      task_id: 'task_api_node_test',
+      objective: 'Run dashboard static test command',
+      repo: process.cwd(),
+      policy_id: 'full_exec',
+      budget: { soft_limit_usd: 2.5, hard_limit_usd: 5 },
+      created_at: '2026-05-24T00:00:00Z'
+    })
+  });
+  assert.equal(nodeTestRun.status, 'queued');
+
+  const { response: nodeStepRes, body: nodeStepResult } = await requestJson(`${baseUrl}/runs/${nodeTestRun.run_id}/steps`, {
+    method: 'POST',
+    body: JSON.stringify({ step_id: 'step_dashboard_static', action: 'Run dashboard static test command' })
+  });
+  assert.equal(nodeStepRes.status, 201);
+  assert.equal(nodeStepResult.step.status, 'pending');
+
+  const { response: nodeExecuteRes, body: nodeExecuted } = await requestJson(`${baseUrl}/runs/${nodeTestRun.run_id}/steps/step_dashboard_static/execute`, {
+    method: 'POST',
+    body: JSON.stringify({})
+  });
+  assert.equal(nodeExecuteRes.status, 200);
+  assert.equal(nodeExecuted.execution.adapter, 'node_test');
+  assert.equal(nodeExecuted.execution.status, 'completed');
+  assert.equal(nodeExecuted.execution.target_path, 'tests_dashboard_static.mjs');
+  assert.match(nodeExecuted.execution.stdout, /dashboard/);
+
   console.log(JSON.stringify({ ok: true, test: 'api-execution' }));
 } finally {
   if (server.listening) {

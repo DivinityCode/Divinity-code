@@ -29,7 +29,7 @@ Build a best-in-class AI engineering platform that combines:
    - Repo-aware task execution.
    - Patch + PR summary artifacts.
    - Bootstrap status: CLI and IDE command surfaces are present, with IDE commands delegating to CLI workflows.
-   - Bootstrap status: API can execute policy-approved file-read and git-status steps through the execution adapter surface.
+   - Bootstrap status: API can execute policy-approved file-read, git-status, and Node test steps through the execution adapter surface.
 2. **Operator Mode**
    - Task queue dashboard.
    - Approval queue for high-risk steps.

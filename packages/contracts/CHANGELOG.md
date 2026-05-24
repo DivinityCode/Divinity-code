@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.14.0
+- Added `node_test` as an ExecutionRecord adapter for constrained Node test command execution.
+
 ## v1.13.0
 - Added `git_status` as an ExecutionRecord adapter for constrained git status command execution.
 

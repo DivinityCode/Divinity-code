@@ -11,6 +11,7 @@ const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-execution-test-'));
 try {
   mkdirSync(path.join(tmpDir, 'docs'));
   writeFileSync(path.join(tmpDir, 'README.md'), '# Fixture README\n\nExecution evidence.\n');
+  writeFileSync(path.join(tmpDir, 'tests_execution_fixture.mjs'), "console.log('fixture node test ok');\n");
   execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
   writeFileSync(path.join(tmpDir, 'changed.txt'), 'pending change\n');
 
@@ -62,6 +63,23 @@ try {
   assert.equal(gitStatus.target_path, null);
   assert.match(gitStatus.stdout, /\?\? README\.md/);
   assert.match(gitStatus.stdout, /\?\? changed\.txt/);
+
+  const nodeTestStep = {
+    step_id: 'step_node_test',
+    run_id: run.run_id,
+    action: 'Run fixture node test command',
+    status: 'pending',
+    pre_execution_check: {
+      decision: 'allow',
+      predicted_actions: [{ type: 'shell', risk_level: 'high', permission: 'shell:execute' }]
+    }
+  };
+  const nodeTest = executeStep({ run, step: nodeTestStep, cwd: tmpDir });
+  assert.equal(nodeTest.adapter, 'node_test');
+  assert.equal(nodeTest.status, 'completed');
+  assert.equal(nodeTest.exit_code, 0);
+  assert.equal(nodeTest.target_path, 'tests_execution_fixture.mjs');
+  assert.match(nodeTest.stdout, /fixture node test ok/);
 
   assert.throws(() => executeStep({
     run,
