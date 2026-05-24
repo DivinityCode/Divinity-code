@@ -1,5 +1,5 @@
 import { execFileSync } from 'child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 
@@ -24,6 +24,7 @@ function runCli(tmpDir, ...args) {
 const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-smoke-'));
 
 try {
+  writeFileSync(path.join(tmpDir, 'README.md'), '# Smoke Workspace\n\nExecution smoke evidence.\n');
   const initResult = runCli(tmpDir, 'init');
   const configPath = path.join(tmpDir, '.divinity.json');
   assert(initResult.ok === true, 'CLI init did not return ok=true');
@@ -82,7 +83,14 @@ try {
   const createRes = await fetch(`${baseUrl}/tasks`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ task_id: 'task_smoke' })
+    body: JSON.stringify({
+      task_id: 'task_smoke',
+      objective: 'Read README',
+      repo: tmpDir,
+      policy_id: 'safe_exec',
+      budget: { soft_limit_usd: 2.5, hard_limit_usd: 5 },
+      created_at: '2026-05-24T00:00:00Z'
+    })
   });
   assert(createRes.status === 201, 'API task creation returned non-201 status');
   const run = await createRes.json();
@@ -96,6 +104,26 @@ try {
   assert(getRunRes.status === 200, 'API run retrieval returned non-200 status');
   const storedRun = await getRunRes.json();
   assert(storedRun.run_id === run.run_id, 'API run retrieval run_id mismatch');
+
+  const stepRes = await fetch(`${baseUrl}/runs/${run.run_id}/steps`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ step_id: 'step_smoke_readme', action: 'Read README' })
+  });
+  assert(stepRes.status === 201, 'API step gate returned non-201 status');
+  const stepResult = await stepRes.json();
+  assert(stepResult.step?.status === 'pending', 'API step gate status mismatch');
+
+  const executeRes = await fetch(`${baseUrl}/runs/${run.run_id}/steps/step_smoke_readme/execute`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({})
+  });
+  assert(executeRes.status === 200, 'API step execution returned non-200 status');
+  const executed = await executeRes.json();
+  assert(executed.execution?.status === 'completed', 'API step execution status mismatch');
+  assert(executed.execution?.adapter === 'file_read', 'API step execution adapter mismatch');
+  assert(executed.execution?.stdout.includes('Execution smoke evidence'), 'API step execution stdout mismatch');
 
   console.log(JSON.stringify({ ok: true, smoke: 'cli-api' }));
 } finally {

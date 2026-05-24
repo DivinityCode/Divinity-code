@@ -61,6 +61,11 @@
 - The executor stage reports readiness or gate status without side effects.
 - The verifier stage records whether the run is verified for queued execution or waiting for approval/budget gate resolution.
 
+## Execution Plane
+- API step execution is available from `POST /runs/:id/steps/:step_id/execute` after `POST /runs/:id/steps` creates a pending allowed step.
+- The first execution adapter is `file_read`, which reads `README.md` from the run workspace and returns an `ExecutionRecord` with adapter, target path, stdout, stderr, exit code, and timestamps.
+- Blocked or approval-required steps cannot execute through the execution package; the package requires the step gate decision to be `allow`.
+
 ## Memory Provenance
 - CLI and API run payloads include session, project, and team memory entries derived from run context.
 - Memory entries include a stable `memory_id`, scope level/id, fact, confidence, and provenance source/timestamp.
@@ -85,7 +90,7 @@
 - API artifact lists are available from `GET /runs/:id/artifacts`; full artifact content is available from `GET /artifacts/:artifact_id`.
 
 ## Audit Export
-- API lifecycle actions create hash-backed audit records for run creation, run events, approval decisions, and artifact records.
+- API lifecycle actions create hash-backed audit records for run creation, run events, approval decisions, execution records, and artifact records.
 - Audit exports are available from `GET /audit`.
 - Optional `from` and `to` query parameters filter records by creation timestamp.
 

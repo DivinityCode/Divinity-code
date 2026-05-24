@@ -14,6 +14,8 @@ const checks = [
   ['packages/contracts/schemas/step.v1.json','packages/contracts/examples/step.invalid.json',false],
   ['packages/contracts/schemas/artifact.v1.json','packages/contracts/examples/artifact.valid.json',true],
   ['packages/contracts/schemas/artifact.v1.json','packages/contracts/examples/artifact.invalid.json',false],
+  ['packages/contracts/schemas/execution.v1.json','packages/contracts/examples/execution.valid.json',true],
+  ['packages/contracts/schemas/execution.v1.json','packages/contracts/examples/execution.invalid.json',false],
   ['packages/contracts/schemas/preflight.v1.json','packages/contracts/examples/preflight.valid.json',true],
   ['packages/contracts/schemas/preflight.v1.json','packages/contracts/examples/preflight.invalid.json',false],
   ['packages/contracts/schemas/approval.v1.json','packages/contracts/examples/approval.valid.json',true],

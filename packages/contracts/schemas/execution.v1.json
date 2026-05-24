@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ExecutionRecord",
+  "type": "object",
+  "required": [
+    "execution_id",
+    "run_id",
+    "step_id",
+    "adapter",
+    "status",
+    "exit_code",
+    "target_path",
+    "stdout",
+    "stderr",
+    "started_at",
+    "completed_at"
+  ],
+  "properties": {
+    "execution_id": { "type": "string" },
+    "run_id": { "type": "string" },
+    "step_id": { "type": "string" },
+    "adapter": {
+      "type": "string",
+      "enum": ["file_read", "manual"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["completed", "failed"]
+    },
+    "exit_code": { "type": "integer" },
+    "target_path": { "type": ["string", "null"] },
+    "stdout": { "type": "string" },
+    "stderr": { "type": "string" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

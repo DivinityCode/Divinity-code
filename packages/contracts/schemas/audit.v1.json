@@ -30,7 +30,7 @@
           "audit_id": { "type": "string" },
           "type": {
             "type": "string",
-            "enum": ["run_created", "run_event", "approval_decision", "artifact_record"]
+            "enum": ["run_created", "run_event", "approval_decision", "artifact_record", "execution_record"]
           },
           "run_id": { "type": "string" },
           "created_at": { "type": "string", "format": "date-time" },

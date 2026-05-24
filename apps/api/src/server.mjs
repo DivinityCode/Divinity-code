@@ -3,6 +3,7 @@ import http from 'http';
 import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
 import { createAuditRecord, exportAuditLog } from '../../../packages/audit/src/index.mjs';
 import { createInitialRunEvents, createRunEvent } from '../../../packages/events/src/index.mjs';
+import { executeStep } from '../../../packages/execution/src/index.mjs';
 import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
 import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
@@ -237,6 +238,7 @@ const server = http.createServer((req, res) => {
         memory: createRunMemoryEntries({ run_id: runId, task: scopedTask, preflight, recorded_at: events[0]?.created_at }),
         artifacts: runArtifacts.map(publicArtifactMetadata),
         events,
+        executions: [],
         steps: []
       };
       for (const artifact of runArtifacts) {
@@ -355,6 +357,59 @@ const server = http.createServer((req, res) => {
         sendJson(res, 403, { error: 'step blocked by policy', step });
       }
     });
+    return;
+  }
+
+  const stepExecuteMatch = req.url.match(/^\/runs\/([^/]+)\/steps\/([^/]+)\/execute$/);
+  if (req.method === 'POST' && stepExecuteMatch) {
+    const run = runs.get(stepExecuteMatch[1]);
+    if (!run) {
+      sendJson(res, 404, { error: 'run not found' });
+      return;
+    }
+
+    const step = run.steps.find(candidate => candidate.step_id === stepExecuteMatch[2]);
+    if (!step) {
+      sendJson(res, 404, { error: 'step not found' });
+      return;
+    }
+
+    try {
+      const execution = executeStep({ run, step, cwd: run.task?.repo });
+      step.status = execution.status;
+      step.execution = execution;
+      run.executions.push(execution);
+      recordAudit({
+        type: 'execution_record',
+        run_id: run.run_id,
+        created_at: execution.completed_at,
+        payload: execution
+      });
+
+      const event = createRunEvent({
+        run_id: run.run_id,
+        type: 'step_executed',
+        status: run.status,
+        message: `Step ${step.step_id} execution ${execution.status}`,
+        metadata: {
+          step_id: step.step_id,
+          execution_id: execution.execution_id,
+          adapter: execution.adapter,
+          exit_code: execution.exit_code
+        }
+      });
+      run.events.push(event);
+      recordAudit({
+        type: 'run_event',
+        run_id: run.run_id,
+        created_at: event.created_at,
+        payload: event
+      });
+      broadcastRun(run);
+      sendJson(res, 200, { execution, step, run: publicRun(run) });
+    } catch (error) {
+      sendJson(res, 409, { error: error.message, step });
+    }
     return;
   }
 
