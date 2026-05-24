@@ -3,6 +3,7 @@ import assert from 'assert/strict';
 import {
   activeExecutionLock,
   createExecutionLock,
+  recoverStaleExecutionLocks,
   releaseExecutionLock
 } from '../packages/execution-locks/src/index.mjs';
 
@@ -34,6 +35,28 @@ const released = releaseExecutionLock({
 assert.equal(released.status, 'released');
 assert.equal(released.released_at, '2026-05-25T00:01:00.000Z');
 assert.equal(activeExecutionLock({ execution_locks: [released] }, '2026-05-25T00:02:00.000Z'), null);
+
+const staleRun = {
+  execution_locks: [
+    createExecutionLock({
+      run: { run_id: 'run_stale' },
+      step: { step_id: 'step_stale' },
+      locked_at: '2026-05-25T00:00:00.000Z',
+      expires_at: '2026-05-25T00:01:00.000Z'
+    })
+  ],
+  active_execution_lock: null
+};
+staleRun.active_execution_lock = staleRun.execution_locks[0];
+const recovered = recoverStaleExecutionLocks({
+  run: staleRun,
+  now: '2026-05-25T00:02:00.000Z'
+});
+assert.equal(recovered.length, 1);
+assert.equal(recovered[0].status, 'stale');
+assert.equal(recovered[0].released_at, '2026-05-25T00:02:00.000Z');
+assert.equal(staleRun.execution_locks[0].status, 'stale');
+assert.equal(staleRun.active_execution_lock, null);
 
 assert.throws(
   () => releaseExecutionLock({ lock, status: 'invalid' }),

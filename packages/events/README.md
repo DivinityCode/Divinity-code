@@ -4,5 +4,5 @@ Owner: Platform
 Defines run event envelopes shared by CLI, API, and dashboard.
 
 ## Current Surface
-- `createRunEvent(...)` builds a single `RunEvent` envelope, including execution-lock and heartbeat timeline records.
+- `createRunEvent(...)` builds a single `RunEvent` envelope, including execution-lock acquire/recover/release and heartbeat timeline records.
 - `createInitialRunEvents(...)` builds task-created, preflight-completed, and status-changed events for a new run.

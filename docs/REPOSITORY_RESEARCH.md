@@ -102,4 +102,4 @@ The goal is to translate repo-level patterns into product and implementation dec
 10. **Post-execution verification:** implemented `divinity.verification.v1` records so executed steps carry verifier results through run state, events, audit, and dashboard rendering.
 11. **Observable agent activity:** implemented `divinity.agent_activity.v1` records so planner, executor, and verifier work carries actor, reason, evidence, status, and budget estimates.
 12. **Run heartbeats:** implemented `divinity.heartbeat.v1` records, `POST /runs/:id/heartbeat`, liveness fields in observability summaries, and a dashboard liveness card for heartbeat and stale-run visibility.
-13. **Execution locks:** implemented `divinity.execution_lock.v1` records so API step execution has explicit lock acquire/release evidence and rejects overlapping execution attempts.
+13. **Execution locks and recovery:** implemented `divinity.execution_lock.v1` records so API step execution has explicit lock acquire/release/recovery evidence and rejects overlapping execution attempts.
