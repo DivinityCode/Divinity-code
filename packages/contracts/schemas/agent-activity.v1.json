@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AgentActivityRecord",
+  "type": "object",
+  "required": [
+    "activity_id",
+    "run_id",
+    "role",
+    "actor_id",
+    "action",
+    "reason",
+    "status",
+    "budget_estimate_usd",
+    "evidence_refs",
+    "created_at"
+  ],
+  "properties": {
+    "activity_id": { "type": "string" },
+    "run_id": { "type": "string" },
+    "role": {
+      "type": "string",
+      "enum": ["planner", "executor", "verifier"]
+    },
+    "actor_id": { "type": "string" },
+    "action": { "type": "string", "minLength": 1 },
+    "reason": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["completed", "ready", "gated", "waiting"]
+    },
+    "budget_estimate_usd": { "type": "number", "minimum": 0 },
+    "evidence_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["evidence_id", "source", "claim_type", "summary", "supports"],
+        "properties": {
+          "evidence_id": { "type": "string" },
+          "source": { "type": "string" },
+          "claim_type": {
+            "type": "string",
+            "enum": ["observed", "inferred"]
+          },
+          "summary": { "type": "string" },
+          "supports": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

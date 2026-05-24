@@ -100,3 +100,4 @@ The goal is to translate repo-level patterns into product and implementation dec
 8. **Execution adapter expansion:** implemented constrained package-script execution for Node-based package scripts without shell interpolation.
 9. **Capability discovery:** implemented a shared `divinity.capabilities.v1` catalog so clients can discover policy presets, execution adapters, and starter recipes.
 10. **Post-execution verification:** implemented `divinity.verification.v1` records so executed steps carry verifier results through run state, events, audit, and dashboard rendering.
+11. **Observable agent activity:** implemented `divinity.agent_activity.v1` records so planner, executor, and verifier work carries actor, reason, evidence, status, and budget estimates.

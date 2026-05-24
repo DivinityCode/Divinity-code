@@ -57,11 +57,12 @@
 - API step execution records `step_executed`/`step_verified` events and `execution_record`/`verification_record` audit entries.
 - CLI and API expose patch/log/summary artifact metadata; patch artifacts include deterministic unified-diff payloads generated from run context.
 - CLI and API run payloads include deterministic planner/executor/verifier orchestration traces with evidence references.
+- CLI and API run payloads include planner/executor/verifier activity records with actor, reason, status, evidence references, and budget estimates.
 - CLI and API run payloads include session/project/team memory entries with provenance, confidence, and stable IDs.
 - CLI and API run payloads include resolved team policy pack metadata by org scope.
 - API exposes `GET /audit` for hash-backed run audit exports with optional timeframe filters.
 - API exposes `GET /observability` for run health, approval backlog, budget utilization, risk mix, and failure taxonomy summaries.
-- Dashboard shell exists at `apps/dashboard` with contract-shaped local sample data plus opt-in API loading through `?api=<base-url>` for task filtering, run timeline, approval decisions, cost/risk badges, observability summaries, execution and verification evidence, artifacts, audit metadata, and live updates.
+- Dashboard shell exists at `apps/dashboard` with contract-shaped local sample data plus opt-in API loading through `?api=<base-url>` for task filtering, run timeline, approval decisions, cost/risk badges, observability summaries, agent activity, execution and verification evidence, artifacts, audit metadata, and live updates.
 - Missing permissions still produce blocked preflight decisions; soft caps emit `estimated_cost_exceeds_soft_limit` warnings.
 - Preflight and step-gate decision payloads include evidence references for the objective/action, policy permissions, and budget limits.
 - Summary artifacts include decision traces with chosen path, rejected alternative, rationale, and evidence references.

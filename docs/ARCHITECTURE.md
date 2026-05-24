@@ -66,6 +66,11 @@
 - The executor stage reports readiness or gate status without side effects.
 - The verifier stage records whether the run is verified for queued execution or waiting for approval/budget gate resolution.
 
+## Agent Activity
+- CLI and API run payloads include planner, executor, and verifier activity records.
+- Activity records include `actor_id`, action, reason, status, estimated budget share, and the evidence references used to justify that activity.
+- The operator dashboard renders activity records so subagent delegation is visible before execution evidence exists.
+
 ## Execution Plane
 - API step execution is available from `POST /runs/:id/steps/:step_id/execute` after `POST /runs/:id/steps` creates a pending allowed step.
 - API task creation creates a per-run local workspace snapshot when `task.repo` is an existing local directory, or a shallow Git clone when `task.repo` is an explicit Git URL.

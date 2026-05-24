@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { createInterface } from 'readline/promises';
 
+import { createAgentActivityRecords } from '../../../packages/agent-activity/src/index.mjs';
 import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
 import { createCapabilitiesCatalog } from '../../../packages/capabilities/src/index.mjs';
 import { createInitialRunEvents } from '../../../packages/events/src/index.mjs';
@@ -196,6 +197,13 @@ function run() {
   const preflight = evaluatePreflight({ task: payload });
   const run_id = `run_${Date.now()}`;
   const status = preflight.run_status;
+  const agent_activity = createAgentActivityRecords({
+    run_id,
+    task: payload,
+    status,
+    preflight,
+    created_at: payload.created_at
+  });
 
   print({
     ok: true,
@@ -205,6 +213,7 @@ function run() {
     preflight,
     policy_pack: resolvePolicyPackForTask(payload),
     orchestration: createOrchestrationTrace({ run_id, task: payload, status, preflight }),
+    agent_activity,
     memory: createRunMemoryEntries({ run_id, task: payload, preflight, recorded_at: payload.created_at }),
     artifacts: createRunArtifacts({ run_id, task: payload, status, preflight }).map(publicArtifactMetadata),
     events: createInitialRunEvents({ run_id, task: payload, preflight, status }),

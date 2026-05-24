@@ -52,6 +52,7 @@ Build a best-in-class AI engineering platform that combines:
 ### Deliverables
 1. Planner/Executor/Verifier pipeline.
    - Bootstrap status: deterministic orchestration trace is emitted by CLI/API runs.
+   - Bootstrap status: planner/executor/verifier activity records expose actor, reason, evidence, status, and budget estimates in CLI/API/dashboard surfaces.
    - Bootstrap status: executed API steps now produce deterministic verifier records from observed execution evidence.
 2. Layered memory (session/project/team) with provenance.
    - Bootstrap status: session/project/team memory entries are emitted by CLI/API runs.

@@ -6,6 +6,8 @@ const ajv = new Ajv2020({allErrors: true, strict: false});
 addFormats(ajv);
 
 const checks = [
+  ['packages/contracts/schemas/agent-activity.v1.json','packages/contracts/examples/agent-activity.valid.json',true],
+  ['packages/contracts/schemas/agent-activity.v1.json','packages/contracts/examples/agent-activity.invalid.json',false],
   ['packages/contracts/schemas/task.v1.json','packages/contracts/examples/task.valid.json',true],
   ['packages/contracts/schemas/task.v1.json','packages/contracts/examples/task.invalid.json',false],
   ['packages/contracts/schemas/run.v1.json','packages/contracts/examples/run.valid.json',true],

@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.20.0
+- Added `AgentActivityRecord` schema and examples for observable planner/executor/verifier activity.
+
 ## v1.19.0
 - Added `VerificationRecord` schema and examples for post-execution verifier evidence.
 - Added `step_verified` run events and `verification_record` audit entries.

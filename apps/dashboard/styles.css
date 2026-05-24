@@ -734,6 +734,7 @@ dd {
   margin-top: 10px;
 }
 
+.agent-activity-panel,
 .execution-panel {
   margin: 0 18px 18px;
   padding: 14px;
@@ -742,18 +743,59 @@ dd {
   background: var(--surface);
 }
 
+.agent-activity-panel h3,
 .execution-panel h3 {
   margin: 0 0 10px;
   color: var(--text);
   font-size: 13px;
 }
 
+.agent-activity-panel ul,
 .execution-panel ul {
   display: grid;
   gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.agent-activity-item {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto auto;
+  gap: 8px 12px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-alt);
+}
+
+.activity-role {
+  color: var(--indigo);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.activity-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.activity-copy strong,
+.activity-copy span {
+  overflow-wrap: anywhere;
+}
+
+.activity-copy span,
+.activity-budget {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.activity-budget {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 }
 
 .execution-item {

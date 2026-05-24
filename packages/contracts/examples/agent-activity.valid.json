@@ -1,0 +1,20 @@
+{
+  "activity_id": "activity_run_123_planner",
+  "run_id": "run_123",
+  "role": "planner",
+  "actor_id": "planner@divinity",
+  "action": "Plan implementation for: Review README",
+  "reason": "Planner decomposes the objective before execution.",
+  "status": "completed",
+  "budget_estimate_usd": 0.05,
+  "evidence_refs": [
+    {
+      "evidence_id": "evidence_task_objective",
+      "source": "task.objective",
+      "claim_type": "inferred",
+      "summary": "Objective indicates review work.",
+      "supports": ["decision"]
+    }
+  ],
+  "created_at": "2026-05-24T00:00:00Z"
+}
