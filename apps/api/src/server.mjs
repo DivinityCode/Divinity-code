@@ -9,6 +9,7 @@ import { createOrchestrationTrace } from '../../../packages/orchestration/src/in
 import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
 import { evaluatePreflight, evaluateStepGate } from '../../../packages/policy-engine/src/index.mjs';
 import { createConfiguredRunStore } from '../../../packages/run-store/src/index.mjs';
+import { createRunWorkspace, executionCwdForRun } from '../../../packages/workspaces/src/index.mjs';
 
 const runStore = createConfiguredRunStore();
 const { runs, artifacts, auditRecords } = runStore;
@@ -244,7 +245,8 @@ const server = http.createServer((req, res) => {
         artifacts: runArtifacts.map(publicArtifactMetadata),
         events,
         executions: [],
-        steps: []
+        steps: [],
+        workspace: createRunWorkspace({ runId, repoPath: scopedTask.repo })
       };
       for (const artifact of runArtifacts) {
         artifacts.set(artifact.artifact_id, artifact);
@@ -386,7 +388,7 @@ const server = http.createServer((req, res) => {
     }
 
     try {
-      const execution = executeStep({ run, step, cwd: run.task?.repo });
+      const execution = executeStep({ run, step, cwd: executionCwdForRun(run) });
       step.status = execution.status;
       step.execution = execution;
       run.executions.push(execution);
