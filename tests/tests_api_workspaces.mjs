@@ -12,7 +12,7 @@ const workspaceRoot = path.join(tmpDir, 'workspaces');
 
 process.env.DIVINITY_API_AUTOSTART = '0';
 process.env.DIVINITY_WORKSPACE_ROOT = workspaceRoot;
-const { server } = await import('./apps/api/src/server.mjs');
+const { server } = await import('../apps/api/src/server.mjs');
 
 async function requestJson(url, options = {}) {
   const response = await fetch(url, {

@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 
-import { STARTER_RECIPES } from './packages/recipes/src/index.mjs';
+import { STARTER_RECIPES } from '../packages/recipes/src/index.mjs';
 
 function runCli(tmpDir, ...args) {
   const output = execFileSync(

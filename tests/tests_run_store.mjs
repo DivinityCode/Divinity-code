@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, rmSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 
-import { createRunStore } from './packages/run-store/src/index.mjs';
+import { createRunStore } from '../packages/run-store/src/index.mjs';
 
 const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-run-store-test-'));
 const storePath = path.join(tmpDir, 'runs.json');

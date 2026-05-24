@@ -1,6 +1,6 @@
 import assert from 'assert/strict';
 
-import { evaluatePreflight, POLICY_PRESETS } from './packages/policy-engine/src/index.mjs';
+import { evaluatePreflight, POLICY_PRESETS } from '../packages/policy-engine/src/index.mjs';
 
 const baseTask = {
   task_id: 'task_123',

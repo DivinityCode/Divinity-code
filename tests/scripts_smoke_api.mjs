@@ -4,7 +4,7 @@ import { tmpdir } from 'os';
 import path from 'path';
 
 process.env.DIVINITY_API_AUTOSTART = '0';
-const { server } = await import('./apps/api/src/server.mjs');
+const { server } = await import('../apps/api/src/server.mjs');
 
 function assert(condition, message) {
   if (!condition) {

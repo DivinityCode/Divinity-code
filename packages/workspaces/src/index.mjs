@@ -32,6 +32,7 @@ function safeRunSegment(runId) {
 }
 
 function shouldCopy(source) {
+  if (source.includes(`${path.sep}.git${path.sep}`) && source.endsWith('.lock')) return false;
   return !EXCLUDED_DIRECTORIES.has(path.basename(source));
 }
 

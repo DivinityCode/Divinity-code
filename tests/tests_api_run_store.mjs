@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 
-import { createRunStore } from './packages/run-store/src/index.mjs';
+import { createRunStore } from '../packages/run-store/src/index.mjs';
 
 const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-api-run-store-test-'));
 const storePath = path.join(tmpDir, 'api-runs.json');
@@ -23,7 +23,7 @@ seeded.persist();
 
 process.env.DIVINITY_API_AUTOSTART = '0';
 process.env.DIVINITY_RUN_STORE_PATH = storePath;
-const { server } = await import('./apps/api/src/server.mjs');
+const { server } = await import('../apps/api/src/server.mjs');
 
 async function requestJson(url, options = {}) {
   const response = await fetch(url, {

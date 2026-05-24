@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 
-import { executeStep } from './packages/execution/src/index.mjs';
+import { executeStep } from '../packages/execution/src/index.mjs';
 
 const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-execution-test-'));
 

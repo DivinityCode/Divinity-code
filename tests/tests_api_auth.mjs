@@ -2,7 +2,7 @@ import assert from 'assert/strict';
 
 process.env.DIVINITY_API_AUTOSTART = '0';
 process.env.DIVINITY_API_KEYS = 'test-secret';
-const { server } = await import('./apps/api/src/server.mjs');
+const { server } = await import('../apps/api/src/server.mjs');
 
 async function requestJson(url, options = {}) {
   const response = await fetch(url, {

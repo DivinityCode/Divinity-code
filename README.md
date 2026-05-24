@@ -36,6 +36,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - `packages/orchestration` - planner/executor/verifier traces
 - `packages/memory` - session/project/team memory entries with provenance
 - `packages/policy-packs` - org-scoped team policy pack metadata
+- `tests` - repository test suite and validation entrypoints
 
 
 ## Validation
