@@ -65,8 +65,9 @@
 ## Artifact Model
 - CLI and API runs expose patch, log, and summary artifact metadata.
 - Artifact metadata contains `artifact_id`, `run_id`, `type`, and `uri`.
+- Patch artifact content is a deterministic unified diff generated from run context and validated as apply-checkable patch text.
 - Summary artifact content carries the run decision trace: chosen path, rejected alternative, rationale, and supporting evidence references.
-- API artifact lists are available from `GET /runs/:id/artifacts`; full scaffolded artifact content is available from `GET /artifacts/:artifact_id`.
+- API artifact lists are available from `GET /runs/:id/artifacts`; full artifact content is available from `GET /artifacts/:artifact_id`.
 
 ## Audit Export
 - API lifecycle actions create hash-backed audit records for run creation, run events, approval decisions, and artifact records.

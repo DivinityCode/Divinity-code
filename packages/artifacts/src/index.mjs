@@ -36,6 +36,36 @@ function decisionTrace({ status, preflight }) {
   };
 }
 
+function patchText(value, fallback = 'unknown') {
+  const text = String(value ?? '').replace(/\r?\n/g, ' ').trim();
+  return text || fallback;
+}
+
+function generatedPatch({ task, status, preflight }) {
+  const scope = task.scope
+    ? `${patchText(task.scope.org_id)}/${patchText(task.scope.project_id)}`
+    : 'default-org/default-project';
+  const lines = [
+    '# Divinity Task',
+    `- Task ID: ${patchText(task.task_id)}`,
+    `- Objective: ${patchText(task.objective, 'No objective provided')}`,
+    `- Status: ${patchText(status)}`,
+    `- Policy: ${patchText(task.policy_id)}`,
+    `- Scope: ${scope}`,
+    `- Preflight Decision: ${patchText(preflight?.decision, 'not_evaluated')}`
+  ];
+
+  return [
+    'diff --git a/DIVINITY_TASK.md b/DIVINITY_TASK.md',
+    'new file mode 100644',
+    'index 0000000..e69de29',
+    '--- /dev/null',
+    '+++ b/DIVINITY_TASK.md',
+    `@@ -0,0 +1,${lines.length} @@`,
+    ...lines.map(line => `+${line}`)
+  ].join('\n') + '\n';
+}
+
 function artifactContent({ run_id, task, status, type, preflight }) {
   if (type === 'summary') {
     return {
@@ -55,8 +85,10 @@ function artifactContent({ run_id, task, status, type, preflight }) {
   }
 
   return {
-    patch: '',
-    note: 'No code patch has been generated for this scaffolded run.'
+    format: 'unified-diff',
+    target_path: 'DIVINITY_TASK.md',
+    patch: generatedPatch({ task, status, preflight }),
+    note: 'Deterministic patch payload generated from run context.'
   };
 }
 
