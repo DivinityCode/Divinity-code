@@ -96,3 +96,4 @@ The goal is to translate repo-level patterns into product and implementation dec
 4. **Execution workspaces:** implemented per-run local snapshots, explicit Git URL clones, and cleanup for API execution.
 5. **Operator dashboard shell:** implemented task filtering, run detail, approval queue, cost/risk badges, artifacts, audit metadata, and live API updates.
 6. **Diagnostics:** implemented `divinity doctor` for Node, npm, git, package manifest, and API server source readiness checks.
+7. **Operator observability:** implemented run health, budget utilization, approval backlog, and policy/budget/execution failure taxonomy summaries in the API and dashboard.

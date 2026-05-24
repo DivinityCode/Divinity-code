@@ -864,8 +864,83 @@ dd {
   padding: 0 16px 18px;
 }
 
+.observability-panel {
+  padding: 22px 0 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.observability-header,
 .approval-header {
   padding: 22px 0 16px;
+}
+
+.observability-header {
+  padding-top: 0;
+}
+
+.observability-header p {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.observability-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0;
+}
+
+.observability-summary div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-alt);
+}
+
+.observability-summary dd {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.failure-taxonomy {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.taxonomy-item {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.taxonomy-item div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #344054;
+  font-size: 12px;
+}
+
+.taxonomy-item strong {
+  text-transform: capitalize;
+}
+
+.taxonomy-item span {
+  color: var(--muted);
+}
+
+.taxonomy-item code {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 11px;
 }
 
 .approval-list {

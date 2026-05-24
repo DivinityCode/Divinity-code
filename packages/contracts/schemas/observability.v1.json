@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ObservabilitySummary",
+  "type": "object",
+  "required": [
+    "format",
+    "generated_at",
+    "totals",
+    "status_counts",
+    "risk_counts",
+    "budget",
+    "failure_taxonomy"
+  ],
+  "properties": {
+    "format": { "const": "divinity.observability.v1" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "totals": {
+      "type": "object",
+      "required": [
+        "run_count",
+        "approvals_pending",
+        "estimated_cost_usd",
+        "soft_limit_usd",
+        "hard_limit_usd"
+      ],
+      "properties": {
+        "run_count": { "type": "integer", "minimum": 0 },
+        "approvals_pending": { "type": "integer", "minimum": 0 },
+        "estimated_cost_usd": { "type": "number", "minimum": 0 },
+        "soft_limit_usd": { "type": "number", "minimum": 0 },
+        "hard_limit_usd": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "status_counts": {
+      "type": "object",
+      "required": ["queued", "running", "awaiting_approval", "paused", "completed", "failed"],
+      "properties": {
+        "queued": { "type": "integer", "minimum": 0 },
+        "running": { "type": "integer", "minimum": 0 },
+        "awaiting_approval": { "type": "integer", "minimum": 0 },
+        "paused": { "type": "integer", "minimum": 0 },
+        "completed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "risk_counts": {
+      "type": "object",
+      "required": ["low", "medium", "high", "critical"],
+      "properties": {
+        "low": { "type": "integer", "minimum": 0 },
+        "medium": { "type": "integer", "minimum": 0 },
+        "high": { "type": "integer", "minimum": 0 },
+        "critical": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "budget": {
+      "type": "object",
+      "required": ["soft_limit_utilization", "hard_limit_utilization"],
+      "properties": {
+        "soft_limit_utilization": { "type": "number", "minimum": 0 },
+        "hard_limit_utilization": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "failure_taxonomy": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["category", "count", "run_ids"],
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": ["policy", "budget", "execution", "unknown"]
+          },
+          "count": { "type": "integer", "minimum": 0 },
+          "run_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

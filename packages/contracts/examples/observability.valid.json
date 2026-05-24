@@ -1,0 +1,41 @@
+{
+  "format": "divinity.observability.v1",
+  "generated_at": "2026-05-24T00:00:00.000Z",
+  "totals": {
+    "run_count": 4,
+    "approvals_pending": 1,
+    "estimated_cost_usd": 4.75,
+    "soft_limit_usd": 10.1,
+    "hard_limit_usd": 20.1
+  },
+  "status_counts": {
+    "queued": 1,
+    "running": 0,
+    "awaiting_approval": 1,
+    "paused": 1,
+    "completed": 0,
+    "failed": 1
+  },
+  "risk_counts": {
+    "low": 1,
+    "medium": 0,
+    "high": 3,
+    "critical": 0
+  },
+  "budget": {
+    "soft_limit_utilization": 0.47,
+    "hard_limit_utilization": 0.24
+  },
+  "failure_taxonomy": [
+    {
+      "category": "policy",
+      "count": 1,
+      "run_ids": ["run_policy"]
+    },
+    {
+      "category": "budget",
+      "count": 1,
+      "run_ids": ["run_budget"]
+    }
+  ]
+}

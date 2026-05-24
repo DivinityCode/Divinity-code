@@ -56,6 +56,8 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: dashboard run detail renders chosen path, rejected alternative, rationale, and evidence.
 4. Team policy packs and audit export.
    - Bootstrap status: org-scoped starter and regulated policy packs are resolved into CLI/API run payloads; audit export is available from the API.
+5. Operator observability.
+   - Bootstrap status: API and dashboard expose run health, budget utilization, approval backlog, and policy/budget/execution failure taxonomy.
 
 ## Success Metrics
 - Time-to-first-value: < 10 minutes from signup to first completed task.

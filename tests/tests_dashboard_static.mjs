@@ -16,6 +16,8 @@ for (const selector of [
   'data-decision-trace',
   'data-execution-list',
   'data-approval-list',
+  'data-observability-summary',
+  'data-failure-taxonomy',
   'data-artifact-list',
   'data-audit-hash'
 ]) {
@@ -79,7 +81,10 @@ assert(runs.some(run => run.artifacts.length > 0), 'at least one run needs artif
 assert(runs.every(run => /^[a-f0-9]{64}$/.test(run.audit.hash)), 'audit hashes must be sha256-like hex');
 assert(js.includes('new URLSearchParams(window.location.search)'), 'dashboard should read API query parameter');
 assert(js.includes('fetch(`${base}/runs`)'), 'dashboard should load API runs');
+assert(js.includes('fetch(`${base}/observability`)'), 'dashboard should load API observability summary');
 assert(js.includes('fetch(`${base}/runs/${runId}/approval`'), 'dashboard should post approval decisions to API');
 assert(js.includes('new EventSource(`${base}/runs/${runId}/stream`)'), 'dashboard should subscribe to API run stream');
+assert(js.includes('createObservabilitySummary'), 'dashboard should derive local observability summary');
+assert(js.includes('renderFailureTaxonomy'), 'dashboard should render failure taxonomy');
 
 console.log(JSON.stringify({ ok: true, dashboard: 'static-shell', runs: runs.length }));
