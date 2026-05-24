@@ -3,7 +3,7 @@
 Divinity Code is an AI engineering platform designed to combine best-in-class coding execution, multi-agent orchestration, and a user-friendly trust-first UX.
 
 ## Current Status
-Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows, policy and budget gates, approval transitions, execution locks, execution adapter and verifier records, observable planner/executor/verifier activity, run heartbeats, isolated local and Git URL execution workspaces with cleanup, artifacts, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, team policy packs, constrained package-script execution, discoverable connector adapters, run-level connector references, org/project observability rollups, a shared capabilities catalog, and opt-in file-backed API run storage.
+Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows, policy and budget gates, approval transitions, execution locks, execution adapter and verifier records, observable planner/executor/verifier activity, run heartbeats, isolated local and Git URL execution workspaces with cleanup, runner isolation profiles with Docker command planning, artifacts, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, team policy packs, constrained package-script execution, discoverable connector adapters, run-level connector references, org/project observability rollups, a shared capabilities catalog, and opt-in file-backed API run storage.
 
 ## Documents
 - [Product Plan](docs/PRODUCT_PLAN.md)
@@ -31,6 +31,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - `packages/policy-engine` - trust and budget gate evaluation
 - `packages/execution` - policy-approved step execution adapters
 - `packages/execution-locks` - per-run execution lock records for control-plane execution ownership
+- `packages/runner-isolation` - workspace snapshot and container sandbox profile metadata
 - `packages/verification` - post-execution verifier records from observed execution evidence
 - `packages/heartbeats` - run liveness heartbeat records for API and observability flows
 - `packages/workspaces` - per-run local/Git URL workspaces and cleanup for execution

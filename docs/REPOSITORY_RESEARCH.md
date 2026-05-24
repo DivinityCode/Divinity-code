@@ -98,7 +98,7 @@ The goal is to translate repo-level patterns into product and implementation dec
 6. **Diagnostics:** implemented `divinity doctor` for Node, npm, git, package manifest, and API server source readiness checks.
 7. **Operator observability:** implemented run health, budget utilization, approval backlog, and policy/budget/execution failure taxonomy summaries in the API and dashboard.
 8. **Execution adapter expansion:** implemented constrained package-script execution for Node-based package scripts without shell interpolation.
-9. **Capability discovery:** implemented a shared `divinity.capabilities.v1` catalog so clients can discover policy presets, execution adapters, connector adapters, and starter recipes.
+9. **Capability discovery:** implemented a shared `divinity.capabilities.v1` catalog so clients can discover policy presets, execution adapters, runner isolation profiles, connector adapters, and starter recipes.
 10. **Post-execution verification:** implemented `divinity.verification.v1` records so executed steps carry verifier results through run state, events, audit, and dashboard rendering.
 11. **Observable agent activity:** implemented `divinity.agent_activity.v1` records so planner, executor, and verifier work carries actor, reason, evidence, status, and budget estimates.
 12. **Run heartbeats:** implemented `divinity.heartbeat.v1` records, `POST /runs/:id/heartbeat`, liveness fields in observability summaries, and a dashboard liveness card for heartbeat and stale-run visibility.
@@ -106,3 +106,4 @@ The goal is to translate repo-level patterns into product and implementation dec
 14. **Connector adapter discovery:** implemented ticket, docs, and CI connector adapter metadata in the shared capabilities catalog to keep external context extension points explicit.
 15. **Connector reference attachments:** implemented `divinity.connector_reference.v1` records, CLI initial references, API attach/list routes, timeline/audit evidence, and dashboard rendering for ticket, docs, and CI context.
 16. **Scope observability rollups:** implemented org/project run counts, approval backlog, and budget utilization rollups in `divinity.observability.v1`, API output, and dashboard rendering.
+17. **Runner isolation profiles:** implemented workspace snapshot and Docker container-sandbox profile discovery, run workspace isolation metadata, and deterministic Docker argv planning for future container-backed execution.

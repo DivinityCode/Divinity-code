@@ -40,12 +40,12 @@
 - CLI `run --connector adapter:resource_type:resource_id[:url]` attaches initial ticket/docs/CI context to task and run output.
 - CLI `init` supports default, flag-driven, and prompt-driven project config creation for policy preset, soft/hard budget caps, and org/project scope.
 - CLI `doctor` reports Node, npm, git, package manifest, and API server source readiness for local setup diagnostics.
-- CLI `capabilities` reports supported policy presets, execution adapters, connector adapters, and starter recipes for extension discovery.
+- CLI `capabilities` reports supported policy presets, execution adapters, runner isolation profiles, connector adapters, and starter recipes for extension discovery.
 - IDE extension scaffold contributes task run, dashboard launch, and doctor commands that delegate to the repo-local CLI.
 - API exposes `POST /preflight`; `POST /tasks` records preflight metadata and moves high-risk allowed work to `awaiting_approval`.
 - API task creation normalizes missing org/project scope to `default-org/default-project`; configured API keys protect control-plane routes when `DIVINITY_API_KEY` or `DIVINITY_API_KEYS` is set.
 - API exposes `GET /runs`, `GET /approvals`, and `POST /runs/:id/approval` for dashboard loading and approve/reject transitions.
-- API exposes `GET /capabilities` for policy, execution adapter, connector adapter, and starter recipe discovery.
+- API exposes `GET /capabilities` for policy, execution adapter, runner isolation profile, connector adapter, and starter recipe discovery.
 - API exposes `GET /runs/:id/connectors` and `POST /runs/:id/connectors` for run-level ticket/docs/CI context attachments.
 - API run state can be backed by a file snapshot when `DIVINITY_RUN_STORE_PATH` is set; the default remains in-memory for local deterministic demos.
 - API exposes `POST /runs/:id/steps` to run policy and budget gates before a step can enter pending execution.
@@ -54,7 +54,7 @@
 - API exposes `POST /runs/:id/execution-locks/recover` to mark expired locks stale and preserve recovery evidence.
 - API exposes `POST /runs/:id/heartbeat` to append run liveness records, update `last_heartbeat_at`, and preserve heartbeat timeline/audit evidence.
 - API connector references emit `connector_reference_attached` events and `connector_reference` audit entries.
-- API execution uses per-run local snapshots or shallow Git URL clones; workspaces exclude `node_modules` and preserve Git metadata for Git adapters.
+- API execution uses per-run local snapshots or shallow Git URL clones; workspaces exclude `node_modules`, preserve Git metadata for Git adapters, and record the selected runner isolation profile.
 - API step execution now creates verifier records with observed status, exit-code, and output-capture checks; `step_verified` timeline events and `verification_record` audit records preserve the result.
 - API exposes `POST /runs/:id/workspace/cleanup` to remove managed workspaces and record `workspace_cleaned` events.
 - Execution adapters currently cover workspace `README.md` reads, `git status --short`, whitelisted Node test scripts, and constrained Node-based package scripts for approved command steps.

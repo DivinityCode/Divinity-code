@@ -33,6 +33,8 @@ try {
   assert.equal(workspace.run_id, 'run_workspace');
   assert.equal(workspace.source_path, sourceDir);
   assert.equal(workspace.kind, 'local_snapshot');
+  assert.equal(workspace.isolation.profile_id, 'workspace_snapshot');
+  assert.equal(workspace.isolation.requires_runtime, false);
   assert.equal(path.dirname(workspace.path), workspaceRoot);
   assert.match(workspace.created_at, /^\d{4}-\d{2}-\d{2}T/);
   assert.equal(readFileSync(path.join(workspace.path, 'README.md'), 'utf8'), '# Source README\n\nSnapshot content.\n');
@@ -53,6 +55,17 @@ try {
   const secondCleanup = cleanupRunWorkspace(workspace);
   assert.equal(secondCleanup.cleaned, false);
   assert.equal(secondCleanup.reason, 'workspace_not_found');
+
+  const containerProfileWorkspace = createRunWorkspace({
+    runId: 'run_container_profile',
+    repoPath: sourceDir,
+    rootDir: workspaceRoot,
+    isolationProfileId: 'container_sandbox'
+  });
+  assert.equal(containerProfileWorkspace.kind, 'local_snapshot');
+  assert.equal(containerProfileWorkspace.isolation.profile_id, 'container_sandbox');
+  assert.equal(containerProfileWorkspace.isolation.runtime, 'docker');
+  assert.equal(cleanupRunWorkspace(containerProfileWorkspace).cleaned, true);
 
   assert.equal(cleanupRunWorkspace({
     kind: 'local_snapshot',
@@ -78,6 +91,7 @@ try {
   assert.ok(remoteWorkspace);
   assert.equal(remoteWorkspace.kind, 'remote_git_clone');
   assert.equal(remoteWorkspace.repo_url, remoteUrl);
+  assert.equal(remoteWorkspace.isolation.profile_id, 'workspace_snapshot');
   assert.equal(path.dirname(remoteWorkspace.path), workspaceRoot);
   assert.match(readFileSync(path.join(remoteWorkspace.path, 'README.md'), 'utf8'), /Cloned evidence/);
   assert.equal(existsSync(path.join(remoteWorkspace.path, '.git')), true);
