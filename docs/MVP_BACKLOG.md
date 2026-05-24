@@ -38,6 +38,7 @@
 ## Current Implementation Notes
 - CLI `run` now returns `run_id`, status, task payload, and preflight decision metadata.
 - API exposes `POST /preflight`; `POST /tasks` records preflight metadata and moves high-risk allowed work to `awaiting_approval`.
+- API exposes `GET /approvals` and `POST /runs/:id/approval` for approve/reject transitions; dashboard UI is still pending.
 - Hard budget cap excess and missing permissions currently produce blocked preflight decisions; soft caps are surfaced but do not pause runs yet.
 
 ## Epic 4: Explainability (M2-M3)
