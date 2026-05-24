@@ -139,7 +139,7 @@
 
 ## Observability
 - API run state can be aggregated into `divinity.observability.v1` summaries at `GET /observability`.
-- Observability summaries include run counts by status and risk, pending approval count, heartbeat counts, stale run ids, estimated cost totals, budget limit utilization, and a failure taxonomy.
+- Observability summaries include run counts by status and risk, pending approval count, heartbeat counts, stale run ids, estimated cost totals, budget limit utilization, org/project scope rollups, and a failure taxonomy.
 - Failure taxonomy currently classifies failed or paused runs into policy, budget, execution, or unknown categories from preflight blocked reasons, run status, and execution records.
 - The operator dashboard renders the same summary from API output when available and derives it locally from run payloads for static/sample data, including the liveness card.
 
@@ -154,6 +154,6 @@
 ## Observability
 - Real-time run event stream.
 - Run heartbeat and stale-run liveness summaries.
-- Token/cost meters by run/project/team.
+- Token/cost meters by run/project/team, with org/project rollups in the bootstrap summary.
 - Budget utilization meters by run set.
 - Failure taxonomy dashboard (policy, budget, execution, unknown).

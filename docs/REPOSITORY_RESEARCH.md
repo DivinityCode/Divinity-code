@@ -105,3 +105,4 @@ The goal is to translate repo-level patterns into product and implementation dec
 13. **Execution locks and recovery:** implemented `divinity.execution_lock.v1` records so API step execution has explicit lock acquire/release/recovery evidence and rejects overlapping execution attempts.
 14. **Connector adapter discovery:** implemented ticket, docs, and CI connector adapter metadata in the shared capabilities catalog to keep external context extension points explicit.
 15. **Connector reference attachments:** implemented `divinity.connector_reference.v1` records, CLI initial references, API attach/list routes, timeline/audit evidence, and dashboard rendering for ticket, docs, and CI context.
+16. **Scope observability rollups:** implemented org/project run counts, approval backlog, and budget utilization rollups in `divinity.observability.v1`, API output, and dashboard rendering.

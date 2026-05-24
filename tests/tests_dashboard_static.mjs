@@ -21,6 +21,7 @@ for (const selector of [
   'data-observability-summary',
   'data-liveness-summary',
   'data-failure-taxonomy',
+  'data-scope-rollups',
   'data-artifact-list',
   'data-audit-hash'
 ]) {
@@ -137,5 +138,8 @@ assert(js.includes('new EventSource(`${base}/runs/${runId}/stream`)'), 'dashboar
 assert(js.includes('createObservabilitySummary'), 'dashboard should derive local observability summary');
 assert(js.includes('renderLivenessSummary'), 'dashboard should render heartbeat liveness summary');
 assert(js.includes('renderFailureTaxonomy'), 'dashboard should render failure taxonomy');
+assert(js.includes('renderScopeRollups'), 'dashboard should render scope rollups');
+assert(js.includes('scope_rollups'), 'dashboard observability should include scope rollups');
+assert(css.includes('scope-rollup-item'), 'dashboard should style scope rollups');
 
 console.log(JSON.stringify({ ok: true, dashboard: 'static-shell', runs: runs.length }));

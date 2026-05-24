@@ -1,3 +1,5 @@
+const DEFAULT_SCOPE = { org_id: 'default-org', project_id: 'default-project' };
+
 const sampleRuns = [
   {
     run_id: 'run_2026_05_24_0012',
@@ -252,6 +254,7 @@ const selectors = {
   observabilitySummary: document.querySelector('[data-observability-summary]'),
   livenessSummary: document.querySelector('[data-liveness-summary]'),
   failureTaxonomy: document.querySelector('[data-failure-taxonomy]'),
+  scopeRollups: document.querySelector('[data-scope-rollups]'),
   statusFilter: document.querySelector('[data-status-filter]'),
   search: document.querySelector('[data-run-search]'),
   toast: document.querySelector('[data-toast]')
@@ -360,6 +363,94 @@ function runBudget(run) {
   };
 }
 
+function runScope(run) {
+  const scope = run.task?.scope || run.scope || DEFAULT_SCOPE;
+  return {
+    org_id: String(scope.org_id || DEFAULT_SCOPE.org_id).trim() || DEFAULT_SCOPE.org_id,
+    project_id: String(scope.project_id || DEFAULT_SCOPE.project_id).trim() || DEFAULT_SCOPE.project_id
+  };
+}
+
+function emptyCounts(values) {
+  return Object.fromEntries(values.map(value => [value, 0]));
+}
+
+function emptyScopeRollup(scope) {
+  return {
+    scope,
+    run_count: 0,
+    approvals_pending: 0,
+    estimated_cost_usd: 0,
+    soft_limit_usd: 0,
+    hard_limit_usd: 0,
+    status_counts: emptyCounts(['queued', 'running', 'awaiting_approval', 'paused', 'completed', 'failed']),
+    risk_counts: emptyCounts(['low', 'medium', 'high', 'critical'])
+  };
+}
+
+function addRunToScopeRollup(rollup, run, budget) {
+  rollup.run_count += 1;
+  if (run.status === 'awaiting_approval') rollup.approvals_pending += 1;
+  if (rollup.status_counts[run.status] != null) rollup.status_counts[run.status] += 1;
+  if (rollup.risk_counts[run.risk_level] != null) rollup.risk_counts[run.risk_level] += 1;
+  rollup.estimated_cost_usd += budget.estimated_cost_usd;
+  rollup.soft_limit_usd += budget.soft_limit_usd;
+  rollup.hard_limit_usd += budget.hard_limit_usd;
+}
+
+function finalizeScopeRollup(rollup) {
+  const estimatedCost = rounded(rollup.estimated_cost_usd);
+  const softLimit = rounded(rollup.soft_limit_usd);
+  const hardLimit = rounded(rollup.hard_limit_usd);
+  return {
+    ...rollup,
+    estimated_cost_usd: estimatedCost,
+    soft_limit_usd: softLimit,
+    hard_limit_usd: hardLimit,
+    soft_limit_utilization: softLimit ? rounded(estimatedCost / softLimit) : 0,
+    hard_limit_utilization: hardLimit ? rounded(estimatedCost / hardLimit) : 0
+  };
+}
+
+function sortedScopeRollups(map) {
+  return Array.from(map.values()).sort((left, right) => {
+    const leftKey = left.scope.project_id ? `${left.scope.org_id}/${left.scope.project_id}` : left.scope.org_id;
+    const rightKey = right.scope.project_id ? `${right.scope.org_id}/${right.scope.project_id}` : right.scope.org_id;
+    return leftKey.localeCompare(rightKey);
+  }).map(finalizeScopeRollup);
+}
+
+function createScopeRollups(sourceRuns) {
+  const orgRollups = new Map();
+  const projectRollups = new Map();
+
+  for (const run of sourceRuns) {
+    const scope = runScope(run);
+    const budget = runBudget(run);
+    const orgKey = scope.org_id;
+    const projectKey = `${scope.org_id}/${scope.project_id}`;
+
+    if (!orgRollups.has(orgKey)) {
+      orgRollups.set(orgKey, emptyScopeRollup({ level: 'org', org_id: scope.org_id }));
+    }
+    if (!projectRollups.has(projectKey)) {
+      projectRollups.set(projectKey, emptyScopeRollup({
+        level: 'project',
+        org_id: scope.org_id,
+        project_id: scope.project_id
+      }));
+    }
+
+    addRunToScopeRollup(orgRollups.get(orgKey), run, budget);
+    addRunToScopeRollup(projectRollups.get(projectKey), run, budget);
+  }
+
+  return [
+    ...sortedScopeRollups(orgRollups),
+    ...sortedScopeRollups(projectRollups)
+  ];
+}
+
 function classifyRunFailure(run) {
   const blockedReasons = run.preflight?.blocked_reasons || [];
   if (run.status === 'paused' || blockedReasons.some(reason => reason.includes('budget') || reason.includes('cost'))) {
@@ -452,7 +543,8 @@ function createObservabilitySummary({ runs: sourceRuns, generated_at = new Date(
       category,
       count: failureBuckets.get(category).length,
       run_ids: failureBuckets.get(category)
-    })).filter(item => item.count > 0)
+    })).filter(item => item.count > 0),
+    scope_rollups: createScopeRollups(sourceRuns)
   };
 }
 
@@ -703,6 +795,7 @@ function renderObservability() {
     </div>
   `;
   selectors.livenessSummary.innerHTML = renderLivenessSummary(summary.liveness);
+  selectors.scopeRollups.innerHTML = renderScopeRollups(summary.scope_rollups);
   selectors.failureTaxonomy.innerHTML = renderFailureTaxonomy(summary.failure_taxonomy);
 }
 
@@ -734,6 +827,30 @@ function renderFailureTaxonomy(items = []) {
       <code>${item.run_ids.join(', ')}</code>
     </article>
   `).join('');
+}
+
+function renderScopeRollups(items = []) {
+  if (!items.length) return '<div class="empty-state">No scope rollups are available.</div>';
+
+  return items.map(item => {
+    const label = item.scope.level === 'org'
+      ? item.scope.org_id
+      : `${item.scope.org_id}/${item.scope.project_id}`;
+    return `
+      <article class="scope-rollup-item">
+        <div>
+          <strong>${label}</strong>
+          <span>${item.scope.level}</span>
+        </div>
+        <dl>
+          <div><dt>Runs</dt><dd>${item.run_count}</dd></div>
+          <div><dt>Pending</dt><dd>${item.approvals_pending}</dd></div>
+          <div><dt>Cost</dt><dd>${formatCurrency(item.estimated_cost_usd)}</dd></div>
+          <div><dt>Soft Use</dt><dd>${Math.round(item.soft_limit_utilization * 100)}%</dd></div>
+        </dl>
+      </article>
+    `;
+  }).join('');
 }
 
 function renderRunList() {

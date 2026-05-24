@@ -64,7 +64,7 @@ Build a best-in-class AI engineering platform that combines:
 4. Team policy packs and audit export.
    - Bootstrap status: org-scoped starter and regulated policy packs are resolved into CLI/API run payloads; audit export is available from the API.
 5. Operator observability.
-   - Bootstrap status: API and dashboard expose run health, heartbeat liveness, budget utilization, approval backlog, and policy/budget/execution failure taxonomy.
+   - Bootstrap status: API and dashboard expose run health, heartbeat liveness, budget utilization, org/project scope rollups, approval backlog, and policy/budget/execution failure taxonomy.
 6. External context references.
    - Bootstrap status: connector references attach ticket, docs, and CI context to runs and render in the operator dashboard.
 

@@ -1057,6 +1057,49 @@ dd {
   overflow-wrap: anywhere;
 }
 
+.scope-rollups {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.scope-rollup-item {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.scope-rollup-item > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #344054;
+  font-size: 12px;
+}
+
+.scope-rollup-item strong {
+  overflow-wrap: anywhere;
+}
+
+.scope-rollup-item span {
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.scope-rollup-item dl {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin: 0;
+}
+
+.scope-rollup-item dl div {
+  min-width: 0;
+}
+
 .failure-taxonomy {
   display: grid;
   gap: 8px;
