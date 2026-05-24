@@ -1,5 +1,9 @@
 # Contracts Changelog
 
+## v1.6.0
+- Added AuditExport schema and examples for immutable run audit exports.
+- Added repository-level validation checks for audit valid/invalid examples.
+
 ## v1.5.0
 - Added artifact valid/invalid examples to lock patch/log/summary metadata shape.
 - Added repository-level validation checks for artifact examples.

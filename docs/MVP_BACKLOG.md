@@ -41,6 +41,7 @@
 - API exposes `GET /approvals` and `POST /runs/:id/approval` for approve/reject transitions; dashboard UI is still pending.
 - CLI and API expose structured run events; dashboard timeline UI is still pending.
 - CLI and API expose patch/log/summary artifact metadata; real patch payload generation is still pending.
+- API exposes `GET /audit` for hash-backed run audit exports with optional timeframe filters.
 - Hard budget cap excess and missing permissions currently produce blocked preflight decisions; soft caps are surfaced but do not pause runs yet.
 
 ## Epic 4: Explainability (M2-M3)
@@ -54,11 +55,11 @@
 ## Epic 5: Platform (M1-M3)
 - [ ] Auth + org/project model.  
   - Acceptance: task is associated with org and project scope.
-- [ ] Artifact storage and retrieval API.  
+- [x] Artifact storage and retrieval API.
   - Acceptance: artifact metadata and payload retrieval endpoint work.
 - [ ] Event stream for live updates.  
   - Acceptance: dashboard receives status updates in near real time.
-- [ ] Audit export endpoint.  
+- [x] Audit export endpoint.
   - Acceptance: exports immutable run audit log for selected timeframe.
 
 ## Blocking Dependencies
