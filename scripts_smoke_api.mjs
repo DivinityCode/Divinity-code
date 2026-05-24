@@ -158,6 +158,38 @@ try {
   assert(gitExecuted.execution?.adapter === 'git_status', 'API git step execution adapter mismatch');
   assert(gitExecuted.execution?.stdout.includes('README.md'), 'API git step execution stdout mismatch');
 
+  const nodeRunRes = await fetch(`${baseUrl}/tasks`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      task_id: 'task_smoke_node_test',
+      objective: 'Run dashboard static test command',
+      repo: process.cwd(),
+      policy_id: 'full_exec',
+      budget: { soft_limit_usd: 2.5, hard_limit_usd: 5 },
+      created_at: '2026-05-24T00:00:00Z'
+    })
+  });
+  assert(nodeRunRes.status === 201, 'API node test task creation returned non-201 status');
+  const nodeRun = await nodeRunRes.json();
+
+  const nodeStepRes = await fetch(`${baseUrl}/runs/${nodeRun.run_id}/steps`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ step_id: 'step_smoke_dashboard_static', action: 'Run dashboard static test command' })
+  });
+  assert(nodeStepRes.status === 201, 'API node test step gate returned non-201 status');
+
+  const nodeExecuteRes = await fetch(`${baseUrl}/runs/${nodeRun.run_id}/steps/step_smoke_dashboard_static/execute`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({})
+  });
+  assert(nodeExecuteRes.status === 200, 'API node test step execution returned non-200 status');
+  const nodeExecuted = await nodeExecuteRes.json();
+  assert(nodeExecuted.execution?.adapter === 'node_test', 'API node test execution adapter mismatch');
+  assert(nodeExecuted.execution?.stdout.includes('dashboard'), 'API node test execution stdout mismatch');
+
   console.log(JSON.stringify({ ok: true, smoke: 'cli-api' }));
 } finally {
   if (server.listening) {

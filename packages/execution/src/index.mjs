@@ -79,10 +79,38 @@ function executeGitStatus({ run, step, cwd, started_at }) {
   });
 }
 
+function nodeTestScriptForAction(action) {
+  const text = action || '';
+  if (/\bfixture\b/i.test(text) && /\bnode\s+test\b/i.test(text)) return 'tests_execution_fixture.mjs';
+  if (/\bdashboard\s+static\s+test\b/i.test(text)) return 'tests_dashboard_static.mjs';
+  return null;
+}
+
+function executeNodeTest({ run, step, cwd, started_at }) {
+  const targetPath = nodeTestScriptForAction(step?.action);
+  const result = spawnSync(process.execPath, [targetPath], {
+    cwd: workspacePath({ run, cwd }),
+    encoding: 'utf8'
+  });
+
+  return executionEnvelope({
+    run,
+    step,
+    adapter: 'node_test',
+    status: result.status === 0 ? 'completed' : 'failed',
+    exit_code: result.status ?? 1,
+    target_path: targetPath,
+    stdout: result.stdout || '',
+    stderr: result.stderr || result.error?.message || '',
+    started_at
+  });
+}
+
 export function resolveExecutionAdapter(step) {
   const actionTypes = predictedActionTypes(step);
   if (actionTypes.has('file_read')) return 'file_read';
   if (actionTypes.has('shell') && /\bgit\s+status\b/i.test(step?.action || '')) return 'git_status';
+  if (actionTypes.has('shell') && nodeTestScriptForAction(step?.action)) return 'node_test';
   return 'manual';
 }
 
@@ -97,6 +125,10 @@ export function executeStep({ run, step, cwd }) {
 
   if (adapter === 'git_status') {
     return executeGitStatus({ run, step, cwd, started_at });
+  }
+
+  if (adapter === 'node_test') {
+    return executeNodeTest({ run, step, cwd, started_at });
   }
 
   return executionEnvelope({

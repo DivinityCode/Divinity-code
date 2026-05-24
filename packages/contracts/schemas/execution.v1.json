@@ -21,7 +21,7 @@
     "step_id": { "type": "string" },
     "adapter": {
       "type": "string",
-      "enum": ["file_read", "git_status", "manual"]
+      "enum": ["file_read", "git_status", "node_test", "manual"]
     },
     "status": {
       "type": "string",

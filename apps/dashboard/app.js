@@ -95,6 +95,17 @@ const sampleRuns = [
         stdout: ' M apps/api/src/server.mjs',
         stderr: '',
         completed_at: '2026-05-24T08:39:03.000Z'
+      },
+      {
+        execution_id: 'exec_0010_test',
+        step_id: 'step_dashboard_static',
+        adapter: 'node_test',
+        status: 'completed',
+        exit_code: 0,
+        target_path: 'tests_dashboard_static.mjs',
+        stdout: '{"ok":true,"dashboard":"static-shell","runs":6}',
+        stderr: '',
+        completed_at: '2026-05-24T08:40:19.000Z'
       }
     ],
     artifacts: [

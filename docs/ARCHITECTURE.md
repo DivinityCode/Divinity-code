@@ -63,7 +63,7 @@
 
 ## Execution Plane
 - API step execution is available from `POST /runs/:id/steps/:step_id/execute` after `POST /runs/:id/steps` creates a pending allowed step.
-- Execution adapters include `file_read`, which reads `README.md` from the run workspace, and `git_status`, which runs `git status --short` without shell interpolation.
+- Execution adapters include `file_read`, which reads `README.md` from the run workspace, `git_status`, which runs `git status --short`, and `node_test`, which runs whitelisted Node test scripts without shell interpolation.
 - Blocked or approval-required steps cannot execute through the execution package; the package requires the step gate decision to be `allow`.
 
 ## Memory Provenance
