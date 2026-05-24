@@ -49,13 +49,14 @@
 - Missing permissions still produce blocked preflight decisions; soft caps emit `estimated_cost_exceeds_soft_limit` warnings.
 - Preflight and step-gate decision payloads include evidence references for the objective/action, policy permissions, and budget limits.
 - Summary artifacts include decision traces with chosen path, rejected alternative, rationale, and evidence references.
+- Evidence references label objective/action classifications as `inferred` and policy/budget values as `observed`; dashboard timeline events render observed/inferred chips.
 
 ## Epic 4: Explainability (M2-M3)
 - [x] Action-to-evidence linking model.
   - Acceptance: each major decision includes at least one evidence reference.
 - [x] Decision trace summaries.
   - Acceptance: run summary includes chosen path and rejected alternative.
-- [ ] Fact vs inference labeling.  
+- [x] Fact vs inference labeling.
   - Acceptance: UI/CLI marks statements as observed or inferred.
 
 ## Epic 5: Platform (M1-M3)

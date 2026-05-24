@@ -91,18 +91,21 @@ function createEvidenceRefs({ task, predicted_actions, resolvedPolicy, budget, o
     {
       evidence_id: objectiveSource === 'step.action' ? 'evidence_step_action' : 'evidence_task_objective',
       source: objectiveSource,
+      claim_type: 'inferred',
       summary: `Classified objective: ${task?.objective || 'No objective provided'}`,
       supports: ['predicted_actions', 'risk_level', 'decision']
     },
     {
       evidence_id: 'evidence_policy_permissions',
       source: 'policy.permissions',
+      claim_type: 'observed',
       summary: `Policy ${resolvedPolicy.policy_id} grants: ${(resolvedPolicy.permissions || []).join(', ') || 'none'}`,
       supports: ['approval_required', 'blocked_reasons', 'decision']
     },
     {
       evidence_id: 'evidence_task_budget',
       source: 'task.budget',
+      claim_type: 'observed',
       summary: `Estimated $${budget.estimated_cost_usd} against soft $${budget.soft_limit_usd ?? 'none'} and hard $${budget.hard_limit_usd ?? 'none'} limits`,
       supports: ['budget', 'warnings', 'run_status']
     }

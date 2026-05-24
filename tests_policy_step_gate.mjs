@@ -17,7 +17,8 @@ const run = {
 function assertEvidenceRefs(decision) {
   assert.ok(Array.isArray(decision.evidence_refs));
   assert.ok(decision.evidence_refs.length > 0);
-  assert.ok(decision.evidence_refs.some(evidence => evidence.source === 'step.action'));
+  assert.ok(decision.evidence_refs.some(evidence => evidence.source === 'step.action' && evidence.claim_type === 'inferred'));
+  assert.ok(decision.evidence_refs.some(evidence => evidence.source === 'task.budget' && evidence.claim_type === 'observed'));
 }
 
 {

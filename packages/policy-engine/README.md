@@ -5,7 +5,7 @@ Evaluates permissions, risk thresholds, and budget gates before execution.
 
 ## Current Surface
 - `POLICY_PRESETS`: `read_only`, `scoped_edit`, `safe_exec`, and `full_exec`.
-- `evaluatePreflight({ task, policy })`: returns decision, derived run status, risk level, approval flag, predicted actions, budget state, soft-cap warnings, blocked reasons, and evidence references.
-- `evaluateStepGate({ run, step, policy })`: reuses the same policy and budget model for a proposed execution step and returns `allowed` or `blocked` with step-action evidence before side effects run.
+- `evaluatePreflight({ task, policy })`: returns decision, derived run status, risk level, approval flag, predicted actions, budget state, soft-cap warnings, blocked reasons, and observed/inferred evidence references.
+- `evaluateStepGate({ run, step, policy })`: reuses the same policy and budget model for a proposed execution step and returns `allowed` or `blocked` with inferred step-action evidence before side effects run.
 - `runStatusForDecision(decision)`: maps hard budget caps to `paused`, approval gates to `awaiting_approval`, policy blocks to `failed`, and allowed work to `queued`.
 - `resolvePolicy(policyOrId)`: resolves preset ids to policy objects.

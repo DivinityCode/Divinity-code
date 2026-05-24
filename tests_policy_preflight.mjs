@@ -18,6 +18,7 @@ function assertEvidenceRefs(decision) {
     assert.match(evidence.evidence_id, /^evidence_/);
     assert.equal(typeof evidence.source, 'string');
     assert.equal(typeof evidence.summary, 'string');
+    assert.match(evidence.claim_type, /^(observed|inferred)$/);
     assert.ok(Array.isArray(evidence.supports));
     assert.ok(evidence.supports.length > 0);
   }
@@ -35,6 +36,8 @@ function assertEvidenceRefs(decision) {
   assert.equal(decision.budget.hard_cap_exceeded, false);
   assert.deepEqual(decision.warnings, []);
   assertEvidenceRefs(decision);
+  assert.ok(decision.evidence_refs.some(evidence => evidence.source === 'task.objective' && evidence.claim_type === 'inferred'));
+  assert.ok(decision.evidence_refs.some(evidence => evidence.source === 'policy.permissions' && evidence.claim_type === 'observed'));
 }
 
 {

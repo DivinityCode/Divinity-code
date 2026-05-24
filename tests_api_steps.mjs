@@ -38,7 +38,7 @@ try {
   assert.equal(allowedRes.status, 201);
   assert.equal(allowed.step.status, 'pending');
   assert.equal(allowed.step.pre_execution_check.decision, 'allow');
-  assert.ok(allowed.step.pre_execution_check.evidence_refs.some(evidence => evidence.source === 'step.action'));
+  assert.ok(allowed.step.pre_execution_check.evidence_refs.some(evidence => evidence.source === 'step.action' && evidence.claim_type === 'inferred'));
 
   const { response: approvalRes, body: approvalBlocked } = await requestJson(`${baseUrl}/runs/${run.run_id}/steps`, {
     method: 'POST',
@@ -58,7 +58,7 @@ try {
   assert.equal(denied.error, 'step blocked by policy');
   assert.equal(denied.step.status, 'blocked');
   assert.ok(denied.step.pre_execution_check.blocked_reasons.includes('permission_denied:git_push'));
-  assert.ok(denied.step.pre_execution_check.evidence_refs.some(evidence => evidence.source === 'policy.permissions'));
+  assert.ok(denied.step.pre_execution_check.evidence_refs.some(evidence => evidence.source === 'policy.permissions' && evidence.claim_type === 'observed'));
 
   const { body: hardCapRun } = await requestJson(`${baseUrl}/tasks`, {
     method: 'POST',
@@ -81,7 +81,7 @@ try {
   assert.equal(pausedStep.step.status, 'blocked');
   assert.equal(pausedStep.step.pre_execution_check.run_status, 'paused');
   assert.ok(pausedStep.step.pre_execution_check.blocked_reasons.includes('estimated_cost_exceeds_hard_limit'));
-  assert.ok(pausedStep.step.pre_execution_check.evidence_refs.some(evidence => evidence.source === 'task.budget'));
+  assert.ok(pausedStep.step.pre_execution_check.evidence_refs.some(evidence => evidence.source === 'task.budget' && evidence.claim_type === 'observed'));
 
   const { body: storedRun } = await requestJson(`${baseUrl}/runs/${run.run_id}`);
   assert.equal(storedRun.steps.length, 3);

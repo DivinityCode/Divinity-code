@@ -13,6 +13,7 @@
       {
         "evidence_id": "evidence_step_action",
         "source": "step.action",
+        "claim_type": "inferred",
         "summary": "Step action indicates file read work.",
         "supports": ["predicted_actions", "decision"]
       }

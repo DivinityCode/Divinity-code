@@ -24,6 +24,10 @@ for (const token of ['--indigo', '--teal', '--amber', '--red', '--row-height']) 
   assert(css.includes(token), `missing CSS token ${token}`);
 }
 
+for (const selector of ['claim-observed', 'claim-inferred']) {
+  assert(css.includes(selector), `missing ${selector} style`);
+}
+
 const runDataMatch = js.match(/const sampleRuns = (\[[\s\S]*?\n\]);\n\nlet runs =/);
 assert(runDataMatch, 'dashboard sample run data not found');
 
@@ -37,6 +41,7 @@ const runs = vm.runInNewContext(runDataMatch[1], {
     metadata: { detail, duration },
     created_at
   }),
+  evidence: (claim_type, source, summary) => ({ claim_type, source, summary }),
   artifact: (artifact_id, type, uri) => ({ artifact_id, run_id: '', type, uri })
 });
 const statuses = new Set(runs.map(run => run.status));
@@ -53,6 +58,9 @@ for (const risk of ['low', 'medium', 'high']) {
 assert(runs.some(run => run.status === 'awaiting_approval'), 'approval queue needs a pending run');
 assert(runs.every(run => run.budget && Number.isFinite(run.budget.soft) && Number.isFinite(run.budget.hard)), 'runs need soft and hard budgets');
 assert(runs.every(run => Array.isArray(run.events) && run.events.length > 0), 'runs need timelines');
+assert(js.includes('claim_type'), 'dashboard sample data should include fact/inference labels');
+assert(js.includes('renderEvidenceLabels'), 'dashboard should render evidence labels');
+assert(js.includes('Observed') && js.includes('Inferred'), 'dashboard should show observed/inferred label text');
 assert(runs.some(run => run.artifacts.length > 0), 'at least one run needs artifacts');
 assert(runs.every(run => /^[a-f0-9]{64}$/.test(run.audit.hash)), 'audit hashes must be sha256-like hex');
 assert(js.includes('new URLSearchParams(window.location.search)'), 'dashboard should read API query parameter');

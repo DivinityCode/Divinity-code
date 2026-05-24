@@ -651,6 +651,36 @@ dd {
   line-height: 1.35;
 }
 
+.claim-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.event-copy .claim-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 20px;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.event-copy .claim-observed {
+  border: 1px solid #addfc0;
+  background: var(--teal-bg);
+  color: var(--teal);
+}
+
+.event-copy .claim-inferred {
+  border: 1px solid #f7c87a;
+  background: var(--amber-bg);
+  color: var(--amber);
+}
+
 .event-duration {
   color: var(--muted);
   font-size: 12px;
