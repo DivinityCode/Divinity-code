@@ -57,6 +57,11 @@
 - The executor stage reports readiness or gate status without side effects.
 - The verifier stage records whether the run is verified for queued execution or waiting for approval/budget gate resolution.
 
+## Memory Provenance
+- CLI and API run payloads include session, project, and team memory entries derived from run context.
+- Memory entries include a stable `memory_id`, scope level/id, fact, confidence, and provenance source/timestamp.
+- Session memory is scoped to a run, project memory is scoped to `org_id/project_id`, and team memory is scoped to `org_id`.
+
 ## Approval Flow
 - Runs in `awaiting_approval` appear in `GET /approvals`.
 - Operators approve or reject a pending run with `POST /runs/:id/approval`.
