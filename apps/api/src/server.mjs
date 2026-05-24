@@ -11,6 +11,7 @@ import { createOrchestrationTrace } from '../../../packages/orchestration/src/in
 import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
 import { evaluatePreflight, evaluateStepGate } from '../../../packages/policy-engine/src/index.mjs';
 import { createConfiguredRunStore } from '../../../packages/run-store/src/index.mjs';
+import { createExecutionVerification } from '../../../packages/verification/src/index.mjs';
 import { cleanupRunWorkspace, createRunWorkspace, executionCwdForRun } from '../../../packages/workspaces/src/index.mjs';
 
 const runStore = createConfiguredRunStore();
@@ -259,6 +260,7 @@ const server = http.createServer((req, res) => {
         artifacts: runArtifacts.map(publicArtifactMetadata),
         events,
         executions: [],
+        verifications: [],
         steps: [],
         workspace: createRunWorkspace({ runId, repoPath: scopedTask.repo })
       };
@@ -403,14 +405,24 @@ const server = http.createServer((req, res) => {
 
     try {
       const execution = executeStep({ run, step, cwd: executionCwdForRun(run) });
+      const verification = createExecutionVerification({ run, step, execution });
       step.status = execution.status;
       step.execution = execution;
+      step.verification = verification;
       run.executions.push(execution);
+      run.verifications = run.verifications || [];
+      run.verifications.push(verification);
       recordAudit({
         type: 'execution_record',
         run_id: run.run_id,
         created_at: execution.completed_at,
         payload: execution
+      });
+      recordAudit({
+        type: 'verification_record',
+        run_id: run.run_id,
+        created_at: verification.completed_at,
+        payload: verification
       });
 
       const event = createRunEvent({
@@ -426,15 +438,34 @@ const server = http.createServer((req, res) => {
         }
       });
       run.events.push(event);
+      const verificationEvent = createRunEvent({
+        run_id: run.run_id,
+        type: 'step_verified',
+        status: run.status,
+        message: `Step ${step.step_id} verification ${verification.result}`,
+        metadata: {
+          step_id: step.step_id,
+          execution_id: execution.execution_id,
+          verification_id: verification.verification_id,
+          result: verification.result
+        }
+      });
+      run.events.push(verificationEvent);
       recordAudit({
         type: 'run_event',
         run_id: run.run_id,
         created_at: event.created_at,
         payload: event
       });
+      recordAudit({
+        type: 'run_event',
+        run_id: run.run_id,
+        created_at: verificationEvent.created_at,
+        payload: verificationEvent
+      });
       persistRunStore();
       broadcastRun(run);
-      sendJson(res, 200, { execution, step, run: publicRun(run) });
+      sendJson(res, 200, { execution, verification, step, run: publicRun(run) });
     } catch (error) {
       sendJson(res, 409, { error: error.message, step });
     }

@@ -1,7 +1,7 @@
 # API App
 Owner: Control Plane
 
-Control-plane endpoints for task creation, run retrieval, preflight checks, approvals, step execution, artifacts, capabilities, observability, and audit export.
+Control-plane endpoints for task creation, run retrieval, preflight checks, approvals, step execution, verification, artifacts, capabilities, observability, and audit export.
 
 ## Authentication
 Control-plane routes are public in local development when no API key is configured.
@@ -25,6 +25,6 @@ Set `DIVINITY_API_KEY` or comma-separated `DIVINITY_API_KEYS` to require `Author
 - `POST /runs/:id/approval`
 
 Task creation normalizes missing scope to `default-org/default-project`; callers can pass `scope.org_id` and `scope.project_id` to associate a run with an org and project.
-Step execution requires a pending step whose pre-execution check is allowed; execution records are written back to the run, event timeline, and audit export.
+Step execution requires a pending step whose pre-execution check is allowed; execution and verifier records are written back to the run, event timeline, and audit export.
 Capabilities expose the current policy presets, constrained execution adapters, and starter recipe summaries for CLI/API/dashboard discovery.
 Observability summaries aggregate run counts, approval backlog, estimated budget usage, risk mix, and policy/budget/execution failure categories.

@@ -119,6 +119,12 @@ const sampleRuns = [
         completed_at: '2026-05-24T08:41:03.000Z'
       }
     ],
+    verifications: [
+      verification('verify_exec_0010_readme', 'exec_0010_readme', 'step_readme', 'passed'),
+      verification('verify_exec_0010_git', 'exec_0010_git', 'step_git_status', 'passed'),
+      verification('verify_exec_0010_test', 'exec_0010_test', 'step_dashboard_static', 'passed'),
+      verification('verify_exec_0010_contracts', 'exec_0010_contracts', 'step_validate_contracts', 'passed')
+    ],
     artifacts: [
       artifact('artifact_patch_0010', 'patch', 'artifact://run_2026_05_24_0010/patch.diff'),
       artifact('artifact_log_0010', 'log', 'artifact://run_2026_05_24_0010/run.log'),
@@ -250,6 +256,27 @@ function artifact(artifact_id, type, uri) {
   return { artifact_id, run_id: '', type, uri };
 }
 
+function verification(verification_id, execution_id, step_id, result) {
+  return {
+    verification_id,
+    run_id: '',
+    step_id,
+    execution_id,
+    status: 'completed',
+    result,
+    checks: [
+      {
+        check_id: 'execution_completed',
+        status: result === 'passed' ? 'passed' : 'failed',
+        summary: `Verifier observed execution result ${result}.`
+      }
+    ],
+    evidence_refs: [
+      evidence('observed', 'execution.exit_code', `Verifier result ${result} for ${execution_id}.`)
+    ]
+  };
+}
+
 function decisionTrace(chosen_path, rejected_alternative, rationale, evidence_refs = []) {
   return { chosen_path, rejected_alternative, rationale, evidence_refs };
 }
@@ -356,6 +383,7 @@ function normalizeApiRun(run) {
   const budget = run.task?.budget || run.preflight?.budget || {};
   const createdAt = run.created_at || run.events?.[0]?.created_at || new Date().toISOString();
   const stepExecutions = (run.steps || []).map(step => step.execution).filter(Boolean);
+  const stepVerifications = (run.steps || []).map(step => step.verification).filter(Boolean);
   return {
     run_id: run.run_id,
     task_id: run.task_id,
@@ -372,6 +400,7 @@ function normalizeApiRun(run) {
     events: (run.events || []).map(normalizeApiEvent),
     decision_trace: decisionTraceForRun(run),
     executions: run.executions || stepExecutions,
+    verifications: run.verifications || stepVerifications,
     artifacts: run.artifacts || [],
     audit: {
       hash: run.audit?.hash || '0'.repeat(64),
@@ -445,6 +474,7 @@ function hydrateRunReferences(sourceRuns) {
   for (const run of sourceRuns) {
     for (const runEvent of run.events) runEvent.run_id = run.run_id;
     for (const runArtifact of run.artifacts) runArtifact.run_id = run.run_id;
+    for (const runVerification of run.verifications || []) runVerification.run_id = run.run_id;
   }
 }
 
@@ -724,6 +754,7 @@ function renderExecutions(run) {
     return '<li class="empty-state">Execution records appear after approved steps run.</li>';
   }
 
+  const verificationsByExecution = new Map((run.verifications || []).map(record => [record.execution_id, record]));
   return executions.map(item => `
     <li class="execution-item">
       <span class="execution-main">
@@ -731,10 +762,20 @@ function renderExecutions(run) {
         <span>${item.step_id}</span>
       </span>
       <span class="status-pill ${item.status === 'completed' ? 'status-completed' : 'status-failed'}">${item.status}</span>
+      ${renderVerificationResult(verificationsByExecution.get(item.execution_id))}
       <span class="execution-meta">exit ${item.exit_code}${item.target_path ? ` - ${item.target_path}` : ''}</span>
       <code class="execution-output">${(item.stdout || item.stderr || '').split('\n')[0] || '-'}</code>
     </li>
   `).join('');
+}
+
+function renderVerificationResult(record) {
+  if (!record) return '<span class="verification-chip verification-pending">verify pending</span>';
+  return `
+    <span class="verification-chip verification-${record.result}">
+      verify ${record.result}
+    </span>
+  `;
 }
 
 function renderApprovalQueue() {

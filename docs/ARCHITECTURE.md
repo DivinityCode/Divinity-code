@@ -72,6 +72,8 @@
 - Execution adapters run from `run.workspace.path` when present, preventing source-directory mutations after task creation from changing read/test evidence.
 - Execution adapters include `file_read`, which reads `README.md` from the run workspace, `git_status`, which runs `git status --short`, `node_test`, which runs whitelisted Node test scripts, and `package_script`, which runs named Node-based package scripts without shell interpolation.
 - Blocked or approval-required steps cannot execute through the execution package; the package requires the step gate decision to be `allow`.
+- Each execution produces a deterministic post-execution verifier record with observed status, exit-code, and output-capture checks.
+- Verifier records are attached to the step and run, emit `step_verified` timeline events, and write `verification_record` audit entries.
 - Workspace snapshots exclude or remove `node_modules` and preserve Git metadata.
 - Workspace cleanup is available from `POST /runs/:id/workspace/cleanup`, records a `workspace_cleaned` timeline event, and refuses to delete paths outside the recorded workspace root.
 - Containerized runner isolation is still future work.
@@ -88,7 +90,7 @@
 - Each transition records decision, actor, reason, and timestamp metadata.
 
 ## Run Event Timeline
-- CLI and API runs emit structured events for task creation, preflight completion, status changes, and approval decisions.
+- CLI and API runs emit structured events for task creation, preflight completion, status changes, approval decisions, step execution, verification, and workspace cleanup.
 - API timelines are available from `GET /runs/:id/events`.
 - Event envelopes include event id, run id, event type, lifecycle status, message, metadata, and creation timestamp; preflight event metadata carries the same observed/inferred evidence references as the decision.
 
@@ -106,7 +108,7 @@
 - API artifact lists are available from `GET /runs/:id/artifacts`; full artifact content is available from `GET /artifacts/:artifact_id`.
 
 ## Audit Export
-- API lifecycle actions create hash-backed audit records for run creation, run events, approval decisions, execution records, and artifact records.
+- API lifecycle actions create hash-backed audit records for run creation, run events, approval decisions, execution records, verification records, workspace cleanup, and artifact records.
 - Audit exports are available from `GET /audit`.
 - Optional `from` and `to` query parameters filter records by creation timestamp.
 
