@@ -106,6 +106,17 @@ const sampleRuns = [
         stdout: '{"ok":true,"dashboard":"static-shell","runs":6}',
         stderr: '',
         completed_at: '2026-05-24T08:40:19.000Z'
+      },
+      {
+        execution_id: 'exec_0010_contracts',
+        step_id: 'step_validate_contracts',
+        adapter: 'package_script',
+        status: 'completed',
+        exit_code: 0,
+        target_path: 'package.json#scripts.validate:contracts',
+        stdout: 'PASS packages/contracts/examples/task.valid.json expected=true',
+        stderr: '',
+        completed_at: '2026-05-24T08:41:03.000Z'
       }
     ],
     artifacts: [

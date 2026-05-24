@@ -48,7 +48,7 @@
 - API exposes `POST /runs/:id/steps/:step_id/execute` for policy-approved step execution through constrained adapters.
 - API execution uses per-run local snapshots or shallow Git URL clones; workspaces exclude `node_modules` and preserve Git metadata for Git adapters.
 - API exposes `POST /runs/:id/workspace/cleanup` to remove managed workspaces and record `workspace_cleaned` events.
-- Execution adapters currently cover workspace `README.md` reads, `git status --short`, and whitelisted Node test scripts for approved command steps.
+- Execution adapters currently cover workspace `README.md` reads, `git status --short`, whitelisted Node test scripts, and constrained Node-based package scripts for approved command steps.
 - Hard budget cap excess now maps to `paused` for CLI/API runs and pauses an API run when a proposed step exceeds the hard cap.
 - CLI and API expose structured run events; dashboard can subscribe to live selected-run updates through API server-sent events.
 - API step execution records `step_executed` events and `execution_record` audit entries.
