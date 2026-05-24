@@ -28,6 +28,8 @@ const checks = [
   ['packages/contracts/schemas/event.v1.json','packages/contracts/examples/event.invalid.json',false],
   ['packages/contracts/schemas/heartbeat.v1.json','packages/contracts/examples/heartbeat.valid.json',true],
   ['packages/contracts/schemas/heartbeat.v1.json','packages/contracts/examples/heartbeat.invalid.json',false],
+  ['packages/contracts/schemas/connector-reference.v1.json','packages/contracts/examples/connector-reference.valid.json',true],
+  ['packages/contracts/schemas/connector-reference.v1.json','packages/contracts/examples/connector-reference.invalid.json',false],
   ['packages/contracts/schemas/audit.v1.json','packages/contracts/examples/audit.valid.json',true],
   ['packages/contracts/schemas/audit.v1.json','packages/contracts/examples/audit.invalid.json',false],
   ['packages/contracts/schemas/observability.v1.json','packages/contracts/examples/observability.valid.json',true],

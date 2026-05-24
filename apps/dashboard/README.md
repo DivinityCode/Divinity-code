@@ -10,13 +10,15 @@ Implemented views:
 - Cost, risk, artifact, and audit metadata panels.
 - Observability summary with run health, heartbeat liveness, budget pressure, and failure taxonomy.
 - Decision trace panel with chosen path, rejected alternative, rationale, and supporting evidence.
+- Connector reference panel for attached ticket, docs, and CI context.
 - Agent activity panel for planner, executor, and verifier actor/status/budget records.
 - Execution panel with post-execution verifier result chips.
 
 Open `index.html` directly in a browser for local inspection. The shell uses
 sample data shaped after the current API contracts and does not require a build
-step. Run detail renders agent activity, execution records, verification
-records, and liveness records from `run.agent_activity`,
+step. Run detail renders connector references, agent activity, execution
+records, verification records, and liveness records from
+`run.connector_references`, `run.agent_activity`,
 `run.executions`/`run.verifications`, `run.heartbeats`, or completed step
 payloads when API data is loaded.
 

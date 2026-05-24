@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ConnectorReference",
+  "type": "object",
+  "required": [
+    "format",
+    "reference_id",
+    "run_id",
+    "adapter",
+    "resource_type",
+    "resource_id",
+    "attached_by",
+    "attached_at",
+    "metadata"
+  ],
+  "properties": {
+    "format": { "const": "divinity.connector_reference.v1" },
+    "reference_id": { "type": "string", "pattern": "^ref_[a-f0-9]{16}$" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "adapter": {
+      "type": "string",
+      "enum": ["ticket_reference", "docs_reference", "ci_status"]
+    },
+    "resource_type": {
+      "type": "string",
+      "enum": ["ticket", "issue", "document", "knowledge_base", "ci_run", "check_run", "deployment"]
+    },
+    "resource_id": { "type": "string", "minLength": 1 },
+    "url": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "attached_by": { "type": "string", "minLength": 1 },
+    "attached_at": { "type": "string", "format": "date-time" },
+    "metadata": { "type": "object" }
+  },
+  "additionalProperties": false
+}

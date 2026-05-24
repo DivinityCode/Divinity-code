@@ -7,6 +7,7 @@ import { createInterface } from 'readline/promises';
 import { createAgentActivityRecords } from '../../../packages/agent-activity/src/index.mjs';
 import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
 import { createCapabilitiesCatalog } from '../../../packages/capabilities/src/index.mjs';
+import { createConnectorReferences } from '../../../packages/connectors/src/index.mjs';
 import { createInitialRunEvents } from '../../../packages/events/src/index.mjs';
 import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
@@ -85,6 +86,40 @@ function parseInitArgs(values) {
   }
 
   return options;
+}
+
+function parseConnectorReferenceFlag(value) {
+  const [adapter, resource_type, resource_id, ...urlParts] = String(value || '').split(':');
+  const reference = {
+    adapter,
+    resource_type,
+    resource_id
+  };
+  const url = urlParts.join(':').trim();
+  if (url) reference.url = url;
+  return reference;
+}
+
+function parseRunArgs(values) {
+  const objectiveParts = [];
+  const connectorReferences = [];
+
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    if (value === '--connector') {
+      connectorReferences.push(parseConnectorReferenceFlag(values[index + 1]));
+      index += 1;
+    } else if (value.startsWith('--connector=')) {
+      connectorReferences.push(parseConnectorReferenceFlag(value.slice('--connector='.length)));
+    } else {
+      objectiveParts.push(value);
+    }
+  }
+
+  return {
+    objective: objectiveParts.join(' ').trim() || 'No objective provided',
+    connector_references: connectorReferences
+  };
 }
 
 function asBudgetNumber(value, label) {
@@ -181,22 +216,29 @@ async function init() {
 }
 
 function run() {
-  const objective = args.join(' ').trim() || 'No objective provided';
+  const parsedArgs = parseRunArgs(args);
   const config = fs.existsSync(configPath)
     ? JSON.parse(fs.readFileSync(configPath, 'utf8'))
     : DEFAULT_CONFIG;
   const payload = {
     task_id: `task_${Date.now()}`,
-    objective,
+    objective: parsedArgs.objective,
     repo: cwd,
     scope: config.scope || DEFAULT_CONFIG.scope,
     policy_id: config.policy_id,
     budget: config.budget,
+    connector_references: parsedArgs.connector_references,
     created_at: new Date().toISOString()
   };
   const preflight = evaluatePreflight({ task: payload });
   const run_id = `run_${Date.now()}`;
   const status = preflight.run_status;
+  const connector_references = createConnectorReferences({
+    run_id,
+    references: parsedArgs.connector_references,
+    attached_by: 'cli',
+    attached_at: payload.created_at
+  });
   const agent_activity = createAgentActivityRecords({
     run_id,
     task: payload,
@@ -213,6 +255,7 @@ function run() {
     preflight,
     policy_pack: resolvePolicyPackForTask(payload),
     orchestration: createOrchestrationTrace({ run_id, task: payload, status, preflight }),
+    connector_references,
     agent_activity,
     memory: createRunMemoryEntries({ run_id, task: payload, preflight, recorded_at: payload.created_at }),
     artifacts: createRunArtifacts({ run_id, task: payload, status, preflight }).map(publicArtifactMetadata),

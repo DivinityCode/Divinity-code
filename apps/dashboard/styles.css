@@ -734,6 +734,7 @@ dd {
   margin-top: 10px;
 }
 
+.connector-panel,
 .agent-activity-panel,
 .execution-panel {
   margin: 0 18px 18px;
@@ -743,6 +744,7 @@ dd {
   background: var(--surface);
 }
 
+.connector-panel h3,
 .agent-activity-panel h3,
 .execution-panel h3 {
   margin: 0 0 10px;
@@ -750,6 +752,7 @@ dd {
   font-size: 13px;
 }
 
+.connector-panel ul,
 .agent-activity-panel ul,
 .execution-panel ul {
   display: grid;
@@ -757,6 +760,47 @@ dd {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.connector-reference-item {
+  display: grid;
+  grid-template-columns: 124px minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-alt);
+}
+
+.connector-adapter {
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.connector-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.connector-copy strong,
+.connector-copy span {
+  overflow-wrap: anywhere;
+}
+
+.connector-copy span,
+.connector-missing-link {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.connector-reference-item a {
+  color: var(--indigo);
+  font-size: 12px;
+  font-weight: 760;
+  text-decoration: none;
 }
 
 .agent-activity-item {

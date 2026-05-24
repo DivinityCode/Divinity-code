@@ -14,12 +14,17 @@ const sampleRuns = [
         evidence('inferred', 'task.objective', 'Predicted write and test execution actions.'),
         evidence('observed', 'policy.permissions', 'safe_exec policy grants scoped write and shell execution.')
       ]),
-      event('evt_003', 'status_changed', 'awaiting_approval', 'Awaiting approval', 'Manual approval required before execution.', '2026-05-24T10:13:28.000Z', '-')
+      event('evt_003', 'status_changed', 'awaiting_approval', 'Awaiting approval', 'Manual approval required before execution.', '2026-05-24T10:13:28.000Z', '-'),
+      event('evt_004', 'connector_reference_attached', 'awaiting_approval', 'Connector reference attached', 'Ticket context DIV-17 is attached to the run.', '2026-05-24T10:13:33.000Z', '-')
     ],
     decision_trace: decisionTrace('request_operator_approval', 'execute_without_approval', 'Risk threshold requires an operator decision before execution continues.', [
       evidence('inferred', 'task.objective', 'Predicted write and test execution actions.'),
       evidence('observed', 'policy.permissions', 'safe_exec policy grants scoped write and shell execution.')
     ]),
+    connector_references: [
+      connectorReference('ref_a11ce0000000001', 'ticket_reference', 'ticket', 'DIV-17', 'https://example.test/tickets/DIV-17', 'Pagination ticket'),
+      connectorReference('ref_a11ce0000000002', 'docs_reference', 'document', 'SPEC-USERS-PAGING', 'https://example.test/docs/users-pagination', 'Pagination spec')
+    ],
     agent_activity: [
       agentActivity('activity_0012_planner', 'planner', 'completed', 0.3),
       agentActivity('activity_0012_executor', 'executor', 'gated', 0.9),
@@ -54,6 +59,9 @@ const sampleRuns = [
     decision_trace: decisionTrace('queue_for_execution', 'pause_or_request_approval', 'Preflight allowed the run to enter the execution queue.', [
       evidence('observed', 'policy.permissions', 'safe_exec policy grants scoped write and shell execution.')
     ]),
+    connector_references: [
+      connectorReference('ref_a11ce0000000011', 'ci_status', 'ci_run', 'ci-5812', 'https://example.test/ci/5812', 'Middleware CI')
+    ],
     artifacts: [
       artifact('artifact_log_0011', 'log', 'artifact://run_2026_05_24_0011/run.log'),
       artifact('artifact_summary_0011', 'summary', 'artifact://run_2026_05_24_0011/summary.md')
@@ -277,6 +285,23 @@ function heartbeat(heartbeat_id, run_id, actor, status, message, recorded_at) {
   return { heartbeat_id, run_id, actor, status, message, recorded_at };
 }
 
+function connectorReference(reference_id, adapter, resource_type, resource_id, url = '', title = resource_id) {
+  const reference = {
+    format: 'divinity.connector_reference.v1',
+    reference_id,
+    run_id: '',
+    adapter,
+    resource_type,
+    resource_id,
+    title,
+    attached_by: 'operator@divinity',
+    attached_at: '2026-05-24T10:12:43.000Z',
+    metadata: {}
+  };
+  if (url) reference.url = url;
+  return reference;
+}
+
 function agentActivity(activity_id, role, status, budget_estimate_usd) {
   return {
     activity_id,
@@ -472,6 +497,7 @@ function normalizeApiRun(run) {
     executions: run.executions || stepExecutions,
     verifications: run.verifications || stepVerifications,
     artifacts: run.artifacts || [],
+    connector_references: run.connector_references || [],
     heartbeats: run.heartbeats || [],
     last_heartbeat_at: run.last_heartbeat_at || null,
     audit: {
@@ -546,6 +572,7 @@ function hydrateRunReferences(sourceRuns) {
   for (const run of sourceRuns) {
     for (const runEvent of run.events) runEvent.run_id = run.run_id;
     for (const runArtifact of run.artifacts) runArtifact.run_id = run.run_id;
+    for (const connector of run.connector_references || []) connector.run_id = run.run_id;
     for (const activity of run.agent_activity || []) activity.run_id = run.run_id;
     for (const runVerification of run.verifications || []) runVerification.run_id = run.run_id;
     for (const runHeartbeat of run.heartbeats || []) runHeartbeat.run_id = run.run_id;
@@ -766,6 +793,7 @@ function renderRunDetail() {
 
   document.querySelector('[data-event-timeline]').innerHTML = run.events.map(renderEvent).join('');
   document.querySelector('[data-decision-trace]').innerHTML = renderDecisionTrace(run.decision_trace);
+  document.querySelector('[data-connector-reference-list]').innerHTML = renderConnectorReferences(run);
   document.querySelector('[data-agent-activity-list]').innerHTML = renderAgentActivity(run);
   document.querySelector('[data-execution-list]').innerHTML = renderExecutions(run);
   document.querySelector('[data-artifact-list]').innerHTML = renderArtifacts(run);
@@ -836,6 +864,24 @@ function renderArtifacts(run) {
       <span class="artifact-icon" aria-hidden="true">[]</span>
       <span>${item.uri.split('/').pop()}</span>
       <span>${item.type}</span>
+    </li>
+  `).join('');
+}
+
+function renderConnectorReferences(run) {
+  const references = run.connector_references || [];
+  if (!references.length) {
+    return '<li class="empty-state">Connector references appear when tickets, docs, or CI context is attached.</li>';
+  }
+
+  return references.map(reference => `
+    <li class="connector-reference-item">
+      <span class="connector-adapter">${reference.adapter}</span>
+      <span class="connector-copy">
+        <strong>${reference.title || reference.resource_id}</strong>
+        <span>${reference.resource_type} / ${reference.resource_id}</span>
+      </span>
+      ${reference.url ? `<a href="${reference.url}" target="_blank" rel="noreferrer">Open</a>` : '<span class="connector-missing-link">No link</span>'}
     </li>
   `).join('');
 }

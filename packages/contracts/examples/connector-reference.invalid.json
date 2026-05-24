@@ -1,0 +1,11 @@
+{
+  "format": "divinity.connector_reference.v1",
+  "reference_id": "connector_123",
+  "run_id": "",
+  "adapter": "unknown_connector",
+  "resource_type": "deployment",
+  "resource_id": "",
+  "attached_by": "",
+  "attached_at": "not-a-date",
+  "metadata": []
+}
