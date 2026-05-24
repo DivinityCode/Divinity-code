@@ -35,7 +35,8 @@ const sampleRuns = [
     artifacts: [
       artifact('artifact_patch_0012', 'patch', 'artifact://run_2026_05_24_0012/patch.diff'),
       artifact('artifact_log_0012', 'log', 'artifact://run_2026_05_24_0012/run.log'),
-      artifact('artifact_summary_0012', 'summary', 'artifact://run_2026_05_24_0012/summary.md')
+      artifact('artifact_summary_0012', 'summary', 'artifact://run_2026_05_24_0012/summary.md'),
+      artifact('artifact_pr_summary_0012', 'pr_summary', 'artifact://run_2026_05_24_0012/pr-summary.md')
     ],
     heartbeats: [],
     last_heartbeat_at: null,

@@ -68,16 +68,23 @@ function assertPatchPayload(patchContent, expectedObjective) {
     }
   });
 
-  assert.deepEqual(artifacts.map(artifact => artifact.type), ['patch', 'log', 'summary']);
+  assert.deepEqual(artifacts.map(artifact => artifact.type), ['patch', 'log', 'summary', 'pr_summary']);
   assert.deepEqual(artifacts.map(artifact => artifact.uri), [
     'artifact://run_123/patch',
     'artifact://run_123/log',
-    'artifact://run_123/summary'
+    'artifact://run_123/summary',
+    'artifact://run_123/pr_summary'
   ]);
   assert.equal(artifacts[2].content.summary, 'Run run_123 for task task_123 is queued: Review README');
   assert.equal(artifacts[2].content.decision_trace.chosen_path, 'queue_for_execution');
   assert.equal(artifacts[2].content.decision_trace.rejected_alternative, 'pause_or_request_approval');
   assert.equal(artifacts[2].content.decision_trace.evidence_refs[0].source, 'task.objective');
+  assert.equal(artifacts[3].content.format, 'github_pull_request_summary');
+  assert.match(artifacts[3].content.title, /Review README/);
+  assert.match(artifacts[3].content.body, /## Summary/);
+  assert.match(artifacts[3].content.body, /## Validation/);
+  assert.match(artifacts[3].content.body, /Preflight decision: allow/);
+  assert.equal(artifacts[3].content.decision_trace.chosen_path, 'queue_for_execution');
   assertPatchPayload(artifacts[0].content, 'Review README');
 }
 
@@ -85,7 +92,7 @@ const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-artifacts-test-'));
 try {
   runCli(tmpDir, 'init');
   const cliRun = runCli(tmpDir, 'run', 'Review README');
-  assert.deepEqual(cliRun.artifacts.map(artifact => artifact.type), ['patch', 'log', 'summary']);
+  assert.deepEqual(cliRun.artifacts.map(artifact => artifact.type), ['patch', 'log', 'summary', 'pr_summary']);
   assert.ok(cliRun.artifacts.every(artifact => artifact.run_id === cliRun.run_id));
 } finally {
   rmSync(tmpDir, { recursive: true, force: true });
@@ -109,7 +116,7 @@ try {
     method: 'POST',
     body: JSON.stringify(task)
   });
-  assert.deepEqual(run.artifacts.map(artifact => artifact.type), ['patch', 'log', 'summary']);
+  assert.deepEqual(run.artifacts.map(artifact => artifact.type), ['patch', 'log', 'summary', 'pr_summary']);
 
   const { response: listRes, body: list } = await requestJson(`${baseUrl}/runs/${run.run_id}/artifacts`);
   assert.equal(listRes.status, 200);
@@ -117,7 +124,8 @@ try {
   assert.deepEqual(list.artifacts.map(artifact => artifact.uri), [
     `artifact://${run.run_id}/patch`,
     `artifact://${run.run_id}/log`,
-    `artifact://${run.run_id}/summary`
+    `artifact://${run.run_id}/summary`,
+    `artifact://${run.run_id}/pr_summary`
   ]);
 
   const summaryId = list.artifacts.find(artifact => artifact.type === 'summary').artifact_id;
@@ -136,6 +144,18 @@ try {
   assert.equal(patchArtifact.artifact_id, patchId);
   assert.equal(patchArtifact.type, 'patch');
   assertPatchPayload(patchArtifact.content, task.objective);
+
+  const prSummaryId = list.artifacts.find(artifact => artifact.type === 'pr_summary').artifact_id;
+  const { response: prSummaryRes, body: prSummaryArtifact } = await requestJson(`${baseUrl}/artifacts/${prSummaryId}`);
+  assert.equal(prSummaryRes.status, 200);
+  assert.equal(prSummaryArtifact.artifact_id, prSummaryId);
+  assert.equal(prSummaryArtifact.type, 'pr_summary');
+  assert.equal(prSummaryArtifact.content.format, 'github_pull_request_summary');
+  assert.match(prSummaryArtifact.content.title, /Review README/);
+  assert.match(prSummaryArtifact.content.body, /## Summary/);
+  assert.match(prSummaryArtifact.content.body, /## Validation/);
+  assert.match(prSummaryArtifact.content.body, /Preflight decision: allow/);
+  assert.equal(prSummaryArtifact.content.decision_trace.chosen_path, 'queue_for_execution');
 
   console.log(JSON.stringify({ ok: true, test: 'artifacts' }));
 } finally {

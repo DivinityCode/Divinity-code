@@ -28,6 +28,7 @@ Build a best-in-class AI engineering platform that combines:
    - CLI session lifecycle.
    - Repo-aware task execution.
    - Patch + PR summary artifacts.
+   - Bootstrap status: CLI/API runs emit patch, log, summary, and GitHub-ready PR summary artifacts.
    - Bootstrap status: CLI and IDE command surfaces are present, with IDE commands delegating to CLI workflows.
    - Bootstrap status: API can execute policy-approved file-read, git-status, Node test, and constrained package-script steps through the execution adapter surface.
    - Bootstrap status: local-directory tasks execute from per-run workspace snapshots rather than directly from the source path, and explicit Git URLs are shallow-cloned into run workspaces.

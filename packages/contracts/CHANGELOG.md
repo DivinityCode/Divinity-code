@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.27.0
+- Added `pr_summary` as an Artifact type for PR-ready run summaries.
+
 ## v1.26.0
 - Added runner isolation profile metadata to `CapabilitiesCatalog` for workspace snapshot and Docker container-sandbox discovery.
 

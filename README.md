@@ -3,7 +3,7 @@
 Divinity Code is an AI engineering platform designed to combine best-in-class coding execution, multi-agent orchestration, and a user-friendly trust-first UX.
 
 ## Current Status
-Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows, policy and budget gates, approval transitions, execution locks, execution adapter and verifier records, observable planner/executor/verifier activity, run heartbeats, isolated local and Git URL execution workspaces with cleanup, runner isolation profiles with Docker command planning, artifacts, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, team policy packs, constrained package-script execution, discoverable connector adapters, run-level connector references, org/project observability rollups, a shared capabilities catalog, and opt-in file-backed API run storage.
+Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows, policy and budget gates, approval transitions, execution locks, execution adapter and verifier records, observable planner/executor/verifier activity, run heartbeats, isolated local and Git URL execution workspaces with cleanup, runner isolation profiles with Docker command planning, patch/log/summary/PR-summary artifacts, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, team policy packs, constrained package-script execution, discoverable connector adapters, run-level connector references, org/project observability rollups, a shared capabilities catalog, and opt-in file-backed API run storage.
 
 ## Documents
 - [Product Plan](docs/PRODUCT_PLAN.md)
@@ -37,7 +37,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - `packages/workspaces` - per-run local/Git URL workspaces and cleanup for execution
 - `packages/run-store` - in-memory and file-backed API run state snapshots
 - `packages/events` - shared run event model
-- `packages/artifacts` - patch/log/summary artifact payloads
+- `packages/artifacts` - patch/log/summary/PR-summary artifact payloads
 - `packages/audit` - hash-backed audit records and exports
 - `packages/recipes` - guided starter recipes
 - `packages/orchestration` - planner/executor/verifier traces

@@ -1,6 +1,6 @@
 {
-  "artifact_id": "artifact_run_123_summary",
+  "artifact_id": "artifact_run_123_pr_summary",
   "run_id": "run_123",
-  "type": "summary",
-  "uri": "artifact://run_123/summary"
+  "type": "pr_summary",
+  "uri": "artifact://run_123/pr_summary"
 }
