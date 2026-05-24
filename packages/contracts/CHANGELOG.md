@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.23.0
+- Added connector adapter metadata to `CapabilitiesCatalog` for ticket, docs, and CI references.
+
 ## v1.22.0
 - Added `ExecutionLockRecord` schema and examples for per-run execution ownership.
 - Added `execution_lock_acquired`, `execution_lock_recovered`, and `execution_lock_released` run events plus `execution_lock_record` audit entries.

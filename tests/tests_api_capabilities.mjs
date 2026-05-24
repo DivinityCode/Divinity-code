@@ -15,6 +15,7 @@ try {
   assert.equal(catalog.format, 'divinity.capabilities.v1');
   assert.ok(catalog.policies.some(policy => policy.policy_id === 'read_only'));
   assert.ok(catalog.execution_adapters.some(adapter => adapter.adapter === 'package_script'));
+  assert.ok(catalog.connector_adapters.some(adapter => adapter.adapter === 'ticket_reference'));
   assert.ok(catalog.starter_recipes.length >= 4);
 
   console.log(JSON.stringify({ ok: true, test: 'api-capabilities' }));

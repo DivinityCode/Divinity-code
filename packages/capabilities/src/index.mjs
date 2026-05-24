@@ -1,4 +1,5 @@
 import { publicExecutionAdapters } from '../../execution/src/index.mjs';
+import { publicConnectorAdapters } from '../../connectors/src/index.mjs';
 import { POLICY_PRESETS } from '../../policy-engine/src/index.mjs';
 import { publicStarterRecipes } from '../../recipes/src/index.mjs';
 
@@ -26,6 +27,7 @@ export function createCapabilitiesCatalog({ generated_at = new Date().toISOStrin
     generated_at,
     policies: publicPolicies(),
     execution_adapters: publicExecutionAdapters(),
+    connector_adapters: publicConnectorAdapters(),
     starter_recipes: publicRecipeCapabilities()
   };
 }

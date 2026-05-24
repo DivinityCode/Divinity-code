@@ -27,6 +27,16 @@ assert.ok(catalog.execution_adapters.every(adapter => adapter.description));
 assert.ok(catalog.execution_adapters.every(adapter => Array.isArray(adapter.action_types)));
 assert.equal(catalog.execution_adapters.find(adapter => adapter.adapter === 'package_script').shell_interpolation, false);
 
+assert.deepEqual(catalog.connector_adapters.map(adapter => adapter.adapter), [
+  'ticket_reference',
+  'docs_reference',
+  'ci_status'
+]);
+assert.ok(catalog.connector_adapters.every(adapter => adapter.description));
+assert.ok(catalog.connector_adapters.every(adapter => Array.isArray(adapter.resource_types)));
+assert.ok(catalog.connector_adapters.every(adapter => Array.isArray(adapter.auth_modes)));
+assert.ok(catalog.connector_adapters.every(adapter => typeof adapter.write_capable === 'boolean'));
+
 assert.ok(catalog.starter_recipes.length >= 4);
 assert.equal(new Set(catalog.starter_recipes.map(recipe => recipe.recipe_id)).size, catalog.starter_recipes.length);
 assert.ok(catalog.starter_recipes.every(recipe => recipe.policy_id));
