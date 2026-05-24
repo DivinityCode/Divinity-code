@@ -22,6 +22,12 @@ function sendJson(res, statusCode, payload) {
   res.end(JSON.stringify(payload));
 }
 
+function setCorsHeaders(res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'content-type');
+}
+
 function approvalPayload(body) {
   return {
     decision: body.decision,
@@ -68,17 +74,48 @@ function recordRunAudit(run) {
   }
 }
 
+function latestAuditForRun(runId) {
+  for (let index = auditRecords.length - 1; index >= 0; index -= 1) {
+    if (auditRecords[index].run_id === runId) return auditRecords[index];
+  }
+  return null;
+}
+
+function publicRun(run) {
+  const latestAudit = latestAuditForRun(run.run_id);
+  return {
+    ...run,
+    audit: latestAudit
+      ? { hash: latestAudit.hash, recorded_at: latestAudit.created_at }
+      : null
+  };
+}
+
 const server = http.createServer((req, res) => {
+  setCorsHeaders(res);
   res.setHeader('Content-Type', 'application/json');
+
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204;
+    res.end();
+    return;
+  }
 
   if (req.method === 'GET' && req.url === '/health') {
     sendJson(res, 200, { ok: true });
     return;
   }
 
+  if (req.method === 'GET' && req.url === '/runs') {
+    sendJson(res, 200, {
+      runs: Array.from(runs.values()).map(publicRun)
+    });
+    return;
+  }
+
   if (req.method === 'GET' && req.url === '/approvals') {
     sendJson(res, 200, {
-      runs: Array.from(runs.values()).filter(run => run.status === 'awaiting_approval')
+      runs: Array.from(runs.values()).filter(run => run.status === 'awaiting_approval').map(publicRun)
     });
     return;
   }
@@ -110,21 +147,24 @@ const server = http.createServer((req, res) => {
           ? 'failed'
           : 'queued';
       const runArtifacts = createRunArtifacts({ run_id: runId, task, status });
+      const events = createInitialRunEvents({ run_id: runId, task, preflight, status });
       const run = {
         run_id: runId,
         task_id: task.task_id || 'unknown',
+        task,
+        created_at: events[0]?.created_at || new Date().toISOString(),
         status,
         risk_level: preflight.risk_level,
         preflight,
         artifacts: runArtifacts.map(publicArtifactMetadata),
-        events: createInitialRunEvents({ run_id: runId, task, preflight, status })
+        events
       };
       for (const artifact of runArtifacts) {
         artifacts.set(artifact.artifact_id, artifact);
       }
       runs.set(run.run_id, run);
       recordRunAudit(run);
-      sendJson(res, 201, run);
+      sendJson(res, 201, publicRun(run));
     });
     return;
   }
@@ -178,7 +218,7 @@ const server = http.createServer((req, res) => {
           payload: event
         });
       }
-      sendJson(res, 200, run);
+      sendJson(res, 200, publicRun(run));
     });
     return;
   }
@@ -226,7 +266,7 @@ const server = http.createServer((req, res) => {
       sendJson(res, 404, { error: 'run not found' });
       return;
     }
-    sendJson(res, 200, run);
+    sendJson(res, 200, publicRun(run));
     return;
   }
 
