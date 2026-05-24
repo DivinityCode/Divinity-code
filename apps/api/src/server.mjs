@@ -1,11 +1,13 @@
 import http from 'http';
 
 import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
+import { createAuditRecord, exportAuditLog } from '../../../packages/audit/src/index.mjs';
 import { createInitialRunEvents, createRunEvent } from '../../../packages/events/src/index.mjs';
 import { evaluatePreflight } from '../../../packages/policy-engine/src/index.mjs';
 
 const runs = new Map();
 const artifacts = new Map();
+const auditRecords = [];
 
 function readJson(req, callback) {
   let body = '';
@@ -29,6 +31,43 @@ function approvalPayload(body) {
   };
 }
 
+function recordAudit(entry) {
+  const record = createAuditRecord(entry);
+  auditRecords.push(record);
+  return record;
+}
+
+function recordRunAudit(run) {
+  recordAudit({
+    type: 'run_created',
+    run_id: run.run_id,
+    created_at: run.events[0]?.created_at,
+    payload: {
+      task_id: run.task_id,
+      status: run.status,
+      risk_level: run.risk_level,
+      preflight: run.preflight
+    }
+  });
+
+  for (const event of run.events) {
+    recordAudit({
+      type: 'run_event',
+      run_id: run.run_id,
+      created_at: event.created_at,
+      payload: event
+    });
+  }
+
+  for (const artifact of run.artifacts) {
+    recordAudit({
+      type: 'artifact_record',
+      run_id: run.run_id,
+      payload: artifact
+    });
+  }
+}
+
 const server = http.createServer((req, res) => {
   res.setHeader('Content-Type', 'application/json');
 
@@ -41,6 +80,16 @@ const server = http.createServer((req, res) => {
     sendJson(res, 200, {
       runs: Array.from(runs.values()).filter(run => run.status === 'awaiting_approval')
     });
+    return;
+  }
+
+  if (req.method === 'GET' && req.url.startsWith('/audit')) {
+    const url = new URL(req.url, 'http://127.0.0.1');
+    sendJson(res, 200, exportAuditLog({
+      records: auditRecords,
+      from: url.searchParams.get('from'),
+      to: url.searchParams.get('to')
+    }));
     return;
   }
 
@@ -74,6 +123,7 @@ const server = http.createServer((req, res) => {
         artifacts.set(artifact.artifact_id, artifact);
       }
       runs.set(run.run_id, run);
+      recordRunAudit(run);
       sendJson(res, 201, run);
     });
     return;
@@ -99,6 +149,12 @@ const server = http.createServer((req, res) => {
       }
 
       run.approval = approvalPayload(body);
+      recordAudit({
+        type: 'approval_decision',
+        run_id: run.run_id,
+        created_at: run.approval.decided_at,
+        payload: run.approval
+      });
       run.events.push(createRunEvent({
         run_id: run.run_id,
         type: 'approval_decided',
@@ -114,6 +170,14 @@ const server = http.createServer((req, res) => {
         message: `Run status changed to ${run.status}`,
         metadata: { decision: body.decision }
       }));
+      for (const event of run.events.slice(-2)) {
+        recordAudit({
+          type: 'run_event',
+          run_id: run.run_id,
+          created_at: event.created_at,
+          payload: event
+        });
+      }
       sendJson(res, 200, run);
     });
     return;

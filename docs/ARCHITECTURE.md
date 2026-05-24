@@ -65,6 +65,11 @@
 - Artifact metadata contains `artifact_id`, `run_id`, `type`, and `uri`.
 - API artifact lists are available from `GET /runs/:id/artifacts`; full scaffolded artifact content is available from `GET /artifacts/:artifact_id`.
 
+## Audit Export
+- API lifecycle actions create hash-backed audit records for run creation, run events, approval decisions, and artifact records.
+- Audit exports are available from `GET /audit`.
+- Optional `from` and `to` query parameters filter records by creation timestamp.
+
 ## Security and Governance
 - Principle of least privilege by default.
 - Scoped credentials per workspace.

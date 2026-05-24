@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AuditExport",
+  "type": "object",
+  "required": ["format", "exported_at", "filters", "records"],
+  "properties": {
+    "format": {
+      "type": "string",
+      "const": "divinity.audit.v1"
+    },
+    "exported_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "filters": {
+      "type": "object",
+      "required": ["from", "to"],
+      "properties": {
+        "from": { "type": ["string", "null"], "format": "date-time" },
+        "to": { "type": ["string", "null"], "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["audit_id", "type", "run_id", "created_at", "payload", "hash"],
+        "properties": {
+          "audit_id": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["run_created", "run_event", "approval_decision", "artifact_record"]
+          },
+          "run_id": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "payload": { "type": "object" },
+          "hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

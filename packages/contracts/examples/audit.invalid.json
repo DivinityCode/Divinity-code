@@ -1,0 +1,10 @@
+{
+  "format": "audit",
+  "exported_at": "not-a-date",
+  "filters": {},
+  "records": [
+    {
+      "type": "unknown"
+    }
+  ]
+}
