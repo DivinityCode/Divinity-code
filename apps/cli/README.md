@@ -1,7 +1,7 @@
 # CLI App
 Owner: Builder Experience
 
-Planned commands: `init`, `run`, `status`, `approve`, `recipes`.
+Planned commands: `init`, `run`, `status`, `approve`, `recipes`, `doctor`.
 
 ## Current Behavior
 - `init` writes `.divinity.json` with the default `safe_exec` policy, budget caps, and org/project scope.
@@ -10,3 +10,4 @@ Planned commands: `init`, `run`, `status`, `approve`, `recipes`.
 - `init` output includes the built-in starter recipes for onboarding.
 - `run` emits a task payload, generated `run_id`, lifecycle status, preflight decision metadata, artifact metadata, and a structured event timeline; hard budget cap excess returns `paused`.
 - `recipes` lists the built-in guided starter recipes.
+- `doctor` reports Node, npm, git, package manifest, and API server source readiness as structured JSON.

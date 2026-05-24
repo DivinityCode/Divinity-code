@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { spawnSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { createInterface } from 'readline/promises';
@@ -20,6 +21,26 @@ const POLICY_IDS = Object.keys(POLICY_PRESETS);
 
 function print(obj) {
   process.stdout.write(`${JSON.stringify(obj, null, 2)}\n`);
+}
+
+function commandCheck(check_id, executable, values = []) {
+  const result = spawnSync(executable, values, { encoding: 'utf8' });
+  const output = `${result.stdout || ''}${result.stderr || ''}`.trim().split(/\r?\n/)[0];
+  return {
+    check_id,
+    ok: result.status === 0,
+    required: true,
+    summary: output || result.error?.message || `command exited with ${result.status}`
+  };
+}
+
+function fileCheck(check_id, filePath) {
+  return {
+    check_id,
+    ok: fs.existsSync(filePath),
+    required: true,
+    summary: filePath
+  };
 }
 
 function parseInitArgs(values) {
@@ -196,15 +217,32 @@ function recipes() {
   print({ ok: true, command: 'recipes', recipes: publicStarterRecipes() });
 }
 
+function doctor() {
+  const checks = [
+    { check_id: 'node', ok: true, required: true, summary: process.version },
+    commandCheck('npm', 'npm', ['--version']),
+    commandCheck('git', 'git', ['--version']),
+    fileCheck('package_json', path.join(cwd, 'package.json')),
+    fileCheck('api_server_source', path.join(cwd, 'apps/api/src/server.mjs'))
+  ];
+
+  print({
+    ok: checks.every(check => check.ok),
+    command: 'doctor',
+    checks
+  });
+}
+
 switch (command) {
   case 'init': await init(); break;
   case 'run': run(); break;
   case 'status': status(); break;
   case 'approve': approve(); break;
   case 'recipes': recipes(); break;
+  case 'doctor': doctor(); break;
   default:
     print({
       ok: false,
-      usage: 'divinity <init|run|status|approve|recipes> [args]'
+      usage: 'divinity <init|run|status|approve|recipes|doctor> [args]'
     });
 }
