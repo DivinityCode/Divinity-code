@@ -1,3 +1,4 @@
+import { spawnSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
@@ -60,9 +61,28 @@ function executeFileRead({ run, step, cwd, started_at }) {
   }
 }
 
+function executeGitStatus({ run, step, cwd, started_at }) {
+  const result = spawnSync('git', ['status', '--short'], {
+    cwd: workspacePath({ run, cwd }),
+    encoding: 'utf8'
+  });
+
+  return executionEnvelope({
+    run,
+    step,
+    adapter: 'git_status',
+    status: result.status === 0 ? 'completed' : 'failed',
+    exit_code: result.status ?? 1,
+    stdout: result.stdout || '',
+    stderr: result.stderr || result.error?.message || '',
+    started_at
+  });
+}
+
 export function resolveExecutionAdapter(step) {
   const actionTypes = predictedActionTypes(step);
   if (actionTypes.has('file_read')) return 'file_read';
+  if (actionTypes.has('shell') && /\bgit\s+status\b/i.test(step?.action || '')) return 'git_status';
   return 'manual';
 }
 
@@ -73,6 +93,10 @@ export function executeStep({ run, step, cwd }) {
 
   if (adapter === 'file_read') {
     return executeFileRead({ run, step, cwd, started_at });
+  }
+
+  if (adapter === 'git_status') {
+    return executeGitStatus({ run, step, cwd, started_at });
   }
 
   return executionEnvelope({

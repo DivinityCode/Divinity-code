@@ -1,4 +1,5 @@
 import assert from 'assert/strict';
+import { execFileSync } from 'child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
@@ -19,6 +20,8 @@ const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-api-execution-test-'));
 
 try {
   writeFileSync(path.join(tmpDir, 'README.md'), '# API Execution Fixture\n\nExecuted by adapter.\n');
+  execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
+  writeFileSync(path.join(tmpDir, 'changed.txt'), 'pending API change\n');
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address();
   const baseUrl = `http://127.0.0.1:${port}`;
@@ -69,6 +72,35 @@ try {
       && record.run_id === run.run_id
       && record.payload.execution_id === executed.execution.execution_id
   )));
+
+  const { body: gitRun } = await requestJson(`${baseUrl}/tasks`, {
+    method: 'POST',
+    body: JSON.stringify({
+      task_id: 'task_api_git_status',
+      objective: 'Run git status command',
+      repo: tmpDir,
+      policy_id: 'full_exec',
+      budget: { soft_limit_usd: 2.5, hard_limit_usd: 5 },
+      created_at: '2026-05-24T00:00:00Z'
+    })
+  });
+  assert.equal(gitRun.status, 'queued');
+
+  const { response: gitStepRes, body: gitStepResult } = await requestJson(`${baseUrl}/runs/${gitRun.run_id}/steps`, {
+    method: 'POST',
+    body: JSON.stringify({ step_id: 'step_git_status', action: 'Run git status command' })
+  });
+  assert.equal(gitStepRes.status, 201);
+  assert.equal(gitStepResult.step.status, 'pending');
+
+  const { response: gitExecuteRes, body: gitExecuted } = await requestJson(`${baseUrl}/runs/${gitRun.run_id}/steps/step_git_status/execute`, {
+    method: 'POST',
+    body: JSON.stringify({})
+  });
+  assert.equal(gitExecuteRes.status, 200);
+  assert.equal(gitExecuted.execution.adapter, 'git_status');
+  assert.equal(gitExecuted.execution.status, 'completed');
+  assert.match(gitExecuted.execution.stdout, /\?\? changed\.txt/);
 
   console.log(JSON.stringify({ ok: true, test: 'api-execution' }));
 } finally {
