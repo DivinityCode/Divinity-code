@@ -1,5 +1,9 @@
 # Contracts Changelog
 
+## v1.9.0
+- Added `evidence_refs` to PreflightDecision and Step pre-execution checks.
+- Evidence references identify the source, summary, and supported decision fields for policy and budget outcomes.
+
 ## v1.8.0
 - Added `paused` run and event status for hard budget cap enforcement.
 - Added `run_status` to PreflightDecision so policy decisions map deterministically to lifecycle states.

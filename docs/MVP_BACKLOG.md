@@ -47,9 +47,10 @@
 - API exposes `GET /audit` for hash-backed run audit exports with optional timeframe filters.
 - Dashboard shell exists at `apps/dashboard` with contract-shaped local sample data plus opt-in API loading through `?api=<base-url>` for task filtering, run timeline, approval decisions, cost/risk badges, artifacts, and audit metadata; live updates are still pending.
 - Missing permissions still produce blocked preflight decisions; soft caps emit `estimated_cost_exceeds_soft_limit` warnings.
+- Preflight and step-gate decision payloads include evidence references for the objective/action, policy permissions, and budget limits.
 
 ## Epic 4: Explainability (M2-M3)
-- [ ] Action-to-evidence linking model.  
+- [x] Action-to-evidence linking model.
   - Acceptance: each major decision includes at least one evidence reference.
 - [ ] Decision trace summaries.  
   - Acceptance: run summary includes chosen path and rejected alternative.

@@ -11,7 +11,8 @@
     "predicted_actions",
     "budget",
     "warnings",
-    "blocked_reasons"
+    "blocked_reasons",
+    "evidence_refs"
   ],
   "properties": {
     "decision": {
@@ -73,6 +74,25 @@
     "warnings": {
       "type": "array",
       "items": { "type": "string" }
+    },
+    "evidence_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["evidence_id", "source", "summary", "supports"],
+        "properties": {
+          "evidence_id": { "type": "string" },
+          "source": { "type": "string" },
+          "summary": { "type": "string" },
+          "supports": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
     }
   },
   "additionalProperties": false

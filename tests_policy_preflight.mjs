@@ -11,6 +11,18 @@ const baseTask = {
   created_at: '2026-05-24T00:00:00Z'
 };
 
+function assertEvidenceRefs(decision) {
+  assert.ok(Array.isArray(decision.evidence_refs));
+  assert.ok(decision.evidence_refs.length > 0);
+  for (const evidence of decision.evidence_refs) {
+    assert.match(evidence.evidence_id, /^evidence_/);
+    assert.equal(typeof evidence.source, 'string');
+    assert.equal(typeof evidence.summary, 'string');
+    assert.ok(Array.isArray(evidence.supports));
+    assert.ok(evidence.supports.length > 0);
+  }
+}
+
 {
   const decision = evaluatePreflight({
     task: baseTask,
@@ -22,6 +34,7 @@ const baseTask = {
   assert.equal(decision.approval_required, false);
   assert.equal(decision.budget.hard_cap_exceeded, false);
   assert.deepEqual(decision.warnings, []);
+  assertEvidenceRefs(decision);
 }
 
 {
@@ -38,6 +51,7 @@ const baseTask = {
   assert.equal(decision.approval_required, true);
   assert.ok(decision.predicted_actions.some(action => action.type === 'shell'));
   assert.deepEqual(decision.warnings, []);
+  assertEvidenceRefs(decision);
 }
 
 {
@@ -54,6 +68,7 @@ const baseTask = {
   assert.equal(decision.budget.soft_cap_exceeded, true);
   assert.equal(decision.budget.hard_cap_exceeded, false);
   assert.deepEqual(decision.warnings, ['estimated_cost_exceeds_soft_limit']);
+  assertEvidenceRefs(decision);
 }
 
 {
@@ -71,6 +86,7 @@ const baseTask = {
   assert.equal(decision.run_status, 'paused');
   assert.ok(decision.blocked_reasons.includes('estimated_cost_exceeds_hard_limit'));
   assert.ok(decision.warnings.includes('estimated_cost_exceeds_soft_limit'));
+  assertEvidenceRefs(decision);
 }
 
 {
@@ -84,6 +100,7 @@ const baseTask = {
 
   assert.equal(decision.decision, 'block');
   assert.ok(decision.blocked_reasons.includes('permission_denied:file_write'));
+  assertEvidenceRefs(decision);
 }
 
 console.log(JSON.stringify({ ok: true, test: 'policy-preflight' }));
