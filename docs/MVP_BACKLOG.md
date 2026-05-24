@@ -48,6 +48,7 @@
 - API run state can be backed by a file snapshot when `DIVINITY_RUN_STORE_PATH` is set; the default remains in-memory for local deterministic demos.
 - API exposes `POST /runs/:id/steps` to run policy and budget gates before a step can enter pending execution.
 - API exposes `POST /runs/:id/steps/:step_id/execute` for policy-approved step execution through constrained adapters.
+- API step execution records per-run execution locks and rejects overlapping execution attempts with the active lock payload.
 - API exposes `POST /runs/:id/heartbeat` to append run liveness records, update `last_heartbeat_at`, and preserve heartbeat timeline/audit evidence.
 - API execution uses per-run local snapshots or shallow Git URL clones; workspaces exclude `node_modules` and preserve Git metadata for Git adapters.
 - API step execution now creates verifier records with observed status, exit-code, and output-capture checks; `step_verified` timeline events and `verification_record` audit records preserve the result.
@@ -55,7 +56,7 @@
 - Execution adapters currently cover workspace `README.md` reads, `git status --short`, whitelisted Node test scripts, and constrained Node-based package scripts for approved command steps.
 - Hard budget cap excess now maps to `paused` for CLI/API runs and pauses an API run when a proposed step exceeds the hard cap.
 - CLI and API expose structured run events; dashboard can subscribe to live selected-run updates through API server-sent events.
-- API step execution records `step_executed`/`step_verified` events and `execution_record`/`verification_record` audit entries.
+- API step execution records `execution_lock_acquired`/`execution_lock_released`/`step_executed`/`step_verified` events and `execution_lock_record`/`execution_record`/`verification_record` audit entries.
 - CLI and API expose patch/log/summary artifact metadata; patch artifacts include deterministic unified-diff payloads generated from run context.
 - CLI and API run payloads include deterministic planner/executor/verifier orchestration traces with evidence references.
 - CLI and API run payloads include planner/executor/verifier activity records with actor, reason, status, evidence references, and budget estimates.

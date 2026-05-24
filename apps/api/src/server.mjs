@@ -6,6 +6,7 @@ import { createAuditRecord, exportAuditLog } from '../../../packages/audit/src/i
 import { createCapabilitiesCatalog } from '../../../packages/capabilities/src/index.mjs';
 import { createInitialRunEvents, createRunEvent } from '../../../packages/events/src/index.mjs';
 import { executeStep } from '../../../packages/execution/src/index.mjs';
+import { activeExecutionLock, createExecutionLock, releaseExecutionLock } from '../../../packages/execution-locks/src/index.mjs';
 import { createRunHeartbeat, latestHeartbeatAt } from '../../../packages/heartbeats/src/index.mjs';
 import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
 import { createObservabilitySummary } from '../../../packages/observability/src/index.mjs';
@@ -133,6 +134,34 @@ function recordRunAudit(run) {
       payload: artifact
     });
   }
+}
+
+function recordExecutionLock(run, lock, eventType, message) {
+  const event = createRunEvent({
+    run_id: run.run_id,
+    type: eventType,
+    status: run.status,
+    message,
+    metadata: {
+      lock_id: lock.lock_id,
+      step_id: lock.step_id,
+      actor: lock.actor,
+      status: lock.status
+    }
+  });
+  run.events.push(event);
+  recordAudit({
+    type: 'execution_lock_record',
+    run_id: run.run_id,
+    created_at: lock.released_at || lock.locked_at,
+    payload: lock
+  });
+  recordAudit({
+    type: 'run_event',
+    run_id: run.run_id,
+    created_at: event.created_at,
+    payload: event
+  });
 }
 
 function latestAuditForRun(runId) {
@@ -271,6 +300,8 @@ const server = http.createServer((req, res) => {
         events,
         heartbeats: [],
         last_heartbeat_at: null,
+        execution_locks: [],
+        active_execution_lock: null,
         executions: [],
         verifications: [],
         steps: [],
@@ -415,6 +446,22 @@ const server = http.createServer((req, res) => {
       return;
     }
 
+    run.execution_locks = run.execution_locks || [];
+    const activeLock = activeExecutionLock(run);
+    if (activeLock) {
+      run.active_execution_lock = activeLock;
+      sendJson(res, 409, { error: 'run has active execution lock', lock: activeLock });
+      return;
+    }
+
+    run.active_execution_lock = null;
+    const lock = createExecutionLock({ run, step });
+    run.execution_locks.push(lock);
+    run.active_execution_lock = lock;
+    recordExecutionLock(run, lock, 'execution_lock_acquired', `Execution lock acquired for ${step.step_id}`);
+    persistRunStore();
+    broadcastRun(run);
+
     try {
       const execution = executeStep({ run, step, cwd: executionCwdForRun(run) });
       const verification = createExecutionVerification({ run, step, execution });
@@ -475,10 +522,20 @@ const server = http.createServer((req, res) => {
         created_at: verificationEvent.created_at,
         payload: verificationEvent
       });
+      const releasedLock = releaseExecutionLock({ lock, status: 'released' });
+      Object.assign(lock, releasedLock);
+      run.active_execution_lock = null;
+      recordExecutionLock(run, lock, 'execution_lock_released', `Execution lock released for ${step.step_id}`);
       persistRunStore();
       broadcastRun(run);
-      sendJson(res, 200, { execution, verification, step, run: publicRun(run) });
+      sendJson(res, 200, { execution, verification, step, lock, run: publicRun(run) });
     } catch (error) {
+      const failedLock = releaseExecutionLock({ lock, status: 'failed' });
+      Object.assign(lock, failedLock);
+      run.active_execution_lock = null;
+      recordExecutionLock(run, lock, 'execution_lock_released', `Execution lock failed for ${step.step_id}`);
+      persistRunStore();
+      broadcastRun(run);
       sendJson(res, 409, { error: error.message, step });
     }
     return;

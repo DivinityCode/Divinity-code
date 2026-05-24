@@ -34,6 +34,7 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: run workspaces can be cleaned through the API with timeline/audit evidence.
    - Bootstrap status: API run state can persist to a file-backed store when `DIVINITY_RUN_STORE_PATH` is configured.
    - Bootstrap status: CLI/API capability catalogs expose current policy presets, execution adapters, and starter recipes.
+   - Bootstrap status: API step execution records execution locks and rejects overlapping execution attempts.
    - Bootstrap status: API step execution emits post-execution verifier records into run state, events, audit export, and the operator dashboard.
    - Bootstrap status: API runs accept heartbeat records for liveness reporting and stale-run detection.
 2. **Operator Mode**
