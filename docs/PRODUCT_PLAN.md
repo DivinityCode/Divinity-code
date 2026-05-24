@@ -37,6 +37,7 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: API step execution records execution locks, rejects overlapping execution attempts, and exposes stale-lock recovery.
    - Bootstrap status: API step execution emits post-execution verifier records into run state, events, audit export, and the operator dashboard.
    - Bootstrap status: API runs accept heartbeat records for liveness reporting and stale-run detection.
+   - Bootstrap status: CLI and API runs can attach ticket, docs, and CI connector references with timeline/audit evidence.
 2. **Operator Mode**
    - Task queue dashboard.
    - Approval queue for high-risk steps.
@@ -64,6 +65,8 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: org-scoped starter and regulated policy packs are resolved into CLI/API run payloads; audit export is available from the API.
 5. Operator observability.
    - Bootstrap status: API and dashboard expose run health, heartbeat liveness, budget utilization, approval backlog, and policy/budget/execution failure taxonomy.
+6. External context references.
+   - Bootstrap status: connector references attach ticket, docs, and CI context to runs and render in the operator dashboard.
 
 ## Success Metrics
 - Time-to-first-value: < 10 minutes from signup to first completed task.

@@ -1,0 +1,15 @@
+{
+  "format": "divinity.connector_reference.v1",
+  "reference_id": "ref_1234abcd5678ef90",
+  "run_id": "run_123",
+  "adapter": "ticket_reference",
+  "resource_type": "ticket",
+  "resource_id": "DIV-17",
+  "url": "https://example.test/tickets/DIV-17",
+  "title": "Investigate connector context",
+  "attached_by": "operator@divinity",
+  "attached_at": "2026-05-24T12:00:00.000Z",
+  "metadata": {
+    "priority": "high"
+  }
+}

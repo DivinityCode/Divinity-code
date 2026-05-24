@@ -1,1 +1,53 @@
-{ "$schema": "https://json-schema.org/draft/2020-12/schema", "title": "Task", "type": "object", "required": ["task_id","objective","repo","scope","policy_id","budget","created_at"], "properties": {"task_id":{"type":"string"},"objective":{"type":"string"},"repo":{"type":"string"},"scope":{"type":"object","required":["org_id","project_id"],"properties":{"org_id":{"type":"string","minLength":1},"project_id":{"type":"string","minLength":1}},"additionalProperties":false},"policy_id":{"type":"string"},"budget":{"type":"object","required":["soft_limit_usd","hard_limit_usd"],"properties":{"soft_limit_usd":{"type":"number","minimum":0},"hard_limit_usd":{"type":"number","minimum":0}}},"created_at":{"type":"string","format":"date-time"}}, "additionalProperties": false }
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Task",
+  "type": "object",
+  "required": ["task_id", "objective", "repo", "scope", "policy_id", "budget", "created_at"],
+  "properties": {
+    "task_id": { "type": "string" },
+    "objective": { "type": "string" },
+    "repo": { "type": "string" },
+    "scope": {
+      "type": "object",
+      "required": ["org_id", "project_id"],
+      "properties": {
+        "org_id": { "type": "string", "minLength": 1 },
+        "project_id": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "policy_id": { "type": "string" },
+    "budget": {
+      "type": "object",
+      "required": ["soft_limit_usd", "hard_limit_usd"],
+      "properties": {
+        "soft_limit_usd": { "type": "number", "minimum": 0 },
+        "hard_limit_usd": { "type": "number", "minimum": 0 }
+      }
+    },
+    "connector_references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["adapter", "resource_type", "resource_id"],
+        "properties": {
+          "adapter": {
+            "type": "string",
+            "enum": ["ticket_reference", "docs_reference", "ci_status"]
+          },
+          "resource_type": {
+            "type": "string",
+            "enum": ["ticket", "issue", "document", "knowledge_base", "ci_run", "check_run", "deployment"]
+          },
+          "resource_id": { "type": "string", "minLength": 1 },
+          "url": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "metadata": { "type": "object" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

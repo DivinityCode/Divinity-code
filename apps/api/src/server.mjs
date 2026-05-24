@@ -4,6 +4,7 @@ import { createAgentActivityRecords } from '../../../packages/agent-activity/src
 import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
 import { createAuditRecord, exportAuditLog } from '../../../packages/audit/src/index.mjs';
 import { createCapabilitiesCatalog } from '../../../packages/capabilities/src/index.mjs';
+import { createConnectorReference, createConnectorReferences } from '../../../packages/connectors/src/index.mjs';
 import { createInitialRunEvents, createRunEvent } from '../../../packages/events/src/index.mjs';
 import { executeStep } from '../../../packages/execution/src/index.mjs';
 import {
@@ -137,6 +138,15 @@ function recordRunAudit(run) {
       type: 'artifact_record',
       run_id: run.run_id,
       payload: artifact
+    });
+  }
+
+  for (const connectorReference of run.connector_references || []) {
+    recordAudit({
+      type: 'connector_reference',
+      run_id: run.run_id,
+      created_at: connectorReference.attached_at,
+      payload: connectorReference
     });
   }
 }
@@ -291,6 +301,18 @@ const server = http.createServer((req, res) => {
       const runArtifacts = createRunArtifacts({ run_id: runId, task: scopedTask, status, preflight });
       const events = createInitialRunEvents({ run_id: runId, task: scopedTask, preflight, status });
       const createdAt = events[0]?.created_at || new Date().toISOString();
+      let connectorReferences = [];
+      try {
+        connectorReferences = createConnectorReferences({
+          run_id: runId,
+          references: scopedTask.connector_references || [],
+          attached_by: 'task',
+          attached_at: createdAt
+        });
+      } catch (error) {
+        sendJson(res, 400, { error: error.message });
+        return;
+      }
       const run = {
         run_id: runId,
         task_id: scopedTask.task_id || 'unknown',
@@ -310,6 +332,7 @@ const server = http.createServer((req, res) => {
         }),
         memory: createRunMemoryEntries({ run_id: runId, task: scopedTask, preflight, recorded_at: createdAt }),
         artifacts: runArtifacts.map(publicArtifactMetadata),
+        connector_references: connectorReferences,
         events,
         heartbeats: [],
         last_heartbeat_at: null,
@@ -329,6 +352,73 @@ const server = http.createServer((req, res) => {
       sendJson(res, 201, publicRun(run));
     });
     return;
+  }
+
+  const connectorsMatch = req.url.match(/^\/runs\/([^/]+)\/connectors$/);
+  if (connectorsMatch) {
+    const run = runs.get(connectorsMatch[1]);
+    if (!run) {
+      sendJson(res, 404, { error: 'run not found' });
+      return;
+    }
+
+    if (req.method === 'GET') {
+      sendJson(res, 200, {
+        run_id: run.run_id,
+        connector_references: run.connector_references || []
+      });
+      return;
+    }
+
+    if (req.method === 'POST') {
+      readJson(req, (body) => {
+        try {
+          const connectorReference = createConnectorReference({
+            run_id: run.run_id,
+            reference: body,
+            attached_by: body.attached_by || 'operator',
+            attached_at: body.attached_at || new Date().toISOString()
+          });
+
+          run.connector_references = run.connector_references || [];
+          run.connector_references.push(connectorReference);
+
+          const event = createRunEvent({
+            run_id: run.run_id,
+            type: 'connector_reference_attached',
+            status: run.status,
+            message: `Connector reference attached: ${connectorReference.adapter}`,
+            metadata: {
+              reference_id: connectorReference.reference_id,
+              adapter: connectorReference.adapter,
+              resource_type: connectorReference.resource_type,
+              resource_id: connectorReference.resource_id
+            }
+          });
+          run.events.push(event);
+
+          recordAudit({
+            type: 'connector_reference',
+            run_id: run.run_id,
+            created_at: connectorReference.attached_at,
+            payload: connectorReference
+          });
+          recordAudit({
+            type: 'run_event',
+            run_id: run.run_id,
+            created_at: event.created_at,
+            payload: event
+          });
+
+          persistRunStore();
+          broadcastRun(run);
+          sendJson(res, 201, { connector_reference: connectorReference, run: publicRun(run) });
+        } catch (error) {
+          sendJson(res, 400, { error: error.message });
+        }
+      });
+      return;
+    }
   }
 
   const approvalMatch = req.url.match(/^\/runs\/([^/]+)\/approval$/);

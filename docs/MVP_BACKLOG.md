@@ -37,6 +37,7 @@
 
 ## Current Implementation Notes
 - CLI `run` now returns `run_id`, status, task payload, and preflight decision metadata.
+- CLI `run --connector adapter:resource_type:resource_id[:url]` attaches initial ticket/docs/CI context to task and run output.
 - CLI `init` supports default, flag-driven, and prompt-driven project config creation for policy preset, soft/hard budget caps, and org/project scope.
 - CLI `doctor` reports Node, npm, git, package manifest, and API server source readiness for local setup diagnostics.
 - CLI `capabilities` reports supported policy presets, execution adapters, connector adapters, and starter recipes for extension discovery.
@@ -45,12 +46,14 @@
 - API task creation normalizes missing org/project scope to `default-org/default-project`; configured API keys protect control-plane routes when `DIVINITY_API_KEY` or `DIVINITY_API_KEYS` is set.
 - API exposes `GET /runs`, `GET /approvals`, and `POST /runs/:id/approval` for dashboard loading and approve/reject transitions.
 - API exposes `GET /capabilities` for policy, execution adapter, connector adapter, and starter recipe discovery.
+- API exposes `GET /runs/:id/connectors` and `POST /runs/:id/connectors` for run-level ticket/docs/CI context attachments.
 - API run state can be backed by a file snapshot when `DIVINITY_RUN_STORE_PATH` is set; the default remains in-memory for local deterministic demos.
 - API exposes `POST /runs/:id/steps` to run policy and budget gates before a step can enter pending execution.
 - API exposes `POST /runs/:id/steps/:step_id/execute` for policy-approved step execution through constrained adapters.
 - API step execution records per-run execution locks and rejects overlapping execution attempts with the active lock payload.
 - API exposes `POST /runs/:id/execution-locks/recover` to mark expired locks stale and preserve recovery evidence.
 - API exposes `POST /runs/:id/heartbeat` to append run liveness records, update `last_heartbeat_at`, and preserve heartbeat timeline/audit evidence.
+- API connector references emit `connector_reference_attached` events and `connector_reference` audit entries.
 - API execution uses per-run local snapshots or shallow Git URL clones; workspaces exclude `node_modules` and preserve Git metadata for Git adapters.
 - API step execution now creates verifier records with observed status, exit-code, and output-capture checks; `step_verified` timeline events and `verification_record` audit records preserve the result.
 - API exposes `POST /runs/:id/workspace/cleanup` to remove managed workspaces and record `workspace_cleaned` events.
@@ -66,6 +69,7 @@
 - API exposes `GET /audit` for hash-backed run audit exports with optional timeframe filters.
 - API exposes `GET /observability` for run health, heartbeat liveness, approval backlog, budget utilization, risk mix, and failure taxonomy summaries.
 - Dashboard shell exists at `apps/dashboard` with contract-shaped local sample data plus opt-in API loading through `?api=<base-url>` for task filtering, run timeline, approval decisions, cost/risk badges, observability and liveness summaries, agent activity, execution and verification evidence, artifacts, audit metadata, and live updates.
+- Dashboard run detail renders connector references for attached ticket, docs, and CI context.
 - Missing permissions still produce blocked preflight decisions; soft caps emit `estimated_cost_exceeds_soft_limit` warnings.
 - Preflight and step-gate decision payloads include evidence references for the objective/action, policy permissions, and budget limits.
 - Summary artifacts include decision traces with chosen path, rejected alternative, rationale, and evidence references.

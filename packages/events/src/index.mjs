@@ -9,6 +9,7 @@ const EVENT_TYPES = new Set([
   'step_executed',
   'step_verified',
   'heartbeat_recorded',
+  'connector_reference_attached',
   'workspace_cleaned'
 ]);
 

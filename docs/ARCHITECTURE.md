@@ -43,6 +43,12 @@
 - Connector adapters currently identify ticket, docs, and CI status reference surfaces for future external context attachments.
 - Capability discovery keeps extension points explicit so clients do not hard-code supported policies, execution adapters, or connector adapters.
 
+## Connector References
+- CLI `run --connector adapter:resource_type:resource_id[:url]` can attach initial ticket, docs, or CI context to a task and resolved run output.
+- API `POST /runs/:id/connectors` validates and appends connector references after run creation; `GET /runs/:id/connectors` lists the attached references.
+- Connector references emit `connector_reference_attached` timeline events and `connector_reference` audit entries so external context changes remain observable.
+- The operator dashboard renders attached connector references in run detail for static sample data and API-loaded runs.
+
 ## Run Lifecycle
 1. Task created
 2. Preflight analysis (risk + cost estimate)
@@ -98,7 +104,7 @@
 - Each transition records decision, actor, reason, and timestamp metadata.
 
 ## Run Event Timeline
-- CLI and API runs emit structured events for task creation, preflight completion, status changes, approval decisions, execution locks, step execution, verification, heartbeats, and workspace cleanup.
+- CLI and API runs emit structured events for task creation, preflight completion, status changes, approval decisions, execution locks, step execution, verification, heartbeats, connector reference attachment, and workspace cleanup.
 - API timelines are available from `GET /runs/:id/events`.
 - Event envelopes include event id, run id, event type, lifecycle status, message, metadata, and creation timestamp; preflight event metadata carries the same observed/inferred evidence references as the decision.
 

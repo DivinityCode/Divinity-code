@@ -14,6 +14,7 @@ for (const selector of [
   'data-run-list',
   'data-event-timeline',
   'data-decision-trace',
+  'data-connector-reference-list',
   'data-agent-activity-list',
   'data-execution-list',
   'data-approval-list',
@@ -81,6 +82,18 @@ const runs = vm.runInNewContext(runDataMatch[1], {
     rejected_alternative,
     rationale,
     evidence_refs
+  }),
+  connectorReference: (reference_id, adapter, resource_type, resource_id, url = '') => ({
+    format: 'divinity.connector_reference.v1',
+    reference_id,
+    run_id: '',
+    adapter,
+    resource_type,
+    resource_id,
+    url,
+    attached_by: 'operator@divinity',
+    attached_at: '2026-05-24T10:12:43.000Z',
+    metadata: {}
   })
 });
 const statuses = new Set(runs.map(run => run.status));
@@ -102,14 +115,17 @@ assert(runs.some(run => Array.isArray(run.agent_activity) && run.agent_activity.
 assert(runs.some(run => Array.isArray(run.executions) && run.executions.length > 0), 'sample data should include execution records');
 assert(runs.some(run => Array.isArray(run.verifications) && run.verifications.length > 0), 'sample data should include verification records');
 assert(runs.some(run => Array.isArray(run.heartbeats) && run.heartbeats.length > 0), 'sample data should include heartbeat records');
+assert(runs.some(run => Array.isArray(run.connector_references) && run.connector_references.length > 0), 'sample data should include connector references');
 assert(js.includes('claim_type'), 'dashboard sample data should include fact/inference labels');
 assert(js.includes('renderEvidenceLabels'), 'dashboard should render evidence labels');
 assert(js.includes('renderDecisionTrace'), 'dashboard should render decision trace panel');
+assert(js.includes('renderConnectorReferences'), 'dashboard should render connector references');
 assert(js.includes('renderAgentActivity'), 'dashboard should render agent activity records');
 assert(js.includes('renderExecutions'), 'dashboard should render execution records');
 assert(js.includes('renderVerificationResult'), 'dashboard should render verification records');
 assert(js.includes('git_status') && js.includes('file_read') && js.includes('node_test') && js.includes('package_script'), 'dashboard should show execution adapter names');
 assert(css.includes('verification-chip'), 'dashboard should style verification chips');
+assert(css.includes('connector-reference-item'), 'dashboard should style connector reference items');
 assert(js.includes('Observed') && js.includes('Inferred'), 'dashboard should show observed/inferred label text');
 assert(runs.some(run => run.artifacts.length > 0), 'at least one run needs artifacts');
 assert(runs.every(run => /^[a-f0-9]{64}$/.test(run.audit.hash)), 'audit hashes must be sha256-like hex');

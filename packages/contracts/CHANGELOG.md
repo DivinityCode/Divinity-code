@@ -1,5 +1,9 @@
 # Contracts Changelog
 
+## v1.24.0
+- Added `ConnectorReference` schema and examples for run-level ticket, docs, and CI context.
+- Added optional Task `connector_references` requests and `connector_reference_attached` run events.
+
 ## v1.23.0
 - Added connector adapter metadata to `CapabilitiesCatalog` for ticket, docs, and CI references.
 
