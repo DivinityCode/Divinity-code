@@ -20,7 +20,7 @@
    - Verifier agent
    - Memory retrieval/summarization services
 5. **Data Layer**
-   - Task and run store
+   - Task and run store with in-memory and file-backed modes
    - Artifact store (logs, diffs, summaries)
    - Policy store
    - Memory store with provenance metadata
@@ -81,6 +81,12 @@
 - CLI and API runs emit structured events for task creation, preflight completion, status changes, and approval decisions.
 - API timelines are available from `GET /runs/:id/events`.
 - Event envelopes include event id, run id, event type, lifecycle status, message, metadata, and creation timestamp; preflight event metadata carries the same observed/inferred evidence references as the decision.
+
+## Run Storage
+- API run state uses `packages/run-store` for runs, artifact records, and hash-backed audit records.
+- The default store remains in-memory for deterministic local tests and demos.
+- Setting `DIVINITY_RUN_STORE_PATH` before starting the API enables a versioned JSON snapshot that reloads run state across API restarts.
+- Persistent snapshots are written with a temporary file and rename so readers do not observe partial JSON writes.
 
 ## Artifact Model
 - CLI and API runs expose patch, log, and summary artifact metadata.

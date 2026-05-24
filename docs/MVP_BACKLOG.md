@@ -43,6 +43,7 @@
 - API exposes `POST /preflight`; `POST /tasks` records preflight metadata and moves high-risk allowed work to `awaiting_approval`.
 - API task creation normalizes missing org/project scope to `default-org/default-project`; configured API keys protect control-plane routes when `DIVINITY_API_KEY` or `DIVINITY_API_KEYS` is set.
 - API exposes `GET /runs`, `GET /approvals`, and `POST /runs/:id/approval` for dashboard loading and approve/reject transitions.
+- API run state can be backed by a file snapshot when `DIVINITY_RUN_STORE_PATH` is set; the default remains in-memory for local deterministic demos.
 - API exposes `POST /runs/:id/steps` to run policy and budget gates before a step can enter pending execution.
 - API exposes `POST /runs/:id/steps/:step_id/execute` for policy-approved step execution through constrained adapters.
 - Execution adapters currently cover workspace `README.md` reads, `git status --short`, and whitelisted Node test scripts for approved command steps.
