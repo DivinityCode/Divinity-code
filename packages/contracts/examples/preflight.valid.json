@@ -17,5 +17,6 @@
     "soft_cap_exceeded": false,
     "hard_cap_exceeded": false
   },
+  "warnings": [],
   "blocked_reasons": []
 }

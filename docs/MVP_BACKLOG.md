@@ -44,7 +44,7 @@
 - CLI and API expose patch/log/summary artifact metadata; real patch payload generation is still pending.
 - API exposes `GET /audit` for hash-backed run audit exports with optional timeframe filters.
 - Dashboard shell exists at `apps/dashboard` with contract-shaped local sample data plus opt-in API loading through `?api=<base-url>` for task filtering, run timeline, approval decisions, cost/risk badges, artifacts, and audit metadata; live updates are still pending.
-- Hard budget cap excess and missing permissions currently produce blocked preflight decisions; soft caps are surfaced but do not pause runs yet.
+- Hard budget cap excess and missing permissions currently produce blocked preflight decisions; soft caps now emit `estimated_cost_exceeds_soft_limit` warnings but do not pause runs yet.
 
 ## Epic 4: Explainability (M2-M3)
 - [ ] Action-to-evidence linking model.  

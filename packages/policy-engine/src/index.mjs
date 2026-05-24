@@ -111,6 +111,7 @@ export function evaluatePreflight({ task, policy }) {
 
   const permissions = new Set(resolvedPolicy.permissions || []);
   const blocked_reasons = [];
+  const warnings = [];
 
   for (const action of predicted_actions) {
     if (!permissions.has(action.permission)) {
@@ -120,6 +121,10 @@ export function evaluatePreflight({ task, policy }) {
 
   if (budget.hard_cap_exceeded) {
     blocked_reasons.push('estimated_cost_exceeds_hard_limit');
+  }
+
+  if (budget.soft_cap_exceeded) {
+    warnings.push('estimated_cost_exceeds_soft_limit');
   }
 
   const approval_required = !blocked_reasons.length
@@ -137,6 +142,7 @@ export function evaluatePreflight({ task, policy }) {
     policy_id: resolvedPolicy.policy_id,
     predicted_actions,
     budget,
+    warnings,
     blocked_reasons
   };
 }
