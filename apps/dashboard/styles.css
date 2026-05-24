@@ -978,6 +978,41 @@ dd {
   font-size: 15px;
 }
 
+.liveness-summary {
+  margin-top: 12px;
+}
+
+.liveness-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-alt);
+}
+
+.liveness-card div {
+  display: grid;
+  gap: 2px;
+}
+
+.liveness-card strong {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.liveness-card span,
+.liveness-card code {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.liveness-card code {
+  grid-column: 1 / -1;
+  overflow-wrap: anywhere;
+}
+
 .failure-taxonomy {
   display: grid;
   gap: 8px;

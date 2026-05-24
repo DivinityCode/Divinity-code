@@ -95,9 +95,14 @@
 - Each transition records decision, actor, reason, and timestamp metadata.
 
 ## Run Event Timeline
-- CLI and API runs emit structured events for task creation, preflight completion, status changes, approval decisions, step execution, verification, and workspace cleanup.
+- CLI and API runs emit structured events for task creation, preflight completion, status changes, approval decisions, step execution, verification, heartbeats, and workspace cleanup.
 - API timelines are available from `GET /runs/:id/events`.
 - Event envelopes include event id, run id, event type, lifecycle status, message, metadata, and creation timestamp; preflight event metadata carries the same observed/inferred evidence references as the decision.
+
+## Run Heartbeats
+- API runs keep `heartbeats` and `last_heartbeat_at` fields for operator liveness checks.
+- `POST /runs/:id/heartbeat` records an `alive`, `warning`, or `stale` heartbeat for the run.
+- Heartbeat records emit `heartbeat_recorded` timeline events, update run state, and write `heartbeat_record` audit entries.
 
 ## Run Storage
 - API run state uses `packages/run-store` for runs, artifact records, and hash-backed audit records.
@@ -113,15 +118,15 @@
 - API artifact lists are available from `GET /runs/:id/artifacts`; full artifact content is available from `GET /artifacts/:artifact_id`.
 
 ## Audit Export
-- API lifecycle actions create hash-backed audit records for run creation, run events, approval decisions, execution records, verification records, workspace cleanup, and artifact records.
+- API lifecycle actions create hash-backed audit records for run creation, run events, approval decisions, execution records, verification records, heartbeat records, workspace cleanup, and artifact records.
 - Audit exports are available from `GET /audit`.
 - Optional `from` and `to` query parameters filter records by creation timestamp.
 
 ## Observability
 - API run state can be aggregated into `divinity.observability.v1` summaries at `GET /observability`.
-- Observability summaries include run counts by status and risk, pending approval count, estimated cost totals, budget limit utilization, and a failure taxonomy.
+- Observability summaries include run counts by status and risk, pending approval count, heartbeat counts, stale run ids, estimated cost totals, budget limit utilization, and a failure taxonomy.
 - Failure taxonomy currently classifies failed or paused runs into policy, budget, execution, or unknown categories from preflight blocked reasons, run status, and execution records.
-- The operator dashboard renders the same summary from API output when available and derives it locally from run payloads for static/sample data.
+- The operator dashboard renders the same summary from API output when available and derives it locally from run payloads for static/sample data, including the liveness card.
 
 ## Security and Governance
 - Principle of least privilege by default.
@@ -133,6 +138,7 @@
 
 ## Observability
 - Real-time run event stream.
+- Run heartbeat and stale-run liveness summaries.
 - Token/cost meters by run/project/team.
 - Budget utilization meters by run set.
 - Failure taxonomy dashboard (policy, budget, execution, unknown).

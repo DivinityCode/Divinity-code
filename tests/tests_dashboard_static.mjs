@@ -18,6 +18,7 @@ for (const selector of [
   'data-execution-list',
   'data-approval-list',
   'data-observability-summary',
+  'data-liveness-summary',
   'data-failure-taxonomy',
   'data-artifact-list',
   'data-audit-hash'
@@ -60,6 +61,14 @@ const runs = vm.runInNewContext(runDataMatch[1], {
   }),
   evidence: (claim_type, source, summary) => ({ claim_type, source, summary }),
   artifact: (artifact_id, type, uri) => ({ artifact_id, run_id: '', type, uri }),
+  heartbeat: (heartbeat_id, run_id, actor, status, message, recorded_at) => ({
+    heartbeat_id,
+    run_id,
+    actor,
+    status,
+    message,
+    recorded_at
+  }),
   verification: (verification_id, execution_id, step_id, result) => ({
     verification_id,
     execution_id,
@@ -92,6 +101,7 @@ assert(runs.every(run => run.decision_trace?.chosen_path && run.decision_trace?.
 assert(runs.some(run => Array.isArray(run.agent_activity) && run.agent_activity.length > 0), 'sample data should include agent activity records');
 assert(runs.some(run => Array.isArray(run.executions) && run.executions.length > 0), 'sample data should include execution records');
 assert(runs.some(run => Array.isArray(run.verifications) && run.verifications.length > 0), 'sample data should include verification records');
+assert(runs.some(run => Array.isArray(run.heartbeats) && run.heartbeats.length > 0), 'sample data should include heartbeat records');
 assert(js.includes('claim_type'), 'dashboard sample data should include fact/inference labels');
 assert(js.includes('renderEvidenceLabels'), 'dashboard should render evidence labels');
 assert(js.includes('renderDecisionTrace'), 'dashboard should render decision trace panel');
@@ -109,6 +119,7 @@ assert(js.includes('fetch(`${base}/observability`)'), 'dashboard should load API
 assert(js.includes('fetch(`${base}/runs/${runId}/approval`'), 'dashboard should post approval decisions to API');
 assert(js.includes('new EventSource(`${base}/runs/${runId}/stream`)'), 'dashboard should subscribe to API run stream');
 assert(js.includes('createObservabilitySummary'), 'dashboard should derive local observability summary');
+assert(js.includes('renderLivenessSummary'), 'dashboard should render heartbeat liveness summary');
 assert(js.includes('renderFailureTaxonomy'), 'dashboard should render failure taxonomy');
 
 console.log(JSON.stringify({ ok: true, dashboard: 'static-shell', runs: runs.length }));

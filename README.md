@@ -3,7 +3,7 @@
 Divinity Code is an AI engineering platform designed to combine best-in-class coding execution, multi-agent orchestration, and a user-friendly trust-first UX.
 
 ## Current Status
-Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows, policy and budget gates, approval transitions, execution adapter and verifier records, observable planner/executor/verifier activity, isolated local and Git URL execution workspaces with cleanup, artifacts, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, team policy packs, constrained package-script execution, a shared capabilities catalog, and opt-in file-backed API run storage.
+Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows, policy and budget gates, approval transitions, execution adapter and verifier records, observable planner/executor/verifier activity, run heartbeats, isolated local and Git URL execution workspaces with cleanup, artifacts, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, team policy packs, constrained package-script execution, a shared capabilities catalog, and opt-in file-backed API run storage.
 
 ## Documents
 - [Product Plan](docs/PRODUCT_PLAN.md)
@@ -15,8 +15,8 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 ## Implemented Surfaces
 1. Builder CLI: `init`, `run`, `status`, `approve`, `capabilities`, `recipes`, and `doctor`.
 2. IDE extension scaffold: task run, dashboard launch, and doctor commands delegated to the repo-local CLI.
-3. Control Plane API: health, preflight, task creation, run retrieval, approvals, step gates and execution, verifier evidence, artifacts, audit export, and live run streams.
-4. Operator dashboard: run queue, approvals, run timeline, decision trace, agent activity, execution and verification evidence, artifacts, audit metadata, and API-backed live updates.
+3. Control Plane API: health, preflight, task creation, run retrieval, approvals, step gates and execution, verifier evidence, run heartbeats, artifacts, audit export, and live run streams.
+4. Operator dashboard: run queue, approvals, run timeline, decision trace, agent activity, execution and verification evidence, liveness summary, artifacts, audit metadata, and API-backed live updates.
 
 
 ## Repo Layout
@@ -24,12 +24,13 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - `apps/ide-extension` - Builder Mode IDE extension scaffold
 - `apps/api` - Control Plane API
 - `apps/dashboard` - Operator Mode dashboard
-- `packages/contracts` - versioned task/run/policy/capability/verification/agent-activity schemas
+- `packages/contracts` - versioned task/run/policy/capability/verification/agent-activity/heartbeat schemas
 - `packages/agent-activity` - observable planner/executor/verifier activity records
 - `packages/capabilities` - shared policy, adapter, and recipe capability catalog
 - `packages/policy-engine` - trust and budget gate evaluation
 - `packages/execution` - policy-approved step execution adapters
 - `packages/verification` - post-execution verifier records from observed execution evidence
+- `packages/heartbeats` - run liveness heartbeat records for API and observability flows
 - `packages/workspaces` - per-run local/Git URL workspaces and cleanup for execution
 - `packages/run-store` - in-memory and file-backed API run state snapshots
 - `packages/events` - shared run event model
@@ -39,7 +40,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - `packages/orchestration` - planner/executor/verifier traces
 - `packages/memory` - session/project/team memory entries with provenance
 - `packages/policy-packs` - org-scoped team policy pack metadata
-- `packages/observability` - run health, budget, and failure taxonomy summaries
+- `packages/observability` - run health, liveness, budget, and failure taxonomy summaries
 - `tests` - repository test suite and validation entrypoints
 
 
