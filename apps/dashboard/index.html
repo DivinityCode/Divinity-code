@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Divinity Code Operator Dashboard</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Primary navigation">
+        <a class="brand" href="#queue" aria-label="Divinity Code dashboard">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          <span>Divinity Code</span>
+        </a>
+        <nav class="nav-list">
+          <a class="nav-item active" href="#queue" aria-current="page">
+            <span class="nav-icon" aria-hidden="true">::</span>
+            Queue
+          </a>
+          <a class="nav-item" href="#approvals">
+            <span class="nav-icon" aria-hidden="true">A</span>
+            Approvals
+            <span class="nav-count" data-approval-count>0</span>
+          </a>
+          <a class="nav-item" href="#runs">
+            <span class="nav-icon" aria-hidden="true">=</span>
+            Runs
+          </a>
+          <a class="nav-item" href="#audit">
+            <span class="nav-icon" aria-hidden="true">#</span>
+            Audit
+          </a>
+        </nav>
+        <div class="sidebar-footer">
+          <button class="ghost-button" type="button">
+            <span aria-hidden="true">*</span>
+            Settings
+          </button>
+          <button class="ghost-button" type="button">
+            <span aria-hidden="true">&lt;-</span>
+            Collapse
+          </button>
+        </div>
+      </aside>
+
+      <div class="workspace">
+        <header class="topbar">
+          <label>
+            <span>Workspace</span>
+            <select aria-label="Workspace">
+              <option>fraction-estate</option>
+              <option>acme-platform</option>
+            </select>
+          </label>
+          <label>
+            <span>Environment</span>
+            <select aria-label="Environment">
+              <option>production</option>
+              <option>staging</option>
+            </select>
+          </label>
+          <label>
+            <span>Branch</span>
+            <select aria-label="Branch">
+              <option>main</option>
+              <option>codex/audit-export</option>
+            </select>
+          </label>
+          <div class="topbar-spacer"></div>
+          <label class="search-field">
+            <span class="visually-hidden">Search runs</span>
+            <input type="search" placeholder="Search runs, objectives, commits..." data-run-search>
+          </label>
+          <button class="icon-button" type="button" aria-label="Notifications">~</button>
+          <button class="icon-button" type="button" aria-label="Help">?</button>
+          <div class="avatar" aria-label="Signed in as operator">OP</div>
+        </header>
+
+        <main class="dashboard-grid">
+          <section class="queue-panel" id="queue" aria-labelledby="queue-heading">
+            <div class="panel-header">
+              <div>
+                <h1 id="queue-heading">Run Queue</h1>
+                <p>Contract-shaped run state from CLI, API, policy, artifact, and audit surfaces.</p>
+              </div>
+              <button class="primary-button" type="button" data-refresh-button>Refresh</button>
+            </div>
+
+            <div class="status-filter" role="tablist" aria-label="Run status filter" data-status-filter>
+              <button class="filter-button active" type="button" role="tab" aria-selected="true" data-filter="all">All <span data-count="all">0</span></button>
+              <button class="filter-button" type="button" role="tab" aria-selected="false" data-filter="queued">Queued <span data-count="queued">0</span></button>
+              <button class="filter-button" type="button" role="tab" aria-selected="false" data-filter="running">Running <span data-count="running">0</span></button>
+              <button class="filter-button" type="button" role="tab" aria-selected="false" data-filter="awaiting_approval">Awaiting <span data-count="awaiting_approval">0</span></button>
+              <button class="filter-button" type="button" role="tab" aria-selected="false" data-filter="completed">Completed <span data-count="completed">0</span></button>
+              <button class="filter-button" type="button" role="tab" aria-selected="false" data-filter="failed">Failed <span data-count="failed">0</span></button>
+            </div>
+
+            <div class="table-wrap">
+              <table class="run-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Run ID</th>
+                    <th scope="col">Objective</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Risk</th>
+                    <th scope="col">Budget Soft / Hard</th>
+                  </tr>
+                </thead>
+                <tbody data-run-list></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="detail-panel" id="runs" aria-labelledby="run-detail-heading">
+            <div class="detail-heading">
+              <div>
+                <h2 id="run-detail-heading" data-selected-run-id>Run Detail</h2>
+                <p data-selected-objective>Select a run to inspect its policy state and timeline.</p>
+              </div>
+              <span class="status-pill" data-selected-status>queued</span>
+            </div>
+
+            <dl class="run-metadata">
+              <div>
+                <dt>Created</dt>
+                <dd data-selected-created>-</dd>
+              </div>
+              <div>
+                <dt>Soft Budget</dt>
+                <dd data-selected-soft>-</dd>
+              </div>
+              <div>
+                <dt>Hard Budget</dt>
+                <dd data-selected-hard>-</dd>
+              </div>
+              <div>
+                <dt>Risk</dt>
+                <dd data-selected-risk>-</dd>
+              </div>
+            </dl>
+
+            <div class="tabs" aria-label="Run detail sections">
+              <button class="tab active" type="button">Timeline</button>
+              <button class="tab" type="button">Summary</button>
+              <button class="tab" type="button">Changes</button>
+              <button class="tab" type="button">Logs</button>
+              <button class="tab" type="button">Metadata</button>
+            </div>
+
+            <ol class="timeline" data-event-timeline></ol>
+
+            <div class="artifact-strip" id="audit">
+              <div class="artifact-list" aria-labelledby="artifact-heading">
+                <h3 id="artifact-heading">Artifacts</h3>
+                <ul data-artifact-list></ul>
+              </div>
+              <div class="audit-card" aria-labelledby="audit-heading">
+                <h3 id="audit-heading">Audit</h3>
+                <dl>
+                  <div>
+                    <dt>Hash</dt>
+                    <dd data-audit-hash>-</dd>
+                  </div>
+                  <div>
+                    <dt>Recorded</dt>
+                    <dd data-audit-recorded>-</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          </section>
+
+          <aside class="approval-panel" id="approvals" aria-labelledby="approval-heading">
+            <div class="approval-header">
+              <div>
+                <h2 id="approval-heading">Approval Queue</h2>
+                <p><span data-approval-count>0</span> pending runs</p>
+              </div>
+              <button class="icon-button" type="button" aria-label="Filter approvals">=</button>
+            </div>
+            <div class="approval-list" data-approval-list></div>
+          </aside>
+        </main>
+      </div>
+    </div>
+
+    <div class="toast" role="status" aria-live="polite" data-toast hidden></div>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
