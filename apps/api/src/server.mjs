@@ -11,6 +11,40 @@ const auditRecords = [];
 const runSubscribers = new Map();
 const DEFAULT_SCOPE = { org_id: 'default-org', project_id: 'default-project' };
 
+function configuredApiKeys() {
+  const rawKeys = [
+    process.env.DIVINITY_API_KEY,
+    process.env.DIVINITY_API_KEYS
+  ].filter(Boolean).join(',');
+
+  return rawKeys.split(',').map(key => key.trim()).filter(Boolean);
+}
+
+function bearerToken(req) {
+  const authHeader = req.headers.authorization || '';
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  return match ? match[1].trim() : '';
+}
+
+function authenticateRequest(req, res) {
+  const apiKeys = configuredApiKeys();
+  if (apiKeys.length === 0) return true;
+
+  const token = bearerToken(req);
+  if (!token) {
+    res.setHeader('WWW-Authenticate', 'Bearer');
+    sendJson(res, 401, { error: 'authentication required' });
+    return false;
+  }
+
+  if (!apiKeys.includes(token)) {
+    sendJson(res, 403, { error: 'invalid credentials' });
+    return false;
+  }
+
+  return true;
+}
+
 function taskWithScope(task) {
   return {
     ...task,
@@ -37,7 +71,7 @@ function sendJson(res, statusCode, payload) {
 function setCorsHeaders(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'content-type');
+  res.setHeader('Access-Control-Allow-Headers', 'content-type, authorization');
 }
 
 function approvalPayload(body) {
@@ -145,6 +179,8 @@ const server = http.createServer((req, res) => {
     sendJson(res, 200, { ok: true });
     return;
   }
+
+  if (!authenticateRequest(req, res)) return;
 
   if (req.method === 'GET' && req.url === '/runs') {
     sendJson(res, 200, {

@@ -3,6 +3,10 @@ Owner: Control Plane
 
 Planned endpoints: task creation, run retrieval, preflight checks.
 
+## Authentication
+Control-plane routes are public in local development when no API key is configured.
+Set `DIVINITY_API_KEY` or comma-separated `DIVINITY_API_KEYS` to require `Authorization: Bearer <key>` on all API routes except `GET /health` and CORS `OPTIONS` preflight requests.
+
 ## Current Endpoints
 - `GET /health`
 - `GET /audit`
