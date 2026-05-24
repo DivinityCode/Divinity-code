@@ -8,6 +8,7 @@ Implemented views:
 - Run detail timeline with contract-shaped run events.
 - Approval queue with local approve/reject state transitions.
 - Cost, risk, artifact, and audit metadata panels.
+- Decision trace panel with chosen path, rejected alternative, rationale, and supporting evidence.
 
 Open `index.html` directly in a browser for local inspection. The shell uses
 sample data shaped after the current API contracts and does not require a build

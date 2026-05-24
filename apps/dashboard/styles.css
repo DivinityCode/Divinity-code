@@ -687,6 +687,53 @@ dd {
   font-weight: 680;
 }
 
+.decision-trace {
+  margin: 0 18px 18px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #f9fafb;
+}
+
+.decision-trace h3 {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.decision-trace dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0;
+}
+
+.decision-trace dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.decision-trace dd {
+  margin: 4px 0 0;
+  color: #344054;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.decision-trace p {
+  margin: 10px 0 0;
+  color: #344054;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.decision-trace .claim-list {
+  margin-top: 10px;
+}
+
 .artifact-strip {
   margin-top: auto;
   display: grid;

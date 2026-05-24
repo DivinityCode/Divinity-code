@@ -13,6 +13,7 @@ for (const status of ['all', 'queued', 'running', 'awaiting_approval', 'paused',
 for (const selector of [
   'data-run-list',
   'data-event-timeline',
+  'data-decision-trace',
   'data-approval-list',
   'data-artifact-list',
   'data-audit-hash'
@@ -27,6 +28,7 @@ for (const token of ['--indigo', '--teal', '--amber', '--red', '--row-height']) 
 for (const selector of ['claim-observed', 'claim-inferred']) {
   assert(css.includes(selector), `missing ${selector} style`);
 }
+assert(css.includes('decision-trace'), 'missing decision trace styles');
 
 const runDataMatch = js.match(/const sampleRuns = (\[[\s\S]*?\n\]);\n\nlet runs =/);
 assert(runDataMatch, 'dashboard sample run data not found');
@@ -42,7 +44,13 @@ const runs = vm.runInNewContext(runDataMatch[1], {
     created_at
   }),
   evidence: (claim_type, source, summary) => ({ claim_type, source, summary }),
-  artifact: (artifact_id, type, uri) => ({ artifact_id, run_id: '', type, uri })
+  artifact: (artifact_id, type, uri) => ({ artifact_id, run_id: '', type, uri }),
+  decisionTrace: (chosen_path, rejected_alternative, rationale, evidence_refs = []) => ({
+    chosen_path,
+    rejected_alternative,
+    rationale,
+    evidence_refs
+  })
 });
 const statuses = new Set(runs.map(run => run.status));
 const riskLevels = new Set(runs.map(run => run.risk_level));
@@ -58,8 +66,10 @@ for (const risk of ['low', 'medium', 'high']) {
 assert(runs.some(run => run.status === 'awaiting_approval'), 'approval queue needs a pending run');
 assert(runs.every(run => run.budget && Number.isFinite(run.budget.soft) && Number.isFinite(run.budget.hard)), 'runs need soft and hard budgets');
 assert(runs.every(run => Array.isArray(run.events) && run.events.length > 0), 'runs need timelines');
+assert(runs.every(run => run.decision_trace?.chosen_path && run.decision_trace?.rejected_alternative), 'runs need decision traces');
 assert(js.includes('claim_type'), 'dashboard sample data should include fact/inference labels');
 assert(js.includes('renderEvidenceLabels'), 'dashboard should render evidence labels');
+assert(js.includes('renderDecisionTrace'), 'dashboard should render decision trace panel');
 assert(js.includes('Observed') && js.includes('Inferred'), 'dashboard should show observed/inferred label text');
 assert(runs.some(run => run.artifacts.length > 0), 'at least one run needs artifacts');
 assert(runs.every(run => /^[a-f0-9]{64}$/.test(run.audit.hash)), 'audit hashes must be sha256-like hex');

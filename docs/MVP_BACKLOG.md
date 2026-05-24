@@ -54,6 +54,7 @@
 - Missing permissions still produce blocked preflight decisions; soft caps emit `estimated_cost_exceeds_soft_limit` warnings.
 - Preflight and step-gate decision payloads include evidence references for the objective/action, policy permissions, and budget limits.
 - Summary artifacts include decision traces with chosen path, rejected alternative, rationale, and evidence references.
+- Dashboard run detail renders decision traces with chosen path, rejected alternative, rationale, and supporting evidence.
 - Evidence references label objective/action classifications as `inferred` and policy/budget values as `observed`; dashboard timeline events render observed/inferred chips.
 - CLI onboarding exposes four guided starter recipes through `init` output and the `recipes` command.
 

@@ -48,6 +48,7 @@ Build a best-in-class AI engineering platform that combines:
 2. Layered memory (session/project/team) with provenance.
    - Bootstrap status: session/project/team memory entries are emitted by CLI/API runs.
 3. Decision-trace UX surfaces.
+   - Bootstrap status: dashboard run detail renders chosen path, rejected alternative, rationale, and evidence.
 4. Team policy packs and audit export.
    - Bootstrap status: org-scoped starter and regulated policy packs are resolved into CLI/API run payloads; audit export is available from the API.
 

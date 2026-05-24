@@ -16,6 +16,10 @@ const sampleRuns = [
       ]),
       event('evt_003', 'status_changed', 'awaiting_approval', 'Awaiting approval', 'Manual approval required before execution.', '2026-05-24T10:13:28.000Z', '-')
     ],
+    decision_trace: decisionTrace('request_operator_approval', 'execute_without_approval', 'Risk threshold requires an operator decision before execution continues.', [
+      evidence('inferred', 'task.objective', 'Predicted write and test execution actions.'),
+      evidence('observed', 'policy.permissions', 'safe_exec policy grants scoped write and shell execution.')
+    ]),
     artifacts: [
       artifact('artifact_patch_0012', 'patch', 'artifact://run_2026_05_24_0012/patch.diff'),
       artifact('artifact_log_0012', 'log', 'artifact://run_2026_05_24_0012/run.log'),
@@ -40,6 +44,9 @@ const sampleRuns = [
       event('evt_012', 'preflight_completed', 'queued', 'Preflight allowed', 'Read and scoped edit permissions granted.', '2026-05-24T09:47:22.000Z', '1.2s'),
       event('evt_013', 'status_changed', 'running', 'Execution running', 'Implementation loop is applying changes.', '2026-05-24T09:48:01.000Z', '5.26s')
     ],
+    decision_trace: decisionTrace('queue_for_execution', 'pause_or_request_approval', 'Preflight allowed the run to enter the execution queue.', [
+      evidence('observed', 'policy.permissions', 'safe_exec policy grants scoped write and shell execution.')
+    ]),
     artifacts: [
       artifact('artifact_log_0011', 'log', 'artifact://run_2026_05_24_0011/run.log'),
       artifact('artifact_summary_0011', 'summary', 'artifact://run_2026_05_24_0011/summary.md')
@@ -63,6 +70,9 @@ const sampleRuns = [
       event('evt_102', 'preflight_completed', 'queued', 'Preflight allowed', 'No high-risk action predicted.', '2026-05-24T08:33:23.000Z', '820ms'),
       event('evt_103', 'status_changed', 'completed', 'Completed', 'Patch, log, and summary artifacts exported.', '2026-05-24T08:42:11.000Z', '4.18s')
     ],
+    decision_trace: decisionTrace('queue_for_execution', 'pause_or_request_approval', 'Preflight allowed the run to enter the execution queue.', [
+      evidence('inferred', 'task.objective', 'No high-risk action predicted.')
+    ]),
     artifacts: [
       artifact('artifact_patch_0010', 'patch', 'artifact://run_2026_05_24_0010/patch.diff'),
       artifact('artifact_log_0010', 'log', 'artifact://run_2026_05_24_0010/run.log'),
@@ -87,6 +97,9 @@ const sampleRuns = [
       event('evt_092', 'preflight_completed', 'failed', 'Preflight blocked', 'Migration permission was missing.', '2026-05-24T07:58:16.000Z', '1.04s'),
       event('evt_093', 'status_changed', 'failed', 'Run failed', 'Policy gate blocked execution.', '2026-05-24T07:58:18.000Z', '-')
     ],
+    decision_trace: decisionTrace('stop_before_execution', 'execute_disallowed_action', 'Policy or permission checks blocked the requested work before side effects.', [
+      evidence('observed', 'policy.permissions', 'Migration permission was missing.')
+    ]),
     artifacts: [
       artifact('artifact_log_0009', 'log', 'artifact://run_2026_05_24_0009/run.log'),
       artifact('artifact_summary_0009', 'summary', 'artifact://run_2026_05_24_0009/summary.md')
@@ -108,6 +121,7 @@ const sampleRuns = [
     events: [
       event('evt_081', 'task_created', 'queued', 'Task created', 'Waiting for scheduler capacity.', '2026-05-24T07:22:45.000Z', '-')
     ],
+    decision_trace: decisionTrace('queue_for_execution', 'pause_or_request_approval', 'Preflight allowed the run to enter the execution queue.', []),
     artifacts: [],
     audit: {
       hash: 'f1c9e5b0a4d8f2c6e1b9a3d7f0c4e8b2a6d1da8f3c7e2b6a1d9f4c8e3b7a2d6a',
@@ -131,6 +145,9 @@ const sampleRuns = [
       ]),
       event('evt_073', 'status_changed', 'paused', 'Paused by budget cap', 'Hard budget cap was exceeded before the next execution step.', '2026-05-24T07:02:17.000Z', '6.12s')
     ],
+    decision_trace: decisionTrace('pause_for_budget_review', 'continue_past_hard_budget_cap', 'Hard budget cap enforcement pauses execution before additional work starts.', [
+      evidence('observed', 'task.budget', 'Budget limits and spend are loaded from run state.')
+    ]),
     artifacts: [
       artifact('artifact_log_0007', 'log', 'artifact://run_2026_05_24_0007/run.log')
     ],
@@ -184,6 +201,10 @@ function artifact(artifact_id, type, uri) {
   return { artifact_id, run_id: '', type, uri };
 }
 
+function decisionTrace(chosen_path, rejected_alternative, rationale, evidence_refs = []) {
+  return { chosen_path, rejected_alternative, rationale, evidence_refs };
+}
+
 function apiBaseUrl() {
   const params = new URLSearchParams(window.location.search);
   const base = params.get('api') || '';
@@ -218,12 +239,32 @@ function normalizeApiRun(run) {
     },
     actor: run.approval?.actor || 'api',
     events: (run.events || []).map(normalizeApiEvent),
+    decision_trace: decisionTraceForRun(run),
     artifacts: run.artifacts || [],
     audit: {
       hash: run.audit?.hash || '0'.repeat(64),
       recorded_at: run.audit?.recorded_at || createdAt
     }
   };
+}
+
+function decisionTraceForRun(run) {
+  if (run.decision_trace) return run.decision_trace;
+  const evidenceRefs = run.preflight?.evidence_refs || [];
+
+  if (run.status === 'awaiting_approval') {
+    return decisionTrace('request_operator_approval', 'execute_without_approval', 'Risk threshold requires an operator decision before execution continues.', evidenceRefs);
+  }
+
+  if (run.status === 'paused') {
+    return decisionTrace('pause_for_budget_review', 'continue_past_hard_budget_cap', 'Hard budget cap enforcement pauses execution before additional work starts.', evidenceRefs);
+  }
+
+  if (run.status === 'failed') {
+    return decisionTrace('stop_before_execution', 'execute_disallowed_action', 'Policy or permission checks blocked the requested work before side effects.', evidenceRefs);
+  }
+
+  return decisionTrace('queue_for_execution', 'pause_or_request_approval', 'Preflight allowed the run to enter the execution queue.', evidenceRefs);
 }
 
 function replaceRun(nextRun) {
@@ -421,9 +462,27 @@ function renderRunDetail() {
   status.className = `status-pill ${statusClass(run.status)}`;
 
   document.querySelector('[data-event-timeline]').innerHTML = run.events.map(renderEvent).join('');
+  document.querySelector('[data-decision-trace]').innerHTML = renderDecisionTrace(run.decision_trace);
   document.querySelector('[data-artifact-list]').innerHTML = renderArtifacts(run);
   document.querySelector('[data-audit-hash]').textContent = run.audit.hash;
   document.querySelector('[data-audit-recorded]').textContent = formatDate(run.audit.recorded_at);
+}
+
+function renderDecisionTrace(trace) {
+  return `
+    <dl>
+      <div>
+        <dt>Chosen</dt>
+        <dd>${trace.chosen_path}</dd>
+      </div>
+      <div>
+        <dt>Rejected</dt>
+        <dd>${trace.rejected_alternative}</dd>
+      </div>
+    </dl>
+    <p>${trace.rationale}</p>
+    ${renderEvidenceLabels(trace.evidence_refs)}
+  `;
 }
 
 function renderEvent(runEvent) {
