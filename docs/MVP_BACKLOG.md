@@ -30,7 +30,7 @@
   - Acceptance: presets map to explicit permission arrays in Policy schema.
 - [x] Policy engine checks before step execution.
   - Acceptance: high-risk or disallowed step is blocked pre-execution.
-- [ ] Budget soft/hard cap enforcement.  
+- [x] Budget soft/hard cap enforcement.
   - Acceptance: soft cap triggers warning; hard cap pauses run.
 - [x] Preflight panel payload contract.
   - Acceptance: includes predicted actions, risk score, and estimated cost.
@@ -41,11 +41,12 @@
 - API exposes `POST /preflight`; `POST /tasks` records preflight metadata and moves high-risk allowed work to `awaiting_approval`.
 - API exposes `GET /runs`, `GET /approvals`, and `POST /runs/:id/approval` for dashboard loading and approve/reject transitions.
 - API exposes `POST /runs/:id/steps` to run policy and budget gates before a step can enter pending execution.
+- Hard budget cap excess now maps to `paused` for CLI/API runs and pauses an API run when a proposed step exceeds the hard cap.
 - CLI and API expose structured run events; dashboard can subscribe to live selected-run updates through API server-sent events.
 - CLI and API expose patch/log/summary artifact metadata; real patch payload generation is still pending.
 - API exposes `GET /audit` for hash-backed run audit exports with optional timeframe filters.
 - Dashboard shell exists at `apps/dashboard` with contract-shaped local sample data plus opt-in API loading through `?api=<base-url>` for task filtering, run timeline, approval decisions, cost/risk badges, artifacts, and audit metadata; live updates are still pending.
-- Hard budget cap excess and missing permissions currently produce blocked preflight decisions; soft caps now emit `estimated_cost_exceeds_soft_limit` warnings but do not pause runs yet.
+- Missing permissions still produce blocked preflight decisions; soft caps emit `estimated_cost_exceeds_soft_limit` warnings.
 
 ## Epic 4: Explainability (M2-M3)
 - [ ] Action-to-evidence linking model.  

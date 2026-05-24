@@ -46,8 +46,8 @@
 ## Preflight Decision Model
 - Preflight runs before task execution in CLI and API flows.
 - The policy engine infers predicted action classes from the task objective, maps each action to a risk level and required permission, estimates cost, and compares the result with the selected policy preset and task budget.
-- Decisions are `allow`, `requires_approval`, or `block`.
-- High-risk actions under `safe_exec` enter `awaiting_approval`; missing permissions or hard budget overruns block execution.
+- Decisions are `allow`, `requires_approval`, or `block`, with a derived run status for lifecycle handling.
+- High-risk actions under `safe_exec` enter `awaiting_approval`; missing permissions fail the run before execution; hard budget overruns pause the run.
 
 ## Approval Flow
 - Runs in `awaiting_approval` appear in `GET /approvals`.

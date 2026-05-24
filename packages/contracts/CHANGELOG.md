@@ -1,5 +1,9 @@
 # Contracts Changelog
 
+## v1.8.0
+- Added `paused` run and event status for hard budget cap enforcement.
+- Added `run_status` to PreflightDecision so policy decisions map deterministically to lifecycle states.
+
 ## v1.7.0
 - Expanded Step schema with `blocked` status and `pre_execution_check` metadata for policy-gated steps.
 - Added Step valid/invalid examples and repository-level validation checks.

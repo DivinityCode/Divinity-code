@@ -27,6 +27,15 @@ try {
   assert.equal(result.preflight.risk_level, 'high');
   assert.equal(result.task.repo, tmpDir);
 
+  runCli(tmpDir, 'init', '--soft-limit', '0.1', '--hard-limit', '0.1');
+  const paused = runCli(tmpDir, 'run', 'Update source files');
+  assert.equal(paused.ok, true);
+  assert.equal(paused.status, 'paused');
+  assert.equal(paused.preflight.decision, 'block');
+  assert.equal(paused.preflight.run_status, 'paused');
+  assert.equal(paused.preflight.budget.hard_cap_exceeded, true);
+  assert.ok(paused.preflight.blocked_reasons.includes('estimated_cost_exceeds_hard_limit'));
+
   console.log(JSON.stringify({ ok: true, test: 'cli-preflight' }));
 } finally {
   rmSync(tmpDir, { recursive: true, force: true });

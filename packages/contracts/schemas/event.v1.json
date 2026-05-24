@@ -16,7 +16,7 @@
     },
     "status": {
       "type": "string",
-      "enum": ["queued", "running", "awaiting_approval", "completed", "failed"]
+      "enum": ["queued", "running", "awaiting_approval", "paused", "completed", "failed"]
     },
     "message": {
       "type": "string"

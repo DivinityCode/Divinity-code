@@ -2,7 +2,7 @@
   "event_id": "evt_123",
   "run_id": "run_123",
   "type": "status_changed",
-  "status": "awaiting_approval",
+  "status": "paused",
   "message": "Run status changed to awaiting_approval",
   "metadata": {
     "risk_level": "high"

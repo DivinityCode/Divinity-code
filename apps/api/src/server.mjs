@@ -170,11 +170,7 @@ const server = http.createServer((req, res) => {
     readJson(req, (task) => {
       const preflight = evaluatePreflight({ task });
       const runId = `run_${Date.now()}`;
-      const status = preflight.decision === 'requires_approval'
-        ? 'awaiting_approval'
-        : preflight.decision === 'block'
-          ? 'failed'
-          : 'queued';
+      const status = preflight.run_status;
       const runArtifacts = createRunArtifacts({ run_id: runId, task, status });
       const events = createInitialRunEvents({ run_id: runId, task, preflight, status });
       const run = {
@@ -277,13 +273,31 @@ const server = http.createServer((req, res) => {
       };
 
       run.steps.push(step);
-      broadcastRun(run);
 
-      if (check.decision === 'allow') {
+      if (check.run_status === 'paused') {
+        run.status = 'paused';
+        run.events.push(createRunEvent({
+          run_id: run.run_id,
+          type: 'status_changed',
+          status: 'paused',
+          message: 'Run paused by hard budget cap',
+          metadata: {
+            blocked_reasons: check.blocked_reasons,
+            estimated_cost_usd: check.budget.estimated_cost_usd,
+            hard_limit_usd: check.budget.hard_limit_usd
+          }
+        }));
+        recordRunAudit(run);
+        broadcastRun(run);
+        sendJson(res, 409, { error: 'run paused by hard budget cap', step, run: publicRun(run) });
+      } else if (check.decision === 'allow') {
+        broadcastRun(run);
         sendJson(res, 201, { step });
       } else if (check.decision === 'requires_approval') {
+        broadcastRun(run);
         sendJson(res, 409, { error: 'step requires approval before execution', step });
       } else {
+        broadcastRun(run);
         sendJson(res, 403, { error: 'step blocked by policy', step });
       }
     });

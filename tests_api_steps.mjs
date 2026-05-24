@@ -57,6 +57,28 @@ try {
   assert.equal(denied.step.status, 'blocked');
   assert.ok(denied.step.pre_execution_check.blocked_reasons.includes('permission_denied:git_push'));
 
+  const { body: hardCapRun } = await requestJson(`${baseUrl}/tasks`, {
+    method: 'POST',
+    body: JSON.stringify({
+      ...task,
+      task_id: 'task_step_hard_cap',
+      objective: 'Review the README',
+      budget: { soft_limit_usd: 0.1, hard_limit_usd: 0.5 }
+    })
+  });
+  assert.equal(hardCapRun.status, 'queued');
+
+  const { response: pausedStepRes, body: pausedStep } = await requestJson(`${baseUrl}/runs/${hardCapRun.run_id}/steps`, {
+    method: 'POST',
+    body: JSON.stringify({ step_id: 'step_update', action: 'Update source files' })
+  });
+  assert.equal(pausedStepRes.status, 409);
+  assert.equal(pausedStep.error, 'run paused by hard budget cap');
+  assert.equal(pausedStep.run.status, 'paused');
+  assert.equal(pausedStep.step.status, 'blocked');
+  assert.equal(pausedStep.step.pre_execution_check.run_status, 'paused');
+  assert.ok(pausedStep.step.pre_execution_check.blocked_reasons.includes('estimated_cost_exceeds_hard_limit'));
+
   const { body: storedRun } = await requestJson(`${baseUrl}/runs/${run.run_id}`);
   assert.equal(storedRun.steps.length, 3);
   assert.equal(storedRun.steps.filter(step => step.status === 'blocked').length, 2);
