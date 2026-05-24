@@ -1,1 +1,40 @@
-{ "$schema":"https://json-schema.org/draft/2020-12/schema","title":"Step","type":"object","required":["step_id","run_id","action","status"],"properties":{"step_id":{"type":"string"},"run_id":{"type":"string"},"action":{"type":"string"},"status":{"type":"string","enum":["pending","running","completed","failed"]}},"additionalProperties":false }
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Step",
+  "type": "object",
+  "required": ["step_id", "run_id", "action", "status", "pre_execution_check"],
+  "properties": {
+    "step_id": { "type": "string" },
+    "run_id": { "type": "string" },
+    "action": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "running", "completed", "failed", "blocked"]
+    },
+    "pre_execution_check": {
+      "type": "object",
+      "required": ["decision", "status", "risk_level", "approval_required", "blocked_reasons"],
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": ["allow", "requires_approval", "block"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["allowed", "blocked"]
+        },
+        "risk_level": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"]
+        },
+        "approval_required": { "type": "boolean" },
+        "blocked_reasons": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

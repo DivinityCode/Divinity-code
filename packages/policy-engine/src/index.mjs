@@ -146,3 +146,20 @@ export function evaluatePreflight({ task, policy }) {
     blocked_reasons
   };
 }
+
+export function evaluateStepGate({ run, step, policy }) {
+  const decision = evaluatePreflight({
+    task: {
+      ...(run?.task || {}),
+      objective: step?.action || '',
+      task_id: step?.step_id || run?.task_id || run?.run_id || 'step',
+      created_at: new Date().toISOString()
+    },
+    policy: policy || run?.task?.policy_id
+  });
+
+  return {
+    ...decision,
+    status: decision.decision === 'allow' ? 'allowed' : 'blocked'
+  };
+}
