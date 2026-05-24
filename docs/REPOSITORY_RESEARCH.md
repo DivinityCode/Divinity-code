@@ -89,9 +89,9 @@ The goal is to translate repo-level patterns into product and implementation dec
 4. Keep smoke tests local and deterministic by using temp workspaces.
 5. Keep documentation current with observed repo signals and implementation status.
 
-## Next Build Slices
-1. **Approval queue:** persist runs requiring approval and implement approve/reject transitions.
-2. **Run event envelope:** emit structured status events from CLI/API and add examples.
-3. **Artifact metadata:** generate patch/log/summary artifact records for completed runs.
-4. **Operator dashboard shell:** render task list, run detail, approval queue, and cost/risk badges from mock/API data.
-5. **Diagnostics:** add a `divinity doctor` command for npm/node/git/API readiness checks.
+## Build Slices Adopted From Research
+1. **Approval queue:** implemented persisted in-memory runs requiring approval plus approve/reject transitions.
+2. **Run event envelope:** implemented structured status events across CLI/API and dashboard consumption.
+3. **Artifact metadata and payloads:** implemented patch/log/summary artifact records with retrievable patch, log, and summary content.
+4. **Operator dashboard shell:** implemented task filtering, run detail, approval queue, cost/risk badges, artifacts, audit metadata, and live API updates.
+5. **Diagnostics:** implemented `divinity doctor` for Node, npm, git, package manifest, and API server source readiness checks.
