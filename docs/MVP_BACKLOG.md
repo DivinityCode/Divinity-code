@@ -16,13 +16,13 @@
   - Acceptance: outputs artifact metadata containing patch/log/summary URIs.
 
 ## Epic 2: Operator Dashboard (M2-M3)
-- [ ] Task list with status filtering.  
+- [x] Task list with status filtering.
   - Acceptance: filter by queued/running/awaiting_approval/completed/failed.
-- [ ] Run detail page with step-by-step timeline.  
+- [x] Run detail page with step-by-step timeline.
   - Acceptance: shows ordered step list with timestamps and statuses.
-- [ ] Approval queue for high-risk actions.  
+- [x] Approval queue for high-risk actions.
   - Acceptance: pending approvals can be approved/rejected and state updates propagate.
-- [ ] Cost/risk badges at task and run level.  
+- [x] Cost/risk badges at task and run level.
   - Acceptance: each run displays risk level and soft/hard budget usage.
 
 ## Epic 3: Trust & Policy (M1-M2)
@@ -40,7 +40,7 @@
 - CLI `init` supports default, flag-driven, and prompt-driven project config creation for policy preset and soft/hard budget caps.
 - API exposes `POST /preflight`; `POST /tasks` records preflight metadata and moves high-risk allowed work to `awaiting_approval`.
 - API exposes `GET /runs`, `GET /approvals`, and `POST /runs/:id/approval` for dashboard loading and approve/reject transitions.
-- CLI and API expose structured run events; live dashboard timeline wiring is still pending.
+- CLI and API expose structured run events; dashboard can subscribe to live selected-run updates through API server-sent events.
 - CLI and API expose patch/log/summary artifact metadata; real patch payload generation is still pending.
 - API exposes `GET /audit` for hash-backed run audit exports with optional timeframe filters.
 - Dashboard shell exists at `apps/dashboard` with contract-shaped local sample data plus opt-in API loading through `?api=<base-url>` for task filtering, run timeline, approval decisions, cost/risk badges, artifacts, and audit metadata; live updates are still pending.
@@ -59,7 +59,7 @@
   - Acceptance: task is associated with org and project scope.
 - [x] Artifact storage and retrieval API.
   - Acceptance: artifact metadata and payload retrieval endpoint work.
-- [ ] Event stream for live updates.  
+- [x] Event stream for live updates.
   - Acceptance: dashboard receives status updates in near real time.
 - [x] Audit export endpoint.
   - Acceptance: exports immutable run audit log for selected timeframe.

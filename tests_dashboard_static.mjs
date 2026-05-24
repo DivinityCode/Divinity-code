@@ -58,5 +58,6 @@ assert(runs.every(run => /^[a-f0-9]{64}$/.test(run.audit.hash)), 'audit hashes m
 assert(js.includes('new URLSearchParams(window.location.search)'), 'dashboard should read API query parameter');
 assert(js.includes('fetch(`${base}/runs`)'), 'dashboard should load API runs');
 assert(js.includes('fetch(`${base}/runs/${runId}/approval`'), 'dashboard should post approval decisions to API');
+assert(js.includes('new EventSource(`${base}/runs/${runId}/stream`)'), 'dashboard should subscribe to API run stream');
 
 console.log(JSON.stringify({ ok: true, dashboard: 'static-shell', runs: runs.length }));

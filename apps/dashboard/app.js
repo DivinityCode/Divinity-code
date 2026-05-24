@@ -136,6 +136,9 @@ const sampleRuns = [
 ];
 
 let runs = sampleRuns;
+let runEventSource = null;
+let subscribedRunId = null;
+let apiRunsLoaded = false;
 
 const state = {
   filter: 'all',
@@ -218,6 +221,38 @@ function replaceRun(nextRun) {
   }
 }
 
+function closeRunStream() {
+  if (!runEventSource) return;
+  runEventSource.close();
+  runEventSource = null;
+  subscribedRunId = null;
+}
+
+function subscribeToSelectedRun() {
+  const base = apiBaseUrl();
+  const runId = state.selectedRunId;
+  if (!base || !apiRunsLoaded || !runId || typeof EventSource === 'undefined' || subscribedRunId === runId) return;
+
+  closeRunStream();
+  subscribedRunId = runId;
+  runEventSource = new EventSource(`${base}/runs/${runId}/stream`);
+
+  const handleUpdate = (event) => {
+    const updated = normalizeApiRun(JSON.parse(event.data));
+    hydrateRunReferences([updated]);
+    replaceRun(updated);
+    state.selectedRunId = updated.run_id;
+    render();
+  };
+
+  runEventSource.addEventListener('run_snapshot', handleUpdate);
+  runEventSource.addEventListener('run_updated', handleUpdate);
+  runEventSource.addEventListener('error', () => {
+    showToast('Live event stream disconnected; use refresh to reload run state');
+    closeRunStream();
+  });
+}
+
 function hydrateRunReferences(sourceRuns) {
   for (const run of sourceRuns) {
     for (const runEvent of run.events) runEvent.run_id = run.run_id;
@@ -235,15 +270,20 @@ async function loadApiRuns() {
     const payload = await response.json();
     const apiRuns = (payload.runs || []).map(normalizeApiRun);
     if (!apiRuns.length) {
+      apiRunsLoaded = false;
+      closeRunStream();
       showToast('API connected; no runs are available yet');
       return;
     }
     hydrateRunReferences(apiRuns);
     runs = apiRuns;
+    apiRunsLoaded = true;
     state.selectedRunId = apiRuns[0].run_id;
     showToast(`Loaded ${apiRuns.length} run${apiRuns.length === 1 ? '' : 's'} from API`);
     render();
   } catch (error) {
+    apiRunsLoaded = false;
+    closeRunStream();
     showToast(`API unavailable; using sample data (${error.message})`);
   }
 }
@@ -507,6 +547,7 @@ function render() {
   renderRunList();
   renderRunDetail();
   renderApprovalQueue();
+  subscribeToSelectedRun();
 }
 
 selectors.statusFilter.addEventListener('click', (event) => {
