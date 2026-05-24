@@ -4,8 +4,9 @@
   "version": "0.1.0",
   "description": "Divinity Code monorepo",
   "scripts": {
-    "test": "node tests_policy_preflight.mjs && node tests_api_preflight.mjs && node tests_api_approval.mjs && node tests_cli_preflight.mjs && node tests_run_events.mjs && node tests_artifacts.mjs && node tests_audit_export.mjs && node tests_dashboard_static.mjs && node scripts_smoke_api.mjs",
-    "test:preflight": "node tests_policy_preflight.mjs && node tests_api_preflight.mjs && node tests_api_approval.mjs && node tests_cli_preflight.mjs",
+    "test": "node tests_policy_preflight.mjs && node tests_api_preflight.mjs && node tests_api_approval.mjs && node tests_cli_init.mjs && node tests_cli_preflight.mjs && node tests_run_events.mjs && node tests_artifacts.mjs && node tests_audit_export.mjs && node tests_dashboard_static.mjs && node scripts_smoke_api.mjs",
+    "test:preflight": "node tests_policy_preflight.mjs && node tests_api_preflight.mjs && node tests_api_approval.mjs && node tests_cli_init.mjs && node tests_cli_preflight.mjs",
+    "test:cli": "node tests_cli_init.mjs && node tests_cli_preflight.mjs",
     "test:events": "node tests_run_events.mjs",
     "test:artifacts": "node tests_artifacts.mjs",
     "test:audit": "node tests_audit_export.mjs",

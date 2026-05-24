@@ -6,7 +6,7 @@
 - **M3:** Dashboard + approvals
 
 ## Epic 1: Builder Mode Core (M1-M2)
-- [ ] CLI init command with project config wizard.  
+- [x] CLI init command with project config wizard.
   - Acceptance: creates local project config with policy preset and budget defaults.
 - [x] Task command (`divinity run`) accepting objective + repo context.
   - Acceptance: submits valid Task payload and returns `run_id`.
@@ -37,6 +37,7 @@
 
 ## Current Implementation Notes
 - CLI `run` now returns `run_id`, status, task payload, and preflight decision metadata.
+- CLI `init` supports default, flag-driven, and prompt-driven project config creation for policy preset and soft/hard budget caps.
 - API exposes `POST /preflight`; `POST /tasks` records preflight metadata and moves high-risk allowed work to `awaiting_approval`.
 - API exposes `GET /approvals` and `POST /runs/:id/approval` for approve/reject transitions; API-backed dashboard wiring is still pending.
 - CLI and API expose structured run events; live dashboard timeline wiring is still pending.
