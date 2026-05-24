@@ -20,4 +20,5 @@ index.html?api=http://127.0.0.1:3000
 ```
 
 With an API base URL present, refresh loads `GET /runs` and approve/reject posts
-to `POST /runs/:id/approval`.
+to `POST /runs/:id/approval`. The selected run also subscribes to
+`GET /runs/:id/stream` for live status updates.

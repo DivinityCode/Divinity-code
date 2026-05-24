@@ -8,6 +8,7 @@ import { evaluatePreflight } from '../../../packages/policy-engine/src/index.mjs
 const runs = new Map();
 const artifacts = new Map();
 const auditRecords = [];
+const runSubscribers = new Map();
 
 function readJson(req, callback) {
   let body = '';
@@ -89,6 +90,34 @@ function publicRun(run) {
       ? { hash: latestAudit.hash, recorded_at: latestAudit.created_at }
       : null
   };
+}
+
+function sendSse(res, event, payload) {
+  res.write(`event: ${event}\n`);
+  res.write(`data: ${JSON.stringify(payload)}\n\n`);
+}
+
+function subscribeToRun(runId, res) {
+  if (!runSubscribers.has(runId)) {
+    runSubscribers.set(runId, new Set());
+  }
+
+  runSubscribers.get(runId).add(res);
+  return () => {
+    const subscribers = runSubscribers.get(runId);
+    if (!subscribers) return;
+    subscribers.delete(res);
+    if (subscribers.size === 0) runSubscribers.delete(runId);
+  };
+}
+
+function broadcastRun(run, event = 'run_updated') {
+  const subscribers = runSubscribers.get(run.run_id);
+  if (!subscribers) return;
+
+  for (const res of subscribers) {
+    sendSse(res, event, publicRun(run));
+  }
 }
 
 const server = http.createServer((req, res) => {
@@ -218,7 +247,9 @@ const server = http.createServer((req, res) => {
           payload: event
         });
       }
-      sendJson(res, 200, publicRun(run));
+      const payload = publicRun(run);
+      broadcastRun(run);
+      sendJson(res, 200, payload);
     });
     return;
   }
@@ -232,6 +263,26 @@ const server = http.createServer((req, res) => {
     }
 
     sendJson(res, 200, { run_id: run.run_id, events: run.events });
+    return;
+  }
+
+  const streamMatch = req.url.match(/^\/runs\/([^/]+)\/stream$/);
+  if (req.method === 'GET' && streamMatch) {
+    const run = runs.get(streamMatch[1]);
+    if (!run) {
+      sendJson(res, 404, { error: 'run not found' });
+      return;
+    }
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+      'Access-Control-Allow-Origin': '*'
+    });
+    sendSse(res, 'run_snapshot', publicRun(run));
+    const unsubscribe = subscribeToRun(run.run_id, res);
+    req.on('close', unsubscribe);
     return;
   }
 
