@@ -102,7 +102,7 @@ const sampleRuns = [
         adapter: 'node_test',
         status: 'completed',
         exit_code: 0,
-        target_path: 'tests_dashboard_static.mjs',
+        target_path: 'tests/tests_dashboard_static.mjs',
         stdout: '{"ok":true,"dashboard":"static-shell","runs":6}',
         stderr: '',
         completed_at: '2026-05-24T08:40:19.000Z'

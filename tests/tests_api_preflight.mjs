@@ -1,7 +1,7 @@
 import assert from 'assert/strict';
 
 process.env.DIVINITY_API_AUTOSTART = '0';
-const { server } = await import('./apps/api/src/server.mjs');
+const { server } = await import('../apps/api/src/server.mjs');
 
 const task = {
   task_id: 'task_api_123',

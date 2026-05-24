@@ -4,10 +4,10 @@ import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 
-import { createRunEvent } from './packages/events/src/index.mjs';
+import { createRunEvent } from '../packages/events/src/index.mjs';
 
 process.env.DIVINITY_API_AUTOSTART = '0';
-const { server } = await import('./apps/api/src/server.mjs');
+const { server } = await import('../apps/api/src/server.mjs');
 
 function runCli(tmpDir, ...args) {
   const output = execFileSync(

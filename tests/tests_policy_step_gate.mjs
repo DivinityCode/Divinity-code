@@ -1,6 +1,6 @@
 import assert from 'assert/strict';
 
-import { evaluateStepGate, POLICY_PRESETS } from './packages/policy-engine/src/index.mjs';
+import { evaluateStepGate, POLICY_PRESETS } from '../packages/policy-engine/src/index.mjs';
 
 const run = {
   run_id: 'run_step_gate',

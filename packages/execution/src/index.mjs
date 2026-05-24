@@ -82,7 +82,7 @@ function executeGitStatus({ run, step, cwd, started_at }) {
 function nodeTestScriptForAction(action) {
   const text = action || '';
   if (/\bfixture\b/i.test(text) && /\bnode\s+test\b/i.test(text)) return 'tests_execution_fixture.mjs';
-  if (/\bdashboard\s+static\s+test\b/i.test(text)) return 'tests_dashboard_static.mjs';
+  if (/\bdashboard\s+static\s+test\b/i.test(text)) return 'tests/tests_dashboard_static.mjs';
   return null;
 }
 

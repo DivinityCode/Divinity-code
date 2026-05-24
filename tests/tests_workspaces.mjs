@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'os';
 import path from 'path';
 
-import { cleanupRunWorkspace, createRunWorkspace } from './packages/workspaces/src/index.mjs';
+import { cleanupRunWorkspace, createRunWorkspace } from '../packages/workspaces/src/index.mjs';
 
 const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-workspaces-test-'));
 const sourceDir = path.join(tmpDir, 'source');
@@ -15,10 +15,12 @@ const workspaceRoot = path.join(tmpDir, 'workspaces');
 try {
   mkdirSync(path.join(sourceDir, 'src'), { recursive: true });
   mkdirSync(path.join(sourceDir, '.git'), { recursive: true });
+  mkdirSync(path.join(sourceDir, '.git', 'objects'), { recursive: true });
   mkdirSync(path.join(sourceDir, 'node_modules', 'left-pad'), { recursive: true });
   writeFileSync(path.join(sourceDir, 'README.md'), '# Source README\n\nSnapshot content.\n');
   writeFileSync(path.join(sourceDir, 'src', 'app.mjs'), "console.log('app');\n");
   writeFileSync(path.join(sourceDir, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+  writeFileSync(path.join(sourceDir, '.git', 'objects', 'maintenance.lock'), 'locked\n');
   writeFileSync(path.join(sourceDir, 'node_modules', 'left-pad', 'index.js'), 'module.exports = null;\n');
 
   const workspace = createRunWorkspace({
@@ -36,6 +38,7 @@ try {
   assert.equal(readFileSync(path.join(workspace.path, 'README.md'), 'utf8'), '# Source README\n\nSnapshot content.\n');
   assert.equal(readFileSync(path.join(workspace.path, 'src', 'app.mjs'), 'utf8'), "console.log('app');\n");
   assert.equal(readFileSync(path.join(workspace.path, '.git', 'HEAD'), 'utf8'), 'ref: refs/heads/main\n');
+  assert.equal(existsSync(path.join(workspace.path, '.git', 'objects', 'maintenance.lock')), false);
   assert.equal(existsSync(path.join(workspace.path, 'node_modules')), false);
 
   writeFileSync(path.join(sourceDir, 'README.md'), '# Source README\n\nSource changed after snapshot.\n');

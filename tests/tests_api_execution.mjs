@@ -5,7 +5,7 @@ import { tmpdir } from 'os';
 import path from 'path';
 
 process.env.DIVINITY_API_AUTOSTART = '0';
-const { server } = await import('./apps/api/src/server.mjs');
+const { server } = await import('../apps/api/src/server.mjs');
 
 async function requestJson(url, options = {}) {
   const response = await fetch(url, {
@@ -129,7 +129,7 @@ try {
   assert.equal(nodeExecuteRes.status, 200);
   assert.equal(nodeExecuted.execution.adapter, 'node_test');
   assert.equal(nodeExecuted.execution.status, 'completed');
-  assert.equal(nodeExecuted.execution.target_path, 'tests_dashboard_static.mjs');
+  assert.equal(nodeExecuted.execution.target_path, 'tests/tests_dashboard_static.mjs');
   assert.match(nodeExecuted.execution.stdout, /dashboard/);
 
   console.log(JSON.stringify({ ok: true, test: 'api-execution' }));
