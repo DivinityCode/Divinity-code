@@ -1,9 +1,11 @@
 import http from 'http';
 
+import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
 import { createInitialRunEvents, createRunEvent } from '../../../packages/events/src/index.mjs';
 import { evaluatePreflight } from '../../../packages/policy-engine/src/index.mjs';
 
 const runs = new Map();
+const artifacts = new Map();
 
 function readJson(req, callback) {
   let body = '';
@@ -58,14 +60,19 @@ const server = http.createServer((req, res) => {
         : preflight.decision === 'block'
           ? 'failed'
           : 'queued';
+      const runArtifacts = createRunArtifacts({ run_id: runId, task, status });
       const run = {
         run_id: runId,
         task_id: task.task_id || 'unknown',
         status,
         risk_level: preflight.risk_level,
         preflight,
+        artifacts: runArtifacts.map(publicArtifactMetadata),
         events: createInitialRunEvents({ run_id: runId, task, preflight, status })
       };
+      for (const artifact of runArtifacts) {
+        artifacts.set(artifact.artifact_id, artifact);
+      }
       runs.set(run.run_id, run);
       sendJson(res, 201, run);
     });
@@ -121,6 +128,30 @@ const server = http.createServer((req, res) => {
     }
 
     sendJson(res, 200, { run_id: run.run_id, events: run.events });
+    return;
+  }
+
+  const runArtifactsMatch = req.url.match(/^\/runs\/([^/]+)\/artifacts$/);
+  if (req.method === 'GET' && runArtifactsMatch) {
+    const run = runs.get(runArtifactsMatch[1]);
+    if (!run) {
+      sendJson(res, 404, { error: 'run not found' });
+      return;
+    }
+
+    sendJson(res, 200, { run_id: run.run_id, artifacts: run.artifacts });
+    return;
+  }
+
+  const artifactMatch = req.url.match(/^\/artifacts\/([^/]+)$/);
+  if (req.method === 'GET' && artifactMatch) {
+    const artifact = artifacts.get(artifactMatch[1]);
+    if (!artifact) {
+      sendJson(res, 404, { error: 'artifact not found' });
+      return;
+    }
+
+    sendJson(res, 200, artifact);
     return;
   }
 

@@ -12,7 +12,7 @@
   - Acceptance: submits valid Task payload and returns `run_id`.
 - [x] Local run timeline and structured progress events.
   - Acceptance: emits JSON event envelope with status transitions.
-- [ ] Patch artifact generation and summary export.  
+- [x] Patch artifact generation and summary export.
   - Acceptance: outputs artifact metadata containing patch/log/summary URIs.
 
 ## Epic 2: Operator Dashboard (M2-M3)
@@ -40,6 +40,7 @@
 - API exposes `POST /preflight`; `POST /tasks` records preflight metadata and moves high-risk allowed work to `awaiting_approval`.
 - API exposes `GET /approvals` and `POST /runs/:id/approval` for approve/reject transitions; dashboard UI is still pending.
 - CLI and API expose structured run events; dashboard timeline UI is still pending.
+- CLI and API expose patch/log/summary artifact metadata; real patch payload generation is still pending.
 - Hard budget cap excess and missing permissions currently produce blocked preflight decisions; soft caps are surfaced but do not pause runs yet.
 
 ## Epic 4: Explainability (M2-M3)
