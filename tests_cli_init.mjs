@@ -26,21 +26,24 @@ try {
   assert.equal(defaultResult.config.policy_id, 'safe_exec');
   assert.deepEqual(readConfig(tmpDir), {
     policy_id: 'safe_exec',
-    budget: { soft_limit_usd: 2, hard_limit_usd: 5 }
+    budget: { soft_limit_usd: 2, hard_limit_usd: 5 },
+    scope: { org_id: 'default-org', project_id: 'default-project' }
   });
 
-  const flagResult = runCli(tmpDir, ['init', '--policy', 'scoped_edit', '--soft-limit', '3.5', '--hard-limit', '9']);
+  const flagResult = runCli(tmpDir, ['init', '--policy', 'scoped_edit', '--soft-limit', '3.5', '--hard-limit', '9', '--org', 'acme', '--project', 'platform']);
   assert.equal(flagResult.ok, true);
   assert.deepEqual(readConfig(tmpDir), {
     policy_id: 'scoped_edit',
-    budget: { soft_limit_usd: 3.5, hard_limit_usd: 9 }
+    budget: { soft_limit_usd: 3.5, hard_limit_usd: 9 },
+    scope: { org_id: 'acme', project_id: 'platform' }
   });
 
-  const wizardResult = runCli(tmpDir, ['init', '--wizard'], 'read_only\n1.25\n2.5\n');
+  const wizardResult = runCli(tmpDir, ['init', '--wizard'], 'read_only\n1.25\n2.5\nops\nsandbox\n');
   assert.equal(wizardResult.ok, true);
   assert.deepEqual(readConfig(tmpDir), {
     policy_id: 'read_only',
-    budget: { soft_limit_usd: 1.25, hard_limit_usd: 2.5 }
+    budget: { soft_limit_usd: 1.25, hard_limit_usd: 2.5 },
+    scope: { org_id: 'ops', project_id: 'sandbox' }
   });
 
   assert.throws(() => runCli(tmpDir, ['init', '--policy', 'unknown']));
