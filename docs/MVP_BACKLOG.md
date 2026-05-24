@@ -46,6 +46,7 @@
 - API run state can be backed by a file snapshot when `DIVINITY_RUN_STORE_PATH` is set; the default remains in-memory for local deterministic demos.
 - API exposes `POST /runs/:id/steps` to run policy and budget gates before a step can enter pending execution.
 - API exposes `POST /runs/:id/steps/:step_id/execute` for policy-approved step execution through constrained adapters.
+- API execution uses per-run local workspace snapshots when a task repo is a local directory; snapshots exclude `node_modules` and preserve Git metadata for Git adapters.
 - Execution adapters currently cover workspace `README.md` reads, `git status --short`, and whitelisted Node test scripts for approved command steps.
 - Hard budget cap excess now maps to `paused` for CLI/API runs and pauses an API run when a proposed step exceeds the hard cap.
 - CLI and API expose structured run events; dashboard can subscribe to live selected-run updates through API server-sent events.

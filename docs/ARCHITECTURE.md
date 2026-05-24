@@ -63,8 +63,11 @@
 
 ## Execution Plane
 - API step execution is available from `POST /runs/:id/steps/:step_id/execute` after `POST /runs/:id/steps` creates a pending allowed step.
+- API task creation creates a per-run local workspace snapshot when `task.repo` is an existing local directory.
+- Execution adapters run from `run.workspace.path` when present, preventing source-directory mutations after task creation from changing read/test evidence.
 - Execution adapters include `file_read`, which reads `README.md` from the run workspace, `git_status`, which runs `git status --short`, and `node_test`, which runs whitelisted Node test scripts without shell interpolation.
 - Blocked or approval-required steps cannot execute through the execution package; the package requires the step gate decision to be `allow`.
+- Workspace snapshots exclude `node_modules` and preserve Git metadata; remote checkout, cleanup lifecycle, and containerized runner isolation are still future work.
 
 ## Memory Provenance
 - CLI and API run payloads include session, project, and team memory entries derived from run context.
