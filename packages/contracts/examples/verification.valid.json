@@ -1,0 +1,31 @@
+{
+  "verification_id": "verify_exec_123",
+  "run_id": "run_123",
+  "step_id": "step_readme",
+  "execution_id": "exec_123",
+  "status": "completed",
+  "result": "passed",
+  "checks": [
+    {
+      "check_id": "execution_completed",
+      "status": "passed",
+      "summary": "Execution status was completed."
+    },
+    {
+      "check_id": "exit_code_zero",
+      "status": "passed",
+      "summary": "Execution exit code was 0."
+    }
+  ],
+  "evidence_refs": [
+    {
+      "evidence_id": "evidence_exec_123_exit_code",
+      "source": "execution.exit_code",
+      "claim_type": "observed",
+      "summary": "Execution exec_123 exited with code 0.",
+      "supports": ["verification.result", "checks.exit_code_zero"]
+    }
+  ],
+  "started_at": "2026-05-24T00:00:02Z",
+  "completed_at": "2026-05-24T00:00:03Z"
+}

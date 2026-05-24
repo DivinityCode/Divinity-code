@@ -48,6 +48,13 @@ const runs = vm.runInNewContext(runDataMatch[1], {
   }),
   evidence: (claim_type, source, summary) => ({ claim_type, source, summary }),
   artifact: (artifact_id, type, uri) => ({ artifact_id, run_id: '', type, uri }),
+  verification: (verification_id, execution_id, step_id, result) => ({
+    verification_id,
+    execution_id,
+    step_id,
+    status: 'completed',
+    result
+  }),
   decisionTrace: (chosen_path, rejected_alternative, rationale, evidence_refs = []) => ({
     chosen_path,
     rejected_alternative,
@@ -71,11 +78,14 @@ assert(runs.every(run => run.budget && Number.isFinite(run.budget.soft) && Numbe
 assert(runs.every(run => Array.isArray(run.events) && run.events.length > 0), 'runs need timelines');
 assert(runs.every(run => run.decision_trace?.chosen_path && run.decision_trace?.rejected_alternative), 'runs need decision traces');
 assert(runs.some(run => Array.isArray(run.executions) && run.executions.length > 0), 'sample data should include execution records');
+assert(runs.some(run => Array.isArray(run.verifications) && run.verifications.length > 0), 'sample data should include verification records');
 assert(js.includes('claim_type'), 'dashboard sample data should include fact/inference labels');
 assert(js.includes('renderEvidenceLabels'), 'dashboard should render evidence labels');
 assert(js.includes('renderDecisionTrace'), 'dashboard should render decision trace panel');
 assert(js.includes('renderExecutions'), 'dashboard should render execution records');
+assert(js.includes('renderVerificationResult'), 'dashboard should render verification records');
 assert(js.includes('git_status') && js.includes('file_read') && js.includes('node_test') && js.includes('package_script'), 'dashboard should show execution adapter names');
+assert(css.includes('verification-chip'), 'dashboard should style verification chips');
 assert(js.includes('Observed') && js.includes('Inferred'), 'dashboard should show observed/inferred label text');
 assert(runs.some(run => run.artifacts.length > 0), 'at least one run needs artifacts');
 assert(runs.every(run => /^[a-f0-9]{64}$/.test(run.audit.hash)), 'audit hashes must be sha256-like hex');

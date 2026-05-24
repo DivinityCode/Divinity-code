@@ -1,5 +1,9 @@
 # Contracts Changelog
 
+## v1.19.0
+- Added `VerificationRecord` schema and examples for post-execution verifier evidence.
+- Added `step_verified` run events and `verification_record` audit entries.
+
 ## v1.18.0
 - Added `CapabilitiesCatalog` schema and examples for policy preset, execution adapter, and starter recipe discovery.
 

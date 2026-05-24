@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VerificationRecord",
+  "type": "object",
+  "required": [
+    "verification_id",
+    "run_id",
+    "step_id",
+    "execution_id",
+    "status",
+    "result",
+    "checks",
+    "evidence_refs",
+    "started_at",
+    "completed_at"
+  ],
+  "properties": {
+    "verification_id": { "type": "string" },
+    "run_id": { "type": "string" },
+    "step_id": { "type": "string" },
+    "execution_id": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["completed"]
+    },
+    "result": {
+      "type": "string",
+      "enum": ["passed", "failed"]
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["check_id", "status", "summary"],
+        "properties": {
+          "check_id": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["passed", "failed"]
+          },
+          "summary": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "evidence_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["evidence_id", "source", "claim_type", "summary", "supports"],
+        "properties": {
+          "evidence_id": { "type": "string" },
+          "source": { "type": "string" },
+          "claim_type": {
+            "type": "string",
+            "enum": ["observed", "inferred"]
+          },
+          "summary": { "type": "string" },
+          "supports": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

@@ -49,18 +49,19 @@
 - API exposes `POST /runs/:id/steps` to run policy and budget gates before a step can enter pending execution.
 - API exposes `POST /runs/:id/steps/:step_id/execute` for policy-approved step execution through constrained adapters.
 - API execution uses per-run local snapshots or shallow Git URL clones; workspaces exclude `node_modules` and preserve Git metadata for Git adapters.
+- API step execution now creates verifier records with observed status, exit-code, and output-capture checks; `step_verified` timeline events and `verification_record` audit records preserve the result.
 - API exposes `POST /runs/:id/workspace/cleanup` to remove managed workspaces and record `workspace_cleaned` events.
 - Execution adapters currently cover workspace `README.md` reads, `git status --short`, whitelisted Node test scripts, and constrained Node-based package scripts for approved command steps.
 - Hard budget cap excess now maps to `paused` for CLI/API runs and pauses an API run when a proposed step exceeds the hard cap.
 - CLI and API expose structured run events; dashboard can subscribe to live selected-run updates through API server-sent events.
-- API step execution records `step_executed` events and `execution_record` audit entries.
+- API step execution records `step_executed`/`step_verified` events and `execution_record`/`verification_record` audit entries.
 - CLI and API expose patch/log/summary artifact metadata; patch artifacts include deterministic unified-diff payloads generated from run context.
 - CLI and API run payloads include deterministic planner/executor/verifier orchestration traces with evidence references.
 - CLI and API run payloads include session/project/team memory entries with provenance, confidence, and stable IDs.
 - CLI and API run payloads include resolved team policy pack metadata by org scope.
 - API exposes `GET /audit` for hash-backed run audit exports with optional timeframe filters.
 - API exposes `GET /observability` for run health, approval backlog, budget utilization, risk mix, and failure taxonomy summaries.
-- Dashboard shell exists at `apps/dashboard` with contract-shaped local sample data plus opt-in API loading through `?api=<base-url>` for task filtering, run timeline, approval decisions, cost/risk badges, observability summaries, execution evidence, artifacts, audit metadata, and live updates.
+- Dashboard shell exists at `apps/dashboard` with contract-shaped local sample data plus opt-in API loading through `?api=<base-url>` for task filtering, run timeline, approval decisions, cost/risk badges, observability summaries, execution and verification evidence, artifacts, audit metadata, and live updates.
 - Missing permissions still produce blocked preflight decisions; soft caps emit `estimated_cost_exceeds_soft_limit` warnings.
 - Preflight and step-gate decision payloads include evidence references for the objective/action, policy permissions, and budget limits.
 - Summary artifacts include decision traces with chosen path, rejected alternative, rationale, and evidence references.

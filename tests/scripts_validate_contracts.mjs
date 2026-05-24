@@ -28,6 +28,8 @@ const checks = [
   ['packages/contracts/schemas/observability.v1.json','packages/contracts/examples/observability.invalid.json',false],
   ['packages/contracts/schemas/capabilities.v1.json','packages/contracts/examples/capabilities.valid.json',true],
   ['packages/contracts/schemas/capabilities.v1.json','packages/contracts/examples/capabilities.invalid.json',false],
+  ['packages/contracts/schemas/verification.v1.json','packages/contracts/examples/verification.valid.json',true],
+  ['packages/contracts/schemas/verification.v1.json','packages/contracts/examples/verification.invalid.json',false],
 ];
 
 let failed = false;

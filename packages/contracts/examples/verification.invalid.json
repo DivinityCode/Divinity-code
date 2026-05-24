@@ -1,0 +1,10 @@
+{
+  "verification_id": "verify_exec_123",
+  "run_id": "run_123",
+  "step_id": "step_readme",
+  "execution_id": "exec_123",
+  "status": "running",
+  "result": "unknown",
+  "checks": [],
+  "started_at": "not-a-date"
+}
