@@ -1,5 +1,9 @@
 # Contracts Changelog
 
+## v1.7.0
+- Expanded Step schema with `blocked` status and `pre_execution_check` metadata for policy-gated steps.
+- Added Step valid/invalid examples and repository-level validation checks.
+
 ## v1.6.0
 - Added AuditExport schema and examples for immutable run audit exports.
 - Added repository-level validation checks for audit valid/invalid examples.

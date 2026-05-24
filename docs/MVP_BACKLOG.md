@@ -28,7 +28,7 @@
 ## Epic 3: Trust & Policy (M1-M2)
 - [x] Permission presets (read-only, scoped-edit, safe-exec, full-exec).
   - Acceptance: presets map to explicit permission arrays in Policy schema.
-- [ ] Policy engine checks before step execution.  
+- [x] Policy engine checks before step execution.
   - Acceptance: high-risk or disallowed step is blocked pre-execution.
 - [ ] Budget soft/hard cap enforcement.  
   - Acceptance: soft cap triggers warning; hard cap pauses run.
@@ -40,6 +40,7 @@
 - CLI `init` supports default, flag-driven, and prompt-driven project config creation for policy preset and soft/hard budget caps.
 - API exposes `POST /preflight`; `POST /tasks` records preflight metadata and moves high-risk allowed work to `awaiting_approval`.
 - API exposes `GET /runs`, `GET /approvals`, and `POST /runs/:id/approval` for dashboard loading and approve/reject transitions.
+- API exposes `POST /runs/:id/steps` to run policy and budget gates before a step can enter pending execution.
 - CLI and API expose structured run events; dashboard can subscribe to live selected-run updates through API server-sent events.
 - CLI and API expose patch/log/summary artifact metadata; real patch payload generation is still pending.
 - API exposes `GET /audit` for hash-backed run audit exports with optional timeframe filters.

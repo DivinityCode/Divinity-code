@@ -3,7 +3,7 @@ import http from 'http';
 import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
 import { createAuditRecord, exportAuditLog } from '../../../packages/audit/src/index.mjs';
 import { createInitialRunEvents, createRunEvent } from '../../../packages/events/src/index.mjs';
-import { evaluatePreflight } from '../../../packages/policy-engine/src/index.mjs';
+import { evaluatePreflight, evaluateStepGate } from '../../../packages/policy-engine/src/index.mjs';
 
 const runs = new Map();
 const artifacts = new Map();
@@ -186,7 +186,8 @@ const server = http.createServer((req, res) => {
         risk_level: preflight.risk_level,
         preflight,
         artifacts: runArtifacts.map(publicArtifactMetadata),
-        events
+        events,
+        steps: []
       };
       for (const artifact of runArtifacts) {
         artifacts.set(artifact.artifact_id, artifact);
@@ -250,6 +251,41 @@ const server = http.createServer((req, res) => {
       const payload = publicRun(run);
       broadcastRun(run);
       sendJson(res, 200, payload);
+    });
+    return;
+  }
+
+  const stepsMatch = req.url.match(/^\/runs\/([^/]+)\/steps$/);
+  if (req.method === 'POST' && stepsMatch) {
+    const run = runs.get(stepsMatch[1]);
+    if (!run) {
+      sendJson(res, 404, { error: 'run not found' });
+      return;
+    }
+
+    readJson(req, (body) => {
+      const check = evaluateStepGate({
+        run,
+        step: body
+      });
+      const step = {
+        step_id: body.step_id || `step_${Date.now()}`,
+        run_id: run.run_id,
+        action: body.action || '',
+        status: check.status === 'allowed' ? 'pending' : 'blocked',
+        pre_execution_check: check
+      };
+
+      run.steps.push(step);
+      broadcastRun(run);
+
+      if (check.decision === 'allow') {
+        sendJson(res, 201, { step });
+      } else if (check.decision === 'requires_approval') {
+        sendJson(res, 409, { error: 'step requires approval before execution', step });
+      } else {
+        sendJson(res, 403, { error: 'step blocked by policy', step });
+      }
     });
     return;
   }
