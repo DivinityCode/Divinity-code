@@ -1,0 +1,14 @@
+{
+  "name": "divinity-code",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Divinity Code monorepo",
+  "scripts": {
+    "validate:contracts": "node scripts_validate_contracts.mjs"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0",
+    "ajv-cli": "^5.0.0",
+    "ajv-formats": "^3.0.1"
+  }
+}

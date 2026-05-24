@@ -1,0 +1,1 @@
+{ "$schema":"https://json-schema.org/draft/2020-12/schema","title":"Policy","type":"object","required":["policy_id","permissions","approval_threshold"],"properties":{"policy_id":{"type":"string"},"permissions":{"type":"array","items":{"type":"string"}},"approval_threshold":{"type":"string","enum":["low","medium","high"]}},"additionalProperties":false }

@@ -1,0 +1,1 @@
+{ "$schema":"https://json-schema.org/draft/2020-12/schema","title":"Step","type":"object","required":["step_id","run_id","action","status"],"properties":{"step_id":{"type":"string"},"run_id":{"type":"string"},"action":{"type":"string"},"status":{"type":"string","enum":["pending","running","completed","failed"]}},"additionalProperties":false }
