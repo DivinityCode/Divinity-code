@@ -1,86 +1,97 @@
 # Competitive Repository Research (Claude Code, Codex, Hermes Agent, Paperclip)
 
-_Last updated: 2026-05-24_
+_Last refreshed: 2026-05-24_
 
 ## Scope
-This document captures findings from the primary GitHub repositories and public project docs for:
-- `anthropics/claude-code`
-- `openai/codex`
-- `NousResearch/hermes-agent`
-- `paperclipai/paperclip`
+This research covers the referenced GitHub repositories and public project documentation for:
+- [`anthropics/claude-code`](https://github.com/anthropics/claude-code)
+- [`openai/codex`](https://github.com/openai/codex)
+- [`NousResearch/hermes-agent`](https://github.com/NousResearch/hermes-agent)
+- [`paperclipai/paperclip`](https://github.com/paperclipai/paperclip)
 
-Goal: translate repo-level strengths into actionable product decisions for Divinity Code.
+The goal is to translate repo-level patterns into product and implementation decisions for Divinity Code.
 
-## 1) Claude Code (`anthropics/claude-code`)
+## Current Repo Signals
+| Repo | Primary language | Latest observed release | Positioning signal |
+| --- | --- | --- | --- |
+| `anthropics/claude-code` | Shell | `v2.1.150` | Terminal-native coding agent with IDE and GitHub adjacency. |
+| `openai/codex` | Rust | `rust-v0.133.0` | Lightweight local coding agent spanning CLI, IDE, app, and web surfaces. |
+| `NousResearch/hermes-agent` | Python | `v2026.5.16` | Self-improving multi-channel agent with memory, skills, schedulers, and portable runtimes. |
+| `paperclipai/paperclip` | TypeScript | `v2026.517.0` | Agent-management control plane for goals, budgets, governance, heartbeats, and audit trails. |
+
+## 1) Claude Code
 ### Observed strengths
-- Clear positioning as a terminal-native coding agent with IDE/GitHub adjacency.
-- Strong install/onboarding emphasis across OSes.
-- Focused promise: execute routine tasks, explain code, and manage git workflows.
+- Product promise is narrow and memorable: a terminal agent that understands the codebase, performs routine tasks, explains code, and handles git workflows.
+- Installation is treated as core product UX, with first-party installers across macOS, Linux, Windows, Homebrew, WinGet, and a deprecated npm path.
+- The README connects terminal use, IDE use, and GitHub tagging without fragmenting the core mental model.
+- Plugins are a first-class extension surface rather than a hidden internal detail.
+- Bug reporting is embedded in the workflow through an in-product `/bug` command.
 
 ### Product takeaways for Divinity Code
-1. Keep a keyboard-first terminal experience as a first-class surface.
-2. Treat install/upgrade reliability as product work, not a docs afterthought.
-3. Pair agent output with git-native workflows (commit/PR-ready summaries).
+1. Preserve a keyboard-first Builder Mode where the fastest path is `divinity init` -> `divinity run`.
+2. Treat installer and environment diagnostics as MVP work, not post-MVP polish.
+3. Keep git-native outputs: run summaries, validation commands, patch artifacts, and PR-ready descriptions.
+4. Make extension points explicit early: policy presets, tool adapters, and future plugins should be discoverable.
 
-## 2) Codex (`openai/codex`)
+## 2) Codex
 ### Observed strengths
-- Explicitly supports multiple surfaces: CLI, IDE integrations, and app/web entrypoints.
-- Excellent quickstart ergonomics and package manager install paths.
-- Consistent framing around local execution with practical developer loops.
+- Clearly separates local CLI, IDE extension, desktop app, and cloud/web agent surfaces while keeping one product identity.
+- Quickstart is short and practical: installer script first, package managers second, binary releases as fallback.
+- The project emphasizes local execution and direct developer loops.
+- Apache-2.0 licensing and Rust implementation signal a serious open-source CLI foundation.
+- Docs are prominent and split by usage, installation/building, and contribution paths.
 
 ### Product takeaways for Divinity Code
-1. Build one shared task model used by CLI, IDE, and dashboard.
-2. Offer frictionless install paths (shell installer + package managers).
-3. Prioritize local-repo context and fast edit/test iteration cycles.
+1. Use one shared Task/Run/Preflight model across CLI, API, dashboard, and future IDE surfaces.
+2. Keep CLI output structured JSON-friendly so other tools and dashboards can consume it.
+3. Make local verification cheap enough to run before every PR.
+4. Separate user docs from contributor docs once implementation grows beyond this bootstrap.
 
-## 3) Hermes Agent (`NousResearch/hermes-agent`)
+## 3) Hermes Agent
 ### Observed strengths
-- Strong differentiation around self-improving loops (skills + memory evolution).
-- Broad deployment/runtime flexibility (local, container, remote/cloud options).
-- Multi-channel interaction model and explicit subagent parallelization patterns.
+- Differentiates around persistent learning loops: memories, skill creation, skill refinement, session search, and user modeling.
+- Supports many interaction channels from one gateway process: CLI, Telegram, Discord, Slack, WhatsApp, Signal, and more.
+- Runtime portability is a core feature: local, Docker, SSH, Singularity, Modal, Daytona, and Vercel Sandbox.
+- Subagents and parallel workstreams are part of the core operating model.
+- The command surface includes setup, doctor, tools, model switching, gateway setup, and migration flows.
 
 ### Product takeaways for Divinity Code
-1. Implement layered memory with provenance and controllable persistence.
-2. Support delegated subagents and parallel execution as core primitives.
-3. Design for portability (local-first + cloud runners with consistent UX).
+1. Design memory as provenance-first data, not opaque long-term context.
+2. Make subagent delegation observable: who did what, why, with what evidence, and under which budget.
+3. Add a `doctor`-style diagnostic command before deep integrations.
+4. Keep runtime abstractions portable enough for local worktrees now and cloud runners later.
 
-## 4) Paperclip (`paperclipai/paperclip`)
+## 4) Paperclip
 ### Observed strengths
-- Product direction emphasizes agent management for teams, not only solo coding.
-- Organization-level framing suggests dashboards, oversight, and workflow governance.
-- Repository organization indicates app + docs + website separation (productized motion).
+- Models agent work as organizational work: goals, org charts, budgets, governance, tickets, heartbeats, and audit trails.
+- Dashboard framing is operational rather than chat-centric.
+- Budget enforcement, approvals, execution locks, and recovery are core control-plane responsibilities.
+- Supports multiple agent adapters instead of assuming one agent runtime.
+- Emphasizes persistent state, task context, and immutable activity over ephemeral conversations.
 
 ### Product takeaways for Divinity Code
-1. Add a robust operator dashboard (queue, approvals, run analytics).
-2. Make governance explicit (policies, audit trails, role-aware controls).
-3. Treat documentation and onboarding as continuously shipped product components.
+1. Operator Mode should manage runs and approvals, not just display chat.
+2. Every run should be tied to policy, budget, risk, evidence, and artifact metadata.
+3. Approval gates need to be explicit data contracts before the dashboard is built.
+4. Cost/risk state should be present in both CLI and API responses from the start.
 
-## Cross-Repo Convergence (What "best in class" should combine)
-1. **Builder excellence:** terminal and IDE depth for day-to-day engineering work.
-2. **Operator excellence:** project-wide visibility, approvals, and budget controls.
-3. **Agent orchestration:** planner/executor/verifier + subagent parallelism.
-4. **Trust architecture:** explicit permissions, risk preflight, and immutable audit traces.
-5. **Memory quality:** useful long-term memory with provenance, expiry, and user override.
+## Cross-Repo Convergence
+1. **Fast local builder loop:** install, initialize, run, verify, summarize.
+2. **Shared contract model:** one Task/Run/Preflight vocabulary across every surface.
+3. **Trust-first execution:** policy preflight, risk labels, budget checks, approval state, and immutable records.
+4. **Operator visibility:** queue, timeline, audit trail, cost/risk, and intervention controls.
+5. **Extensible agent runtime:** adapters, plugins, memory, skills, and portable execution backends.
 
-## Implementation Decisions to Adopt Immediately
-1. Standardize a run contract with explicit lifecycle states.
-2. Introduce policy checks before any side-effecting step.
-3. Require evidence links for each major agent decision.
-4. Add cost/risk badges to every run surface (CLI + dashboard).
-5. Keep all outputs PR-ready (diff summary, commands executed, validation signals).
+## Implementation Decisions Adopted
+1. Add preflight decisions as a first-class contract before dashboard work.
+2. Return preflight risk, budget, approval, and block state from CLI and API flows.
+3. Add policy presets for `read_only`, `scoped_edit`, `safe_exec`, and `full_exec`.
+4. Keep smoke tests local and deterministic by using temp workspaces.
+5. Keep documentation current with observed repo signals and implementation status.
 
-## Proposed Next Build Slice (2-week execution)
-### Week 1
-- Define JSON schemas for Task, Run, Step, Artifact, Policy.
-- Scaffold CLI command group (`init`, `run`, `status`, `approve`).
-- Implement local run event stream and structured logging.
-
-### Week 2
-- Build dashboard pages: task list, run timeline, approval queue.
-- Add preflight risk and budget estimation panel.
-- Implement one approval gate path for high-risk shell/file operations.
-
-## Open Questions
-- Which default policy preset should new projects start with?
-- What confidence threshold triggers automatic verifier escalation?
-- Which memory entries are auto-expired vs user-pinned?
+## Next Build Slices
+1. **Approval queue:** persist runs requiring approval and implement approve/reject transitions.
+2. **Run event envelope:** emit structured status events from CLI/API and add examples.
+3. **Artifact metadata:** generate patch/log/summary artifact records for completed runs.
+4. **Operator dashboard shell:** render task list, run detail, approval queue, and cost/risk badges from mock/API data.
+5. **Diagnostics:** add a `divinity doctor` command for npm/node/git/API readiness checks.

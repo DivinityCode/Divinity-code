@@ -39,7 +39,9 @@ try {
   const runResult = runCli(tmpDir, 'run', 'smoke task');
   assert(runResult.ok === true, 'CLI run did not return ok=true');
   assert(runResult.command === 'run', 'CLI run command name mismatch');
+  assert(/^run_/.test(runResult.run_id), 'CLI run_id mismatch');
   assert(runResult.status === 'queued', 'CLI run status mismatch');
+  assert(runResult.preflight?.decision === 'allow', 'CLI run preflight decision mismatch');
   assert(runResult.task?.objective === 'smoke task', 'CLI run objective mismatch');
   assert(runResult.task?.repo === tmpDir, 'CLI run repo should be the temp dir');
 
@@ -51,6 +53,22 @@ try {
   assert(healthRes.status === 200, 'API health returned non-200 status');
   const health = await healthRes.json();
   assert(health.ok === true, 'API health did not return ok=true');
+
+  const preflightRes = await fetch(`${baseUrl}/preflight`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      task_id: 'task_smoke',
+      objective: 'Run a migration shell command',
+      repo: 'github.com/org/repo',
+      policy_id: 'safe_exec',
+      budget: { soft_limit_usd: 2.5, hard_limit_usd: 5 },
+      created_at: '2026-05-24T00:00:00Z'
+    })
+  });
+  assert(preflightRes.status === 200, 'API preflight returned non-200 status');
+  const preflight = await preflightRes.json();
+  assert(preflight.decision === 'requires_approval', 'API preflight decision mismatch');
 
   const createRes = await fetch(`${baseUrl}/tasks`, {
     method: 'POST',

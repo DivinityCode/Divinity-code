@@ -10,6 +10,8 @@ const checks = [
   ['packages/contracts/schemas/task.v1.json','packages/contracts/examples/task.invalid.json',false],
   ['packages/contracts/schemas/run.v1.json','packages/contracts/examples/run.valid.json',true],
   ['packages/contracts/schemas/run.v1.json','packages/contracts/examples/run.invalid.json',false],
+  ['packages/contracts/schemas/preflight.v1.json','packages/contracts/examples/preflight.valid.json',true],
+  ['packages/contracts/schemas/preflight.v1.json','packages/contracts/examples/preflight.invalid.json',false],
 ];
 
 let failed = false;

@@ -2,6 +2,8 @@
 import fs from 'fs';
 import path from 'path';
 
+import { evaluatePreflight } from '../../../packages/policy-engine/src/index.mjs';
+
 const [, , command, ...args] = process.argv;
 const cwd = process.cwd();
 const configPath = path.join(cwd, '.divinity.json');
@@ -21,15 +23,35 @@ function init() {
 
 function run() {
   const objective = args.join(' ').trim() || 'No objective provided';
+  const config = fs.existsSync(configPath)
+    ? JSON.parse(fs.readFileSync(configPath, 'utf8'))
+    : {
+        policy_id: 'safe_exec',
+        budget: { soft_limit_usd: 2, hard_limit_usd: 5 }
+      };
   const payload = {
     task_id: `task_${Date.now()}`,
     objective,
     repo: cwd,
-    policy_id: 'safe_exec',
-    budget: { soft_limit_usd: 2, hard_limit_usd: 5 },
+    policy_id: config.policy_id,
+    budget: config.budget,
     created_at: new Date().toISOString()
   };
-  print({ ok: true, command: 'run', status: 'queued', task: payload });
+  const preflight = evaluatePreflight({ task: payload });
+  const status = preflight.decision === 'requires_approval'
+    ? 'awaiting_approval'
+    : preflight.decision === 'block'
+      ? 'failed'
+      : 'queued';
+
+  print({
+    ok: true,
+    command: 'run',
+    run_id: `run_${Date.now()}`,
+    status,
+    preflight,
+    task: payload
+  });
 }
 
 function status() {

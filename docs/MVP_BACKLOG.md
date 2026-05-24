@@ -8,7 +8,7 @@
 ## Epic 1: Builder Mode Core (M1-M2)
 - [ ] CLI init command with project config wizard.  
   - Acceptance: creates local project config with policy preset and budget defaults.
-- [ ] Task command (`divinity run`) accepting objective + repo context.  
+- [x] Task command (`divinity run`) accepting objective + repo context.
   - Acceptance: submits valid Task payload and returns `run_id`.
 - [ ] Local run timeline and structured progress events.  
   - Acceptance: emits JSON event envelope with status transitions.
@@ -26,14 +26,19 @@
   - Acceptance: each run displays risk level and soft/hard budget usage.
 
 ## Epic 3: Trust & Policy (M1-M2)
-- [ ] Permission presets (read-only, scoped-edit, safe-exec, full-exec).  
+- [x] Permission presets (read-only, scoped-edit, safe-exec, full-exec).
   - Acceptance: presets map to explicit permission arrays in Policy schema.
 - [ ] Policy engine checks before step execution.  
   - Acceptance: high-risk or disallowed step is blocked pre-execution.
 - [ ] Budget soft/hard cap enforcement.  
   - Acceptance: soft cap triggers warning; hard cap pauses run.
-- [ ] Preflight panel payload contract.  
+- [x] Preflight panel payload contract.
   - Acceptance: includes predicted actions, risk score, and estimated cost.
+
+## Current Implementation Notes
+- CLI `run` now returns `run_id`, status, task payload, and preflight decision metadata.
+- API exposes `POST /preflight`; `POST /tasks` records preflight metadata and moves high-risk allowed work to `awaiting_approval`.
+- Hard budget cap excess and missing permissions currently produce blocked preflight decisions; soft caps are surfaced but do not pause runs yet.
 
 ## Epic 4: Explainability (M2-M3)
 - [ ] Action-to-evidence linking model.  

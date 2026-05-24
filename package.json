@@ -4,6 +4,8 @@
   "version": "0.1.0",
   "description": "Divinity Code monorepo",
   "scripts": {
+    "test": "node tests_policy_preflight.mjs && node tests_api_preflight.mjs && node tests_cli_preflight.mjs && node scripts_smoke_api.mjs",
+    "test:preflight": "node tests_policy_preflight.mjs && node tests_api_preflight.mjs && node tests_cli_preflight.mjs",
     "validate:contracts": "node scripts_validate_contracts.mjs",
     "test:smoke": "node scripts_smoke_api.mjs"
   },

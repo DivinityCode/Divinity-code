@@ -1,5 +1,9 @@
 # Contracts Changelog
 
+## v1.2.0
+- Added PreflightDecision schema and examples for risk, budget, approval, and block decisions.
+- Added repository-level validation checks for preflight valid/invalid examples.
+
 ## v1.1.0
 - Added run contract example payloads (valid/invalid).
 - Added repository-level contract validation script support.

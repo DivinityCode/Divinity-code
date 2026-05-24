@@ -43,6 +43,12 @@
 7. Approval gates (if needed)
 8. Completion + summary + artifact indexing
 
+## Preflight Decision Model
+- Preflight runs before task execution in CLI and API flows.
+- The policy engine infers predicted action classes from the task objective, maps each action to a risk level and required permission, estimates cost, and compares the result with the selected policy preset and task budget.
+- Decisions are `allow`, `requires_approval`, or `block`.
+- High-risk actions under `safe_exec` enter `awaiting_approval`; missing permissions or hard budget overruns block execution.
+
 ## Security and Governance
 - Principle of least privilege by default.
 - Scoped credentials per workspace.
@@ -53,4 +59,3 @@
 - Real-time run event stream.
 - Token/cost meters by run/project/team.
 - Failure taxonomy dashboard (policy, execution, model, dependency).
-

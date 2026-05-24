@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PreflightDecision",
+  "type": "object",
+  "required": [
+    "decision",
+    "risk_level",
+    "approval_required",
+    "policy_id",
+    "predicted_actions",
+    "budget",
+    "blocked_reasons"
+  ],
+  "properties": {
+    "decision": {
+      "type": "string",
+      "enum": ["allow", "requires_approval", "block"]
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"]
+    },
+    "approval_required": {
+      "type": "boolean"
+    },
+    "policy_id": {
+      "type": "string"
+    },
+    "predicted_actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "risk_level", "permission"],
+        "properties": {
+          "type": { "type": "string" },
+          "risk_level": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "critical"]
+          },
+          "permission": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "budget": {
+      "type": "object",
+      "required": [
+        "estimated_cost_usd",
+        "soft_limit_usd",
+        "hard_limit_usd",
+        "soft_cap_exceeded",
+        "hard_cap_exceeded"
+      ],
+      "properties": {
+        "estimated_cost_usd": { "type": "number", "minimum": 0 },
+        "soft_limit_usd": { "type": ["number", "null"], "minimum": 0 },
+        "hard_limit_usd": { "type": ["number", "null"], "minimum": 0 },
+        "soft_cap_exceeded": { "type": "boolean" },
+        "hard_cap_exceeded": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "blocked_reasons": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}
