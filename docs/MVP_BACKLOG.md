@@ -44,8 +44,10 @@
 - API task creation normalizes missing org/project scope to `default-org/default-project`; configured API keys protect control-plane routes when `DIVINITY_API_KEY` or `DIVINITY_API_KEYS` is set.
 - API exposes `GET /runs`, `GET /approvals`, and `POST /runs/:id/approval` for dashboard loading and approve/reject transitions.
 - API exposes `POST /runs/:id/steps` to run policy and budget gates before a step can enter pending execution.
+- API exposes `POST /runs/:id/steps/:step_id/execute` for policy-approved step execution through constrained adapters.
 - Hard budget cap excess now maps to `paused` for CLI/API runs and pauses an API run when a proposed step exceeds the hard cap.
 - CLI and API expose structured run events; dashboard can subscribe to live selected-run updates through API server-sent events.
+- API step execution records `step_executed` events and `execution_record` audit entries.
 - CLI and API expose patch/log/summary artifact metadata; patch artifacts include deterministic unified-diff payloads generated from run context.
 - CLI and API run payloads include deterministic planner/executor/verifier orchestration traces with evidence references.
 - CLI and API run payloads include session/project/team memory entries with provenance, confidence, and stable IDs.

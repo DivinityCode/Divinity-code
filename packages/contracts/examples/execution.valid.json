@@ -1,0 +1,13 @@
+{
+  "execution_id": "exec_123",
+  "run_id": "run_123",
+  "step_id": "step_readme",
+  "adapter": "file_read",
+  "status": "completed",
+  "exit_code": 0,
+  "target_path": "README.md",
+  "stdout": "# Divinity Code\n",
+  "stderr": "",
+  "started_at": "2026-05-24T00:00:00Z",
+  "completed_at": "2026-05-24T00:00:01Z"
+}

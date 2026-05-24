@@ -12,7 +12,7 @@
     },
     "type": {
       "type": "string",
-      "enum": ["task_created", "preflight_completed", "status_changed", "approval_decided"]
+      "enum": ["task_created", "preflight_completed", "status_changed", "approval_decided", "step_executed"]
     },
     "status": {
       "type": "string",

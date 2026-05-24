@@ -2,7 +2,8 @@ const EVENT_TYPES = new Set([
   'task_created',
   'preflight_completed',
   'status_changed',
-  'approval_decided'
+  'approval_decided',
+  'step_executed'
 ]);
 
 export function createRunEvent({

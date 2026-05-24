@@ -11,6 +11,42 @@
       "type": "string",
       "enum": ["pending", "running", "completed", "failed", "blocked"]
     },
+    "execution": {
+      "type": "object",
+      "required": [
+        "execution_id",
+        "run_id",
+        "step_id",
+        "adapter",
+        "status",
+        "exit_code",
+        "target_path",
+        "stdout",
+        "stderr",
+        "started_at",
+        "completed_at"
+      ],
+      "properties": {
+        "execution_id": { "type": "string" },
+        "run_id": { "type": "string" },
+        "step_id": { "type": "string" },
+        "adapter": {
+          "type": "string",
+          "enum": ["file_read", "manual"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["completed", "failed"]
+        },
+        "exit_code": { "type": "integer" },
+        "target_path": { "type": ["string", "null"] },
+        "stdout": { "type": "string" },
+        "stderr": { "type": "string" },
+        "started_at": { "type": "string", "format": "date-time" },
+        "completed_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
     "pre_execution_check": {
       "type": "object",
       "required": ["decision", "status", "risk_level", "approval_required", "blocked_reasons", "evidence_refs"],

@@ -1,5 +1,10 @@
 # Contracts Changelog
 
+## v1.12.0
+- Added ExecutionRecord schema and examples for execution adapter outputs.
+- Added `step_executed` run events and `execution_record` audit entries.
+- Added optional Step `execution` payload for completed or failed step execution evidence.
+
 ## v1.11.0
 - Added required Task `scope.org_id` and `scope.project_id` fields for org/project run association.
 

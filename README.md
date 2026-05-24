@@ -3,7 +3,7 @@
 Divinity Code is an AI engineering platform designed to combine best-in-class coding execution, multi-agent orchestration, and a user-friendly trust-first UX.
 
 ## Current Status
-Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows, policy and budget gates, approval transitions, artifacts, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, and team policy packs.
+Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows, policy and budget gates, approval transitions, execution adapter records, artifacts, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, and team policy packs.
 
 ## Documents
 - [Product Plan](docs/PRODUCT_PLAN.md)
@@ -15,7 +15,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 ## Implemented Surfaces
 1. Builder CLI: `init`, `run`, `status`, `approve`, `recipes`, and `doctor`.
 2. IDE extension scaffold: task run, dashboard launch, and doctor commands delegated to the repo-local CLI.
-3. Control Plane API: health, preflight, task creation, run retrieval, approvals, steps, artifacts, audit export, and live run streams.
+3. Control Plane API: health, preflight, task creation, run retrieval, approvals, step gates and execution, artifacts, audit export, and live run streams.
 4. Operator dashboard: run queue, approvals, run timeline, decision trace, artifacts, audit metadata, and API-backed live updates.
 
 
@@ -26,6 +26,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - `apps/dashboard` - Operator Mode dashboard
 - `packages/contracts` - versioned task/run/policy schemas
 - `packages/policy-engine` - trust and budget gate evaluation
+- `packages/execution` - policy-approved step execution adapters
 - `packages/events` - shared run event model
 - `packages/artifacts` - patch/log/summary artifact payloads
 - `packages/audit` - hash-backed audit records and exports
@@ -39,4 +40,4 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - Run `npm install`
 - Run `npm run validate:contracts` to validate schema examples and CI contract checks.
 - Run `npm run test:smoke` for a local CLI+API smoke path.
-- Run `npm test` for preflight engine, approval API, run events, artifacts, audit export, CLI, and smoke checks.
+- Run `npm test` for preflight engine, approval API, execution adapters, run events, artifacts, audit export, CLI, and smoke checks.
