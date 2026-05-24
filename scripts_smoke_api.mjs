@@ -25,6 +25,7 @@ const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-smoke-'));
 
 try {
   writeFileSync(path.join(tmpDir, 'README.md'), '# Smoke Workspace\n\nExecution smoke evidence.\n');
+  execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
   const initResult = runCli(tmpDir, 'init');
   const configPath = path.join(tmpDir, '.divinity.json');
   assert(initResult.ok === true, 'CLI init did not return ok=true');
@@ -124,6 +125,38 @@ try {
   assert(executed.execution?.status === 'completed', 'API step execution status mismatch');
   assert(executed.execution?.adapter === 'file_read', 'API step execution adapter mismatch');
   assert(executed.execution?.stdout.includes('Execution smoke evidence'), 'API step execution stdout mismatch');
+
+  const gitRunRes = await fetch(`${baseUrl}/tasks`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      task_id: 'task_smoke_git_status',
+      objective: 'Run git status command',
+      repo: tmpDir,
+      policy_id: 'full_exec',
+      budget: { soft_limit_usd: 2.5, hard_limit_usd: 5 },
+      created_at: '2026-05-24T00:00:00Z'
+    })
+  });
+  assert(gitRunRes.status === 201, 'API git task creation returned non-201 status');
+  const gitRun = await gitRunRes.json();
+
+  const gitStepRes = await fetch(`${baseUrl}/runs/${gitRun.run_id}/steps`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ step_id: 'step_smoke_git_status', action: 'Run git status command' })
+  });
+  assert(gitStepRes.status === 201, 'API git step gate returned non-201 status');
+
+  const gitExecuteRes = await fetch(`${baseUrl}/runs/${gitRun.run_id}/steps/step_smoke_git_status/execute`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({})
+  });
+  assert(gitExecuteRes.status === 200, 'API git step execution returned non-200 status');
+  const gitExecuted = await gitExecuteRes.json();
+  assert(gitExecuted.execution?.adapter === 'git_status', 'API git step execution adapter mismatch');
+  assert(gitExecuted.execution?.stdout.includes('README.md'), 'API git step execution stdout mismatch');
 
   console.log(JSON.stringify({ ok: true, smoke: 'cli-api' }));
 } finally {

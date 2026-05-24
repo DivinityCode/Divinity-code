@@ -45,6 +45,7 @@
 - API exposes `GET /runs`, `GET /approvals`, and `POST /runs/:id/approval` for dashboard loading and approve/reject transitions.
 - API exposes `POST /runs/:id/steps` to run policy and budget gates before a step can enter pending execution.
 - API exposes `POST /runs/:id/steps/:step_id/execute` for policy-approved step execution through constrained adapters.
+- Execution adapters currently cover workspace `README.md` reads and `git status --short` for approved command steps.
 - Hard budget cap excess now maps to `paused` for CLI/API runs and pauses an API run when a proposed step exceeds the hard cap.
 - CLI and API expose structured run events; dashboard can subscribe to live selected-run updates through API server-sent events.
 - API step execution records `step_executed` events and `execution_record` audit entries.

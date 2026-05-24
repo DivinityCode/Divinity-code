@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.13.0
+- Added `git_status` as an ExecutionRecord adapter for constrained git status command execution.
+
 ## v1.12.0
 - Added ExecutionRecord schema and examples for execution adapter outputs.
 - Added `step_executed` run events and `execution_record` audit entries.
