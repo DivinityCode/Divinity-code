@@ -30,3 +30,4 @@ Project bootstrapping is in progress. Initial planning and architecture artifact
 ## Validation
 - Run `npm install`
 - Run `npm run validate:contracts` to validate schema examples and CI contract checks.
+- Run `npm run test:smoke` for a local CLI+API smoke path.
