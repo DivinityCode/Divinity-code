@@ -1,5 +1,9 @@
 # Contracts Changelog
 
+## v1.5.0
+- Added artifact valid/invalid examples to lock patch/log/summary metadata shape.
+- Added repository-level validation checks for artifact examples.
+
 ## v1.4.0
 - Added RunEvent schema and examples for timeline events.
 - Added repository-level validation checks for event valid/invalid examples.

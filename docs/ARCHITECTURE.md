@@ -60,6 +60,11 @@
 - API timelines are available from `GET /runs/:id/events`.
 - Event envelopes include event id, run id, event type, lifecycle status, message, metadata, and creation timestamp.
 
+## Artifact Model
+- CLI and API runs expose patch, log, and summary artifact metadata.
+- Artifact metadata contains `artifact_id`, `run_id`, `type`, and `uri`.
+- API artifact lists are available from `GET /runs/:id/artifacts`; full scaffolded artifact content is available from `GET /artifacts/:artifact_id`.
+
 ## Security and Governance
 - Principle of least privilege by default.
 - Scoped credentials per workspace.

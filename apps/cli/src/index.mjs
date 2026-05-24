@@ -2,6 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 
+import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
 import { createInitialRunEvents } from '../../../packages/events/src/index.mjs';
 import { evaluatePreflight } from '../../../packages/policy-engine/src/index.mjs';
 
@@ -52,6 +53,7 @@ function run() {
     run_id,
     status,
     preflight,
+    artifacts: createRunArtifacts({ run_id, task: payload, status }).map(publicArtifactMetadata),
     events: createInitialRunEvents({ run_id, task: payload, preflight, status }),
     task: payload
   });
