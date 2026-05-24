@@ -31,4 +31,4 @@ Project bootstrapping is in progress. Initial planning and architecture artifact
 - Run `npm install`
 - Run `npm run validate:contracts` to validate schema examples and CI contract checks.
 - Run `npm run test:smoke` for a local CLI+API smoke path.
-- Run `npm test` for preflight engine, API, CLI, and smoke checks.
+- Run `npm test` for preflight engine, approval API, run events, artifacts, audit export, CLI, and smoke checks.

@@ -10,8 +10,18 @@ const checks = [
   ['packages/contracts/schemas/task.v1.json','packages/contracts/examples/task.invalid.json',false],
   ['packages/contracts/schemas/run.v1.json','packages/contracts/examples/run.valid.json',true],
   ['packages/contracts/schemas/run.v1.json','packages/contracts/examples/run.invalid.json',false],
+  ['packages/contracts/schemas/step.v1.json','packages/contracts/examples/step.valid.json',true],
+  ['packages/contracts/schemas/step.v1.json','packages/contracts/examples/step.invalid.json',false],
+  ['packages/contracts/schemas/artifact.v1.json','packages/contracts/examples/artifact.valid.json',true],
+  ['packages/contracts/schemas/artifact.v1.json','packages/contracts/examples/artifact.invalid.json',false],
   ['packages/contracts/schemas/preflight.v1.json','packages/contracts/examples/preflight.valid.json',true],
   ['packages/contracts/schemas/preflight.v1.json','packages/contracts/examples/preflight.invalid.json',false],
+  ['packages/contracts/schemas/approval.v1.json','packages/contracts/examples/approval.valid.json',true],
+  ['packages/contracts/schemas/approval.v1.json','packages/contracts/examples/approval.invalid.json',false],
+  ['packages/contracts/schemas/event.v1.json','packages/contracts/examples/event.valid.json',true],
+  ['packages/contracts/schemas/event.v1.json','packages/contracts/examples/event.invalid.json',false],
+  ['packages/contracts/schemas/audit.v1.json','packages/contracts/examples/audit.valid.json',true],
+  ['packages/contracts/schemas/audit.v1.json','packages/contracts/examples/audit.invalid.json',false],
 ];
 
 let failed = false;

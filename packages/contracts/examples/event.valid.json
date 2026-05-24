@@ -1,0 +1,11 @@
+{
+  "event_id": "evt_123",
+  "run_id": "run_123",
+  "type": "status_changed",
+  "status": "paused",
+  "message": "Run status changed to awaiting_approval",
+  "metadata": {
+    "risk_level": "high"
+  },
+  "created_at": "2026-05-24T00:00:00Z"
+}

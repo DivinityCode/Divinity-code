@@ -1,1 +1,63 @@
-{ "$schema":"https://json-schema.org/draft/2020-12/schema","title":"Step","type":"object","required":["step_id","run_id","action","status"],"properties":{"step_id":{"type":"string"},"run_id":{"type":"string"},"action":{"type":"string"},"status":{"type":"string","enum":["pending","running","completed","failed"]}},"additionalProperties":false }
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Step",
+  "type": "object",
+  "required": ["step_id", "run_id", "action", "status", "pre_execution_check"],
+  "properties": {
+    "step_id": { "type": "string" },
+    "run_id": { "type": "string" },
+    "action": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "running", "completed", "failed", "blocked"]
+    },
+    "pre_execution_check": {
+      "type": "object",
+      "required": ["decision", "status", "risk_level", "approval_required", "blocked_reasons", "evidence_refs"],
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": ["allow", "requires_approval", "block"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["allowed", "blocked"]
+        },
+        "risk_level": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"]
+        },
+        "approval_required": { "type": "boolean" },
+        "blocked_reasons": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["evidence_id", "source", "claim_type", "summary", "supports"],
+            "properties": {
+              "evidence_id": { "type": "string" },
+              "source": { "type": "string" },
+              "claim_type": {
+                "type": "string",
+                "enum": ["observed", "inferred"]
+              },
+              "summary": { "type": "string" },
+              "supports": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string" }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

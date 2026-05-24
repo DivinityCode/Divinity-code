@@ -86,13 +86,46 @@ function estimateCost(actions) {
   ), 0).toFixed(2));
 }
 
+function createEvidenceRefs({ task, predicted_actions, resolvedPolicy, budget, objectiveSource = 'task.objective' }) {
+  return [
+    {
+      evidence_id: objectiveSource === 'step.action' ? 'evidence_step_action' : 'evidence_task_objective',
+      source: objectiveSource,
+      claim_type: 'inferred',
+      summary: `Classified objective: ${task?.objective || 'No objective provided'}`,
+      supports: ['predicted_actions', 'risk_level', 'decision']
+    },
+    {
+      evidence_id: 'evidence_policy_permissions',
+      source: 'policy.permissions',
+      claim_type: 'observed',
+      summary: `Policy ${resolvedPolicy.policy_id} grants: ${(resolvedPolicy.permissions || []).join(', ') || 'none'}`,
+      supports: ['approval_required', 'blocked_reasons', 'decision']
+    },
+    {
+      evidence_id: 'evidence_task_budget',
+      source: 'task.budget',
+      claim_type: 'observed',
+      summary: `Estimated $${budget.estimated_cost_usd} against soft $${budget.soft_limit_usd ?? 'none'} and hard $${budget.hard_limit_usd ?? 'none'} limits`,
+      supports: ['budget', 'warnings', 'run_status']
+    }
+  ];
+}
+
+export function runStatusForDecision(decision) {
+  if (decision?.budget?.hard_cap_exceeded) return 'paused';
+  if (decision?.decision === 'requires_approval') return 'awaiting_approval';
+  if (decision?.decision === 'block') return 'failed';
+  return 'queued';
+}
+
 export function resolvePolicy(policyOrId) {
   if (!policyOrId) return POLICY_PRESETS.safe_exec;
   if (typeof policyOrId === 'string') return POLICY_PRESETS[policyOrId] || POLICY_PRESETS.safe_exec;
   return policyOrId;
 }
 
-export function evaluatePreflight({ task, policy }) {
+export function evaluatePreflight({ task, policy, objectiveSource }) {
   const resolvedPolicy = resolvePolicy(policy || task?.policy_id);
   const predicted_actions = inferActions(task?.objective);
   const risk_level = maxRisk(predicted_actions);
@@ -111,6 +144,7 @@ export function evaluatePreflight({ task, policy }) {
 
   const permissions = new Set(resolvedPolicy.permissions || []);
   const blocked_reasons = [];
+  const warnings = [];
 
   for (const action of predicted_actions) {
     if (!permissions.has(action.permission)) {
@@ -122,6 +156,10 @@ export function evaluatePreflight({ task, policy }) {
     blocked_reasons.push('estimated_cost_exceeds_hard_limit');
   }
 
+  if (budget.soft_cap_exceeded) {
+    warnings.push('estimated_cost_exceeds_soft_limit');
+  }
+
   const approval_required = !blocked_reasons.length
     && compareRisk(risk_level, resolvedPolicy.approval_threshold || 'high') >= 0;
   const decision = blocked_reasons.length
@@ -130,13 +168,43 @@ export function evaluatePreflight({ task, policy }) {
       ? 'requires_approval'
       : 'allow';
 
-  return {
+  const result = {
     decision,
     risk_level,
     approval_required,
     policy_id: resolvedPolicy.policy_id,
     predicted_actions,
     budget,
-    blocked_reasons
+    warnings,
+    blocked_reasons,
+    evidence_refs: createEvidenceRefs({
+      task,
+      predicted_actions,
+      resolvedPolicy,
+      budget,
+      objectiveSource
+    })
+  };
+  return {
+    ...result,
+    run_status: runStatusForDecision(result)
+  };
+}
+
+export function evaluateStepGate({ run, step, policy }) {
+  const decision = evaluatePreflight({
+    task: {
+      ...(run?.task || {}),
+      objective: step?.action || '',
+      task_id: step?.step_id || run?.task_id || run?.run_id || 'step',
+      created_at: new Date().toISOString()
+    },
+    policy: policy || run?.task?.policy_id,
+    objectiveSource: 'step.action'
+  });
+
+  return {
+    ...decision,
+    status: decision.decision === 'allow' ? 'allowed' : 'blocked'
   };
 }

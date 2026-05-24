@@ -4,17 +4,24 @@
   "type": "object",
   "required": [
     "decision",
+    "run_status",
     "risk_level",
     "approval_required",
     "policy_id",
     "predicted_actions",
     "budget",
-    "blocked_reasons"
+    "warnings",
+    "blocked_reasons",
+    "evidence_refs"
   ],
   "properties": {
     "decision": {
       "type": "string",
       "enum": ["allow", "requires_approval", "block"]
+    },
+    "run_status": {
+      "type": "string",
+      "enum": ["queued", "running", "awaiting_approval", "paused", "completed", "failed"]
     },
     "risk_level": {
       "type": "string",
@@ -63,6 +70,33 @@
     "blocked_reasons": {
       "type": "array",
       "items": { "type": "string" }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "evidence_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["evidence_id", "source", "claim_type", "summary", "supports"],
+        "properties": {
+          "evidence_id": { "type": "string" },
+          "source": { "type": "string" },
+          "claim_type": {
+            "type": "string",
+            "enum": ["observed", "inferred"]
+          },
+          "summary": { "type": "string" },
+          "supports": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
     }
   },
   "additionalProperties": false

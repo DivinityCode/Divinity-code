@@ -1,55 +1,212 @@
 #!/usr/bin/env node
+import { spawnSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { createInterface } from 'readline/promises';
 
-import { evaluatePreflight } from '../../../packages/policy-engine/src/index.mjs';
+import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
+import { createInitialRunEvents } from '../../../packages/events/src/index.mjs';
+import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
+import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
+import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
+import { evaluatePreflight, POLICY_PRESETS } from '../../../packages/policy-engine/src/index.mjs';
+import { publicStarterRecipes } from '../../../packages/recipes/src/index.mjs';
 
 const [, , command, ...args] = process.argv;
 const cwd = process.cwd();
 const configPath = path.join(cwd, '.divinity.json');
+const DEFAULT_CONFIG = {
+  policy_id: 'safe_exec',
+  budget: { soft_limit_usd: 2, hard_limit_usd: 5 },
+  scope: { org_id: 'default-org', project_id: 'default-project' }
+};
+const POLICY_IDS = Object.keys(POLICY_PRESETS);
 
 function print(obj) {
   process.stdout.write(`${JSON.stringify(obj, null, 2)}\n`);
 }
 
-function init() {
-  const config = {
-    policy_id: 'safe_exec',
-    budget: { soft_limit_usd: 2, hard_limit_usd: 5 }
+function commandCheck(check_id, executable, values = []) {
+  const result = spawnSync(executable, values, { encoding: 'utf8' });
+  const output = `${result.stdout || ''}${result.stderr || ''}`.trim().split(/\r?\n/)[0];
+  return {
+    check_id,
+    ok: result.status === 0,
+    required: true,
+    summary: output || result.error?.message || `command exited with ${result.status}`
   };
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-  print({ ok: true, command: 'init', config_path: configPath });
+}
+
+function fileCheck(check_id, filePath) {
+  return {
+    check_id,
+    ok: fs.existsSync(filePath),
+    required: true,
+    summary: filePath
+  };
+}
+
+function parseInitArgs(values) {
+  const options = {
+    wizard: false,
+    policy_id: DEFAULT_CONFIG.policy_id,
+    soft_limit_usd: DEFAULT_CONFIG.budget.soft_limit_usd,
+    hard_limit_usd: DEFAULT_CONFIG.budget.hard_limit_usd,
+    org_id: DEFAULT_CONFIG.scope.org_id,
+    project_id: DEFAULT_CONFIG.scope.project_id
+  };
+
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    const next = values[index + 1];
+
+    if (value === '--wizard') {
+      options.wizard = true;
+    } else if (value === '--policy' || value === '--policy-id') {
+      options.policy_id = next;
+      index += 1;
+    } else if (value === '--soft-limit' || value === '--soft-limit-usd') {
+      options.soft_limit_usd = next;
+      index += 1;
+    } else if (value === '--hard-limit' || value === '--hard-limit-usd') {
+      options.hard_limit_usd = next;
+      index += 1;
+    } else if (value === '--org' || value === '--org-id') {
+      options.org_id = next;
+      index += 1;
+    } else if (value === '--project' || value === '--project-id') {
+      options.project_id = next;
+      index += 1;
+    } else {
+      throw new Error(`unknown init option: ${value}`);
+    }
+  }
+
+  return options;
+}
+
+function asBudgetNumber(value, label) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`${label} must be a non-negative number`);
+  }
+  return parsed;
+}
+
+function asScopeId(value, label) {
+  const parsed = String(value || '').trim();
+  if (!parsed) {
+    throw new Error(`${label} must be a non-empty string`);
+  }
+  return parsed;
+}
+
+function buildConfig(options) {
+  if (!POLICY_IDS.includes(options.policy_id)) {
+    throw new Error(`policy_id must be one of: ${POLICY_IDS.join(', ')}`);
+  }
+
+  const softLimit = asBudgetNumber(options.soft_limit_usd, 'soft_limit_usd');
+  const hardLimit = asBudgetNumber(options.hard_limit_usd, 'hard_limit_usd');
+  if (hardLimit < softLimit) {
+    throw new Error('hard_limit_usd must be greater than or equal to soft_limit_usd');
+  }
+
+  return {
+    policy_id: options.policy_id,
+    budget: {
+      soft_limit_usd: softLimit,
+      hard_limit_usd: hardLimit
+    },
+    scope: {
+      org_id: asScopeId(options.org_id, 'org_id'),
+      project_id: asScopeId(options.project_id, 'project_id')
+    }
+  };
+}
+
+async function askForConfig(options) {
+  if (!process.stdin.isTTY) {
+    process.stderr.write(`Policy presets: ${POLICY_IDS.join(', ')}\n`);
+    process.stderr.write(`Policy preset [${options.policy_id}]: `);
+    process.stderr.write(`Soft budget USD [${options.soft_limit_usd}]: `);
+    process.stderr.write(`Hard budget USD [${options.hard_limit_usd}]: `);
+    process.stderr.write(`Org ID [${options.org_id}]: `);
+    process.stderr.write(`Project ID [${options.project_id}]: `);
+    const [policy = '', soft = '', hard = '', org = '', project = ''] = fs.readFileSync(0, 'utf8').split(/\r?\n/);
+    return {
+      ...options,
+      policy_id: policy.trim() || options.policy_id,
+      soft_limit_usd: soft.trim() || options.soft_limit_usd,
+      hard_limit_usd: hard.trim() || options.hard_limit_usd,
+      org_id: org.trim() || options.org_id,
+      project_id: project.trim() || options.project_id
+    };
+  }
+
+  const rl = createInterface({ input: process.stdin, output: process.stderr });
+  try {
+    process.stderr.write(`Policy presets: ${POLICY_IDS.join(', ')}\n`);
+    const policy = await rl.question(`Policy preset [${options.policy_id}]: `);
+    const soft = await rl.question(`Soft budget USD [${options.soft_limit_usd}]: `);
+    const hard = await rl.question(`Hard budget USD [${options.hard_limit_usd}]: `);
+    const org = await rl.question(`Org ID [${options.org_id}]: `);
+    const project = await rl.question(`Project ID [${options.project_id}]: `);
+    return {
+      ...options,
+      policy_id: policy.trim() || options.policy_id,
+      soft_limit_usd: soft.trim() || options.soft_limit_usd,
+      hard_limit_usd: hard.trim() || options.hard_limit_usd,
+      org_id: org.trim() || options.org_id,
+      project_id: project.trim() || options.project_id
+    };
+  } finally {
+    rl.close();
+  }
+}
+
+async function init() {
+  try {
+    const options = parseInitArgs(args);
+    const config = buildConfig(options.wizard ? await askForConfig(options) : options);
+
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    print({ ok: true, command: 'init', config_path: configPath, config, starter_recipes: publicStarterRecipes() });
+  } catch (error) {
+    print({ ok: false, command: 'init', error: error.message });
+    process.exitCode = 1;
+  }
 }
 
 function run() {
   const objective = args.join(' ').trim() || 'No objective provided';
   const config = fs.existsSync(configPath)
     ? JSON.parse(fs.readFileSync(configPath, 'utf8'))
-    : {
-        policy_id: 'safe_exec',
-        budget: { soft_limit_usd: 2, hard_limit_usd: 5 }
-      };
+    : DEFAULT_CONFIG;
   const payload = {
     task_id: `task_${Date.now()}`,
     objective,
     repo: cwd,
+    scope: config.scope || DEFAULT_CONFIG.scope,
     policy_id: config.policy_id,
     budget: config.budget,
     created_at: new Date().toISOString()
   };
   const preflight = evaluatePreflight({ task: payload });
-  const status = preflight.decision === 'requires_approval'
-    ? 'awaiting_approval'
-    : preflight.decision === 'block'
-      ? 'failed'
-      : 'queued';
+  const run_id = `run_${Date.now()}`;
+  const status = preflight.run_status;
 
   print({
     ok: true,
     command: 'run',
-    run_id: `run_${Date.now()}`,
+    run_id,
     status,
     preflight,
+    policy_pack: resolvePolicyPackForTask(payload),
+    orchestration: createOrchestrationTrace({ run_id, task: payload, status, preflight }),
+    memory: createRunMemoryEntries({ run_id, task: payload, preflight, recorded_at: payload.created_at }),
+    artifacts: createRunArtifacts({ run_id, task: payload, status, preflight }).map(publicArtifactMetadata),
+    events: createInitialRunEvents({ run_id, task: payload, preflight, status }),
     task: payload
   });
 }
@@ -62,14 +219,36 @@ function approve() {
   print({ ok: true, command: 'approve', status: 'approved' });
 }
 
+function recipes() {
+  print({ ok: true, command: 'recipes', recipes: publicStarterRecipes() });
+}
+
+function doctor() {
+  const checks = [
+    { check_id: 'node', ok: true, required: true, summary: process.version },
+    commandCheck('npm', 'npm', ['--version']),
+    commandCheck('git', 'git', ['--version']),
+    fileCheck('package_json', path.join(cwd, 'package.json')),
+    fileCheck('api_server_source', path.join(cwd, 'apps/api/src/server.mjs'))
+  ];
+
+  print({
+    ok: checks.every(check => check.ok),
+    command: 'doctor',
+    checks
+  });
+}
+
 switch (command) {
-  case 'init': init(); break;
+  case 'init': await init(); break;
   case 'run': run(); break;
   case 'status': status(); break;
   case 'approve': approve(); break;
+  case 'recipes': recipes(); break;
+  case 'doctor': doctor(); break;
   default:
     print({
       ok: false,
-      usage: 'divinity <init|run|status|approve> [args]'
+      usage: 'divinity <init|run|status|approve|recipes|doctor> [args]'
     });
 }

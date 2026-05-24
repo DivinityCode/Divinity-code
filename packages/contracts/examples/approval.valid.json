@@ -1,0 +1,6 @@
+{
+  "decision": "approve",
+  "actor": "operator@example.com",
+  "reason": "Approved for the planned maintenance window.",
+  "decided_at": "2026-05-24T00:00:00Z"
+}

@@ -1,5 +1,6 @@
 {
   "decision": "requires_approval",
+  "run_status": "awaiting_approval",
   "risk_level": "high",
   "approval_required": true,
   "policy_id": "safe_exec",
@@ -17,5 +18,15 @@
     "soft_cap_exceeded": false,
     "hard_cap_exceeded": false
   },
-  "blocked_reasons": []
+  "warnings": [],
+  "blocked_reasons": [],
+  "evidence_refs": [
+    {
+      "evidence_id": "evidence_task_objective",
+      "source": "task.objective",
+      "claim_type": "inferred",
+      "summary": "Objective indicates shell execution.",
+      "supports": ["predicted_actions", "risk_level", "decision"]
+    }
+  ]
 }

@@ -1,0 +1,22 @@
+{
+  "step_id": "step_1",
+  "run_id": "run_1",
+  "action": "Read README",
+  "status": "pending",
+  "pre_execution_check": {
+    "decision": "allow",
+    "status": "allowed",
+    "risk_level": "low",
+    "approval_required": false,
+    "blocked_reasons": [],
+    "evidence_refs": [
+      {
+        "evidence_id": "evidence_step_action",
+        "source": "step.action",
+        "claim_type": "inferred",
+        "summary": "Step action indicates file read work.",
+        "supports": ["predicted_actions", "decision"]
+      }
+    ]
+  }
+}
