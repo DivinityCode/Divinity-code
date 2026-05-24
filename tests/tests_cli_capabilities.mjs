@@ -18,6 +18,7 @@ assert.equal(result.command, 'capabilities');
 assert.equal(result.catalog.format, 'divinity.capabilities.v1');
 assert.ok(result.catalog.policies.some(policy => policy.policy_id === 'safe_exec'));
 assert.ok(result.catalog.execution_adapters.some(adapter => adapter.adapter === 'package_script'));
+assert.ok(result.catalog.connector_adapters.some(adapter => adapter.adapter === 'ci_status'));
 assert.ok(result.catalog.starter_recipes.length >= 4);
 
 console.log(JSON.stringify({ ok: true, test: 'cli-capabilities' }));

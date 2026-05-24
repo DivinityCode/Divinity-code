@@ -39,8 +39,9 @@
 
 ## Capability Discovery
 - CLI `capabilities` and API `GET /capabilities` expose `divinity.capabilities.v1`.
-- The catalog lists policy presets, constrained execution adapters, and starter recipe summaries from the shared package layer.
-- Capability discovery keeps extension points explicit so clients do not hard-code supported policies or adapters.
+- The catalog lists policy presets, constrained execution adapters, connector adapters, and starter recipe summaries from the shared package layer.
+- Connector adapters currently identify ticket, docs, and CI status reference surfaces for future external context attachments.
+- Capability discovery keeps extension points explicit so clients do not hard-code supported policies, execution adapters, or connector adapters.
 
 ## Run Lifecycle
 1. Task created

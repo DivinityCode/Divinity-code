@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "CapabilitiesCatalog",
   "type": "object",
-  "required": ["format", "generated_at", "policies", "execution_adapters", "starter_recipes"],
+  "required": ["format", "generated_at", "policies", "execution_adapters", "connector_adapters", "starter_recipes"],
   "properties": {
     "format": { "const": "divinity.capabilities.v1" },
     "generated_at": { "type": "string", "format": "date-time" },
@@ -43,6 +43,33 @@
             "items": { "type": "string" }
           },
           "shell_interpolation": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "connector_adapters": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["adapter", "description", "resource_types", "auth_modes", "write_capable"],
+        "properties": {
+          "adapter": {
+            "type": "string",
+            "enum": ["ticket_reference", "docs_reference", "ci_status"]
+          },
+          "description": { "type": "string", "minLength": 1 },
+          "resource_types": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1
+          },
+          "auth_modes": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1
+          },
+          "write_capable": { "type": "boolean" }
         },
         "additionalProperties": false
       }

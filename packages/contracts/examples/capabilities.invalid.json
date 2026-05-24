@@ -10,5 +10,14 @@
       "shell_interpolation": true
     }
   ],
+  "connector_adapters": [
+    {
+      "adapter": "unknown_connector",
+      "description": "",
+      "resource_types": [],
+      "auth_modes": [],
+      "write_capable": "yes"
+    }
+  ],
   "starter_recipes": []
 }

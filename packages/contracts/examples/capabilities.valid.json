@@ -16,6 +16,15 @@
       "shell_interpolation": false
     }
   ],
+  "connector_adapters": [
+    {
+      "adapter": "ticket_reference",
+      "description": "Attach issue, ticket, or project-tracker references to a run.",
+      "resource_types": ["ticket", "issue"],
+      "auth_modes": ["connector", "token"],
+      "write_capable": false
+    }
+  ],
   "starter_recipes": [
     {
       "recipe_id": "recipe_safe_readme_review",

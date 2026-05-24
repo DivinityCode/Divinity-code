@@ -39,12 +39,12 @@
 - CLI `run` now returns `run_id`, status, task payload, and preflight decision metadata.
 - CLI `init` supports default, flag-driven, and prompt-driven project config creation for policy preset, soft/hard budget caps, and org/project scope.
 - CLI `doctor` reports Node, npm, git, package manifest, and API server source readiness for local setup diagnostics.
-- CLI `capabilities` reports supported policy presets, execution adapters, and starter recipes for extension discovery.
+- CLI `capabilities` reports supported policy presets, execution adapters, connector adapters, and starter recipes for extension discovery.
 - IDE extension scaffold contributes task run, dashboard launch, and doctor commands that delegate to the repo-local CLI.
 - API exposes `POST /preflight`; `POST /tasks` records preflight metadata and moves high-risk allowed work to `awaiting_approval`.
 - API task creation normalizes missing org/project scope to `default-org/default-project`; configured API keys protect control-plane routes when `DIVINITY_API_KEY` or `DIVINITY_API_KEYS` is set.
 - API exposes `GET /runs`, `GET /approvals`, and `POST /runs/:id/approval` for dashboard loading and approve/reject transitions.
-- API exposes `GET /capabilities` for policy, adapter, and starter recipe discovery.
+- API exposes `GET /capabilities` for policy, execution adapter, connector adapter, and starter recipe discovery.
 - API run state can be backed by a file snapshot when `DIVINITY_RUN_STORE_PATH` is set; the default remains in-memory for local deterministic demos.
 - API exposes `POST /runs/:id/steps` to run policy and budget gates before a step can enter pending execution.
 - API exposes `POST /runs/:id/steps/:step_id/execute` for policy-approved step execution through constrained adapters.
