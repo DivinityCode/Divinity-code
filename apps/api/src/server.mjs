@@ -8,10 +8,10 @@ import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
 import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
 import { evaluatePreflight, evaluateStepGate } from '../../../packages/policy-engine/src/index.mjs';
+import { createConfiguredRunStore } from '../../../packages/run-store/src/index.mjs';
 
-const runs = new Map();
-const artifacts = new Map();
-const auditRecords = [];
+const runStore = createConfiguredRunStore();
+const { runs, artifacts, auditRecords } = runStore;
 const runSubscribers = new Map();
 const DEFAULT_SCOPE = { org_id: 'default-org', project_id: 'default-project' };
 
@@ -90,7 +90,12 @@ function approvalPayload(body) {
 function recordAudit(entry) {
   const record = createAuditRecord(entry);
   auditRecords.push(record);
+  persistRunStore();
   return record;
+}
+
+function persistRunStore() {
+  runStore.persist();
 }
 
 function recordRunAudit(run) {
@@ -246,6 +251,7 @@ const server = http.createServer((req, res) => {
       }
       runs.set(run.run_id, run);
       recordRunAudit(run);
+      persistRunStore();
       sendJson(res, 201, publicRun(run));
     });
     return;
@@ -300,6 +306,7 @@ const server = http.createServer((req, res) => {
           payload: event
         });
       }
+      persistRunStore();
       const payload = publicRun(run);
       broadcastRun(run);
       sendJson(res, 200, payload);
@@ -344,15 +351,19 @@ const server = http.createServer((req, res) => {
           }
         }));
         recordRunAudit(run);
+        persistRunStore();
         broadcastRun(run);
         sendJson(res, 409, { error: 'run paused by hard budget cap', step, run: publicRun(run) });
       } else if (check.decision === 'allow') {
+        persistRunStore();
         broadcastRun(run);
         sendJson(res, 201, { step });
       } else if (check.decision === 'requires_approval') {
+        persistRunStore();
         broadcastRun(run);
         sendJson(res, 409, { error: 'step requires approval before execution', step });
       } else {
+        persistRunStore();
         broadcastRun(run);
         sendJson(res, 403, { error: 'step blocked by policy', step });
       }
@@ -405,6 +416,7 @@ const server = http.createServer((req, res) => {
         created_at: event.created_at,
         payload: event
       });
+      persistRunStore();
       broadcastRun(run);
       sendJson(res, 200, { execution, step, run: publicRun(run) });
     } catch (error) {
