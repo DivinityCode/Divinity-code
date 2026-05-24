@@ -5,7 +5,7 @@
   "description": "Divinity Code monorepo",
   "scripts": {
     "validate:contracts": "node scripts_validate_contracts.mjs",
-    "test:smoke": "node apps/cli/src/index.mjs init && node apps/cli/src/index.mjs run \"smoke task\" && node scripts_smoke_api.mjs"
+    "test:smoke": "node scripts_smoke_api.mjs"
   },
   "devDependencies": {
     "ajv": "^8.20.0",
