@@ -1,5 +1,6 @@
 import http from 'http';
 
+import { createAgentActivityRecords } from '../../../packages/agent-activity/src/index.mjs';
 import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
 import { createAuditRecord, exportAuditLog } from '../../../packages/audit/src/index.mjs';
 import { createCapabilitiesCatalog } from '../../../packages/capabilities/src/index.mjs';
@@ -246,17 +247,25 @@ const server = http.createServer((req, res) => {
       const status = preflight.run_status;
       const runArtifacts = createRunArtifacts({ run_id: runId, task: scopedTask, status, preflight });
       const events = createInitialRunEvents({ run_id: runId, task: scopedTask, preflight, status });
+      const createdAt = events[0]?.created_at || new Date().toISOString();
       const run = {
         run_id: runId,
         task_id: scopedTask.task_id || 'unknown',
         task: scopedTask,
-        created_at: events[0]?.created_at || new Date().toISOString(),
+        created_at: createdAt,
         status,
         risk_level: preflight.risk_level,
         preflight,
         policy_pack: resolvePolicyPackForTask(scopedTask),
         orchestration: createOrchestrationTrace({ run_id: runId, task: scopedTask, status, preflight }),
-        memory: createRunMemoryEntries({ run_id: runId, task: scopedTask, preflight, recorded_at: events[0]?.created_at }),
+        agent_activity: createAgentActivityRecords({
+          run_id: runId,
+          task: scopedTask,
+          status,
+          preflight,
+          created_at: createdAt
+        }),
+        memory: createRunMemoryEntries({ run_id: runId, task: scopedTask, preflight, recorded_at: createdAt }),
         artifacts: runArtifacts.map(publicArtifactMetadata),
         events,
         executions: [],

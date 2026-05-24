@@ -3,7 +3,7 @@
 Divinity Code is an AI engineering platform designed to combine best-in-class coding execution, multi-agent orchestration, and a user-friendly trust-first UX.
 
 ## Current Status
-Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows, policy and budget gates, approval transitions, execution adapter and verifier records, isolated local and Git URL execution workspaces with cleanup, artifacts, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, team policy packs, constrained package-script execution, a shared capabilities catalog, and opt-in file-backed API run storage.
+Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows, policy and budget gates, approval transitions, execution adapter and verifier records, observable planner/executor/verifier activity, isolated local and Git URL execution workspaces with cleanup, artifacts, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, team policy packs, constrained package-script execution, a shared capabilities catalog, and opt-in file-backed API run storage.
 
 ## Documents
 - [Product Plan](docs/PRODUCT_PLAN.md)
@@ -16,7 +16,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 1. Builder CLI: `init`, `run`, `status`, `approve`, `capabilities`, `recipes`, and `doctor`.
 2. IDE extension scaffold: task run, dashboard launch, and doctor commands delegated to the repo-local CLI.
 3. Control Plane API: health, preflight, task creation, run retrieval, approvals, step gates and execution, verifier evidence, artifacts, audit export, and live run streams.
-4. Operator dashboard: run queue, approvals, run timeline, decision trace, execution and verification evidence, artifacts, audit metadata, and API-backed live updates.
+4. Operator dashboard: run queue, approvals, run timeline, decision trace, agent activity, execution and verification evidence, artifacts, audit metadata, and API-backed live updates.
 
 
 ## Repo Layout
@@ -24,7 +24,8 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - `apps/ide-extension` - Builder Mode IDE extension scaffold
 - `apps/api` - Control Plane API
 - `apps/dashboard` - Operator Mode dashboard
-- `packages/contracts` - versioned task/run/policy/capability/verification schemas
+- `packages/contracts` - versioned task/run/policy/capability/verification/agent-activity schemas
+- `packages/agent-activity` - observable planner/executor/verifier activity records
 - `packages/capabilities` - shared policy, adapter, and recipe capability catalog
 - `packages/policy-engine` - trust and budget gate evaluation
 - `packages/execution` - policy-approved step execution adapters

@@ -20,6 +20,11 @@ const sampleRuns = [
       evidence('inferred', 'task.objective', 'Predicted write and test execution actions.'),
       evidence('observed', 'policy.permissions', 'safe_exec policy grants scoped write and shell execution.')
     ]),
+    agent_activity: [
+      agentActivity('activity_0012_planner', 'planner', 'completed', 0.3),
+      agentActivity('activity_0012_executor', 'executor', 'gated', 0.9),
+      agentActivity('activity_0012_verifier', 'verifier', 'waiting', 0.3)
+    ],
     artifacts: [
       artifact('artifact_patch_0012', 'patch', 'artifact://run_2026_05_24_0012/patch.diff'),
       artifact('artifact_log_0012', 'log', 'artifact://run_2026_05_24_0012/run.log'),
@@ -73,6 +78,11 @@ const sampleRuns = [
     decision_trace: decisionTrace('queue_for_execution', 'pause_or_request_approval', 'Preflight allowed the run to enter the execution queue.', [
       evidence('inferred', 'task.objective', 'No high-risk action predicted.')
     ]),
+    agent_activity: [
+      agentActivity('activity_0010_planner', 'planner', 'completed', 0.05),
+      agentActivity('activity_0010_executor', 'executor', 'ready', 0.15),
+      agentActivity('activity_0010_verifier', 'verifier', 'completed', 0.05)
+    ],
     executions: [
       {
         execution_id: 'exec_0010_readme',
@@ -256,6 +266,23 @@ function artifact(artifact_id, type, uri) {
   return { artifact_id, run_id: '', type, uri };
 }
 
+function agentActivity(activity_id, role, status, budget_estimate_usd) {
+  return {
+    activity_id,
+    run_id: '',
+    role,
+    actor_id: `${role}@divinity`,
+    action: `${role} activity`,
+    reason: `${role} activity reason`,
+    status,
+    budget_estimate_usd,
+    evidence_refs: [
+      evidence('inferred', 'task.objective', `${role} activity is based on objective classification.`)
+    ],
+    created_at: '2026-05-24T08:33:14.000Z'
+  };
+}
+
 function verification(verification_id, execution_id, step_id, result) {
   return {
     verification_id,
@@ -399,6 +426,7 @@ function normalizeApiRun(run) {
     actor: run.approval?.actor || 'api',
     events: (run.events || []).map(normalizeApiEvent),
     decision_trace: decisionTraceForRun(run),
+    agent_activity: run.agent_activity || [],
     executions: run.executions || stepExecutions,
     verifications: run.verifications || stepVerifications,
     artifacts: run.artifacts || [],
@@ -474,6 +502,7 @@ function hydrateRunReferences(sourceRuns) {
   for (const run of sourceRuns) {
     for (const runEvent of run.events) runEvent.run_id = run.run_id;
     for (const runArtifact of run.artifacts) runArtifact.run_id = run.run_id;
+    for (const activity of run.agent_activity || []) activity.run_id = run.run_id;
     for (const runVerification of run.verifications || []) runVerification.run_id = run.run_id;
   }
 }
@@ -675,6 +704,7 @@ function renderRunDetail() {
 
   document.querySelector('[data-event-timeline]').innerHTML = run.events.map(renderEvent).join('');
   document.querySelector('[data-decision-trace]').innerHTML = renderDecisionTrace(run.decision_trace);
+  document.querySelector('[data-agent-activity-list]').innerHTML = renderAgentActivity(run);
   document.querySelector('[data-execution-list]').innerHTML = renderExecutions(run);
   document.querySelector('[data-artifact-list]').innerHTML = renderArtifacts(run);
   document.querySelector('[data-audit-hash]').textContent = run.audit.hash;
@@ -744,6 +774,25 @@ function renderArtifacts(run) {
       <span class="artifact-icon" aria-hidden="true">[]</span>
       <span>${item.uri.split('/').pop()}</span>
       <span>${item.type}</span>
+    </li>
+  `).join('');
+}
+
+function renderAgentActivity(run) {
+  const activity = run.agent_activity || [];
+  if (!activity.length) {
+    return '<li class="empty-state">Agent activity records appear after planning starts.</li>';
+  }
+
+  return activity.map(item => `
+    <li class="agent-activity-item">
+      <span class="activity-role">${item.role}</span>
+      <span class="activity-copy">
+        <strong>${item.actor_id}</strong>
+        <span>${item.reason}</span>
+      </span>
+      <span class="status-pill status-${item.status === 'gated' || item.status === 'waiting' ? 'paused' : 'completed'}">${item.status}</span>
+      <span class="activity-budget">$${item.budget_estimate_usd.toFixed(2)}</span>
     </li>
   `).join('');
 }

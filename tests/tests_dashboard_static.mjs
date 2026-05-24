@@ -14,6 +14,7 @@ for (const selector of [
   'data-run-list',
   'data-event-timeline',
   'data-decision-trace',
+  'data-agent-activity-list',
   'data-execution-list',
   'data-approval-list',
   'data-observability-summary',
@@ -46,6 +47,17 @@ const runs = vm.runInNewContext(runDataMatch[1], {
     metadata: { detail, duration },
     created_at
   }),
+  agentActivity: (activity_id, role, status, budget_estimate_usd) => ({
+    activity_id,
+    run_id: '',
+    role,
+    actor_id: `${role}@divinity`,
+    action: `${role} activity`,
+    reason: `${role} activity reason`,
+    status,
+    budget_estimate_usd,
+    evidence_refs: []
+  }),
   evidence: (claim_type, source, summary) => ({ claim_type, source, summary }),
   artifact: (artifact_id, type, uri) => ({ artifact_id, run_id: '', type, uri }),
   verification: (verification_id, execution_id, step_id, result) => ({
@@ -77,11 +89,13 @@ assert(runs.some(run => run.status === 'awaiting_approval'), 'approval queue nee
 assert(runs.every(run => run.budget && Number.isFinite(run.budget.soft) && Number.isFinite(run.budget.hard)), 'runs need soft and hard budgets');
 assert(runs.every(run => Array.isArray(run.events) && run.events.length > 0), 'runs need timelines');
 assert(runs.every(run => run.decision_trace?.chosen_path && run.decision_trace?.rejected_alternative), 'runs need decision traces');
+assert(runs.some(run => Array.isArray(run.agent_activity) && run.agent_activity.length > 0), 'sample data should include agent activity records');
 assert(runs.some(run => Array.isArray(run.executions) && run.executions.length > 0), 'sample data should include execution records');
 assert(runs.some(run => Array.isArray(run.verifications) && run.verifications.length > 0), 'sample data should include verification records');
 assert(js.includes('claim_type'), 'dashboard sample data should include fact/inference labels');
 assert(js.includes('renderEvidenceLabels'), 'dashboard should render evidence labels');
 assert(js.includes('renderDecisionTrace'), 'dashboard should render decision trace panel');
+assert(js.includes('renderAgentActivity'), 'dashboard should render agent activity records');
 assert(js.includes('renderExecutions'), 'dashboard should render execution records');
 assert(js.includes('renderVerificationResult'), 'dashboard should render verification records');
 assert(js.includes('git_status') && js.includes('file_read') && js.includes('node_test') && js.includes('package_script'), 'dashboard should show execution adapter names');

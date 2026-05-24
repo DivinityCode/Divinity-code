@@ -1,0 +1,12 @@
+{
+  "activity_id": "activity_run_123_unknown",
+  "run_id": "run_123",
+  "role": "reviewer",
+  "actor_id": "",
+  "action": "",
+  "reason": "",
+  "status": "started",
+  "budget_estimate_usd": -1,
+  "evidence_refs": [],
+  "created_at": "not-a-date"
+}
