@@ -105,6 +105,12 @@
 - Audit exports are available from `GET /audit`.
 - Optional `from` and `to` query parameters filter records by creation timestamp.
 
+## Observability
+- API run state can be aggregated into `divinity.observability.v1` summaries at `GET /observability`.
+- Observability summaries include run counts by status and risk, pending approval count, estimated cost totals, budget limit utilization, and a failure taxonomy.
+- Failure taxonomy currently classifies failed or paused runs into policy, budget, execution, or unknown categories from preflight blocked reasons, run status, and execution records.
+- The operator dashboard renders the same summary from API output when available and derives it locally from run payloads for static/sample data.
+
 ## Security and Governance
 - Principle of least privilege by default.
 - API key authentication for control-plane routes when `DIVINITY_API_KEY` or `DIVINITY_API_KEYS` is configured; health checks and CORS preflight stay public.
@@ -116,4 +122,5 @@
 ## Observability
 - Real-time run event stream.
 - Token/cost meters by run/project/team.
-- Failure taxonomy dashboard (policy, execution, model, dependency).
+- Budget utilization meters by run set.
+- Failure taxonomy dashboard (policy, budget, execution, unknown).

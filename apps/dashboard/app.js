@@ -197,6 +197,7 @@ let runs = sampleRuns;
 let runEventSource = null;
 let subscribedRunId = null;
 let apiRunsLoaded = false;
+let observabilitySummary = createObservabilitySummary({ runs });
 
 const state = {
   filter: 'all',
@@ -207,6 +208,8 @@ const state = {
 const selectors = {
   runList: document.querySelector('[data-run-list]'),
   approvalList: document.querySelector('[data-approval-list]'),
+  observabilitySummary: document.querySelector('[data-observability-summary]'),
+  failureTaxonomy: document.querySelector('[data-failure-taxonomy]'),
   statusFilter: document.querySelector('[data-status-filter]'),
   search: document.querySelector('[data-run-search]'),
   toast: document.querySelector('[data-toast]')
@@ -238,6 +241,87 @@ function artifact(artifact_id, type, uri) {
 
 function decisionTrace(chosen_path, rejected_alternative, rationale, evidence_refs = []) {
   return { chosen_path, rejected_alternative, rationale, evidence_refs };
+}
+
+function safeNumber(value) {
+  return Number.isFinite(value) ? value : 0;
+}
+
+function rounded(value) {
+  return Number(safeNumber(value).toFixed(2));
+}
+
+function runBudget(run) {
+  return {
+    estimated_cost_usd: safeNumber(run.preflight?.budget?.estimated_cost_usd ?? run.budget?.spent),
+    soft_limit_usd: safeNumber(run.task?.budget?.soft_limit_usd ?? run.budget?.soft),
+    hard_limit_usd: safeNumber(run.task?.budget?.hard_limit_usd ?? run.budget?.hard)
+  };
+}
+
+function classifyRunFailure(run) {
+  const blockedReasons = run.preflight?.blocked_reasons || [];
+  if (run.status === 'paused' || blockedReasons.some(reason => reason.includes('budget') || reason.includes('cost'))) {
+    return 'budget';
+  }
+
+  const executions = run.executions || [];
+  if (executions.some(execution => execution.status === 'failed')) return 'execution';
+
+  if (run.status === 'failed' && (
+    run.preflight?.decision === 'block'
+    || blockedReasons.some(reason => reason.startsWith('permission_denied'))
+    || /policy/i.test(run.decision_trace?.rationale || '')
+  )) {
+    return 'policy';
+  }
+
+  if (run.status === 'failed') return 'unknown';
+  return null;
+}
+
+function createObservabilitySummary({ runs: sourceRuns, generated_at = new Date().toISOString() }) {
+  const status_counts = Object.fromEntries(['queued', 'running', 'awaiting_approval', 'paused', 'completed', 'failed'].map(status => [status, 0]));
+  const risk_counts = Object.fromEntries(['low', 'medium', 'high', 'critical'].map(risk => [risk, 0]));
+  const failureBuckets = new Map(['policy', 'budget', 'execution', 'unknown'].map(category => [category, []]));
+  let estimatedCost = 0;
+  let softLimit = 0;
+  let hardLimit = 0;
+
+  for (const run of sourceRuns) {
+    if (status_counts[run.status] != null) status_counts[run.status] += 1;
+    if (risk_counts[run.risk_level] != null) risk_counts[run.risk_level] += 1;
+    const budget = runBudget(run);
+    estimatedCost += budget.estimated_cost_usd;
+    softLimit += budget.soft_limit_usd;
+    hardLimit += budget.hard_limit_usd;
+
+    const failureCategory = classifyRunFailure(run);
+    if (failureCategory) failureBuckets.get(failureCategory).push(run.run_id);
+  }
+
+  return {
+    format: 'divinity.observability.v1',
+    generated_at,
+    totals: {
+      run_count: sourceRuns.length,
+      approvals_pending: status_counts.awaiting_approval,
+      estimated_cost_usd: rounded(estimatedCost),
+      soft_limit_usd: rounded(softLimit),
+      hard_limit_usd: rounded(hardLimit)
+    },
+    status_counts,
+    risk_counts,
+    budget: {
+      soft_limit_utilization: softLimit ? rounded(estimatedCost / softLimit) : 0,
+      hard_limit_utilization: hardLimit ? rounded(estimatedCost / hardLimit) : 0
+    },
+    failure_taxonomy: ['policy', 'budget', 'execution', 'unknown'].map(category => ({
+      category,
+      count: failureBuckets.get(category).length,
+      run_ids: failureBuckets.get(category)
+    })).filter(item => item.count > 0)
+  };
 }
 
 function apiBaseUrl() {
@@ -311,6 +395,7 @@ function replaceRun(nextRun) {
   } else {
     runs = runs.map(run => run.run_id === nextRun.run_id ? nextRun : run);
   }
+  observabilitySummary = createObservabilitySummary({ runs });
 }
 
 function closeRunStream() {
@@ -370,6 +455,7 @@ async function loadApiRuns() {
     hydrateRunReferences(apiRuns);
     runs = apiRuns;
     apiRunsLoaded = true;
+    observabilitySummary = await loadApiObservability(base);
     state.selectedRunId = apiRuns[0].run_id;
     showToast(`Loaded ${apiRuns.length} run${apiRuns.length === 1 ? '' : 's'} from API`);
     render();
@@ -377,6 +463,17 @@ async function loadApiRuns() {
     apiRunsLoaded = false;
     closeRunStream();
     showToast(`API unavailable; using sample data (${error.message})`);
+  }
+}
+
+async function loadApiObservability(base) {
+  try {
+    const response = await fetch(`${base}/observability`);
+    if (!response.ok) throw new Error(`GET /observability returned ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    showToast(`API observability unavailable; deriving metrics from runs (${error.message})`);
+    return createObservabilitySummary({ runs });
   }
 }
 
@@ -441,6 +538,43 @@ function renderCounts() {
   for (const node of document.querySelectorAll('[data-approval-count]')) {
     node.textContent = approvalCount;
   }
+}
+
+function renderObservability() {
+  const summary = observabilitySummary || createObservabilitySummary({ runs });
+  selectors.observabilitySummary.innerHTML = `
+    <div>
+      <dt>Runs</dt>
+      <dd>${summary.totals.run_count}</dd>
+    </div>
+    <div>
+      <dt>Pending</dt>
+      <dd>${summary.totals.approvals_pending}</dd>
+    </div>
+    <div>
+      <dt>Est. Cost</dt>
+      <dd>${formatCurrency(summary.totals.estimated_cost_usd)}</dd>
+    </div>
+    <div>
+      <dt>Soft Use</dt>
+      <dd>${Math.round(summary.budget.soft_limit_utilization * 100)}%</dd>
+    </div>
+  `;
+  selectors.failureTaxonomy.innerHTML = renderFailureTaxonomy(summary.failure_taxonomy);
+}
+
+function renderFailureTaxonomy(items = []) {
+  if (!items.length) return '<div class="empty-state">No failures are classified.</div>';
+
+  return items.map(item => `
+    <article class="taxonomy-item">
+      <div>
+        <strong>${item.category}</strong>
+        <span>${item.count} run${item.count === 1 ? '' : 's'}</span>
+      </div>
+      <code>${item.run_ids.join(', ')}</code>
+    </article>
+  `).join('');
 }
 
 function renderRunList() {
@@ -688,7 +822,9 @@ function showToast(message) {
 }
 
 function render() {
+  observabilitySummary = apiRunsLoaded ? observabilitySummary : createObservabilitySummary({ runs });
   renderCounts();
+  renderObservability();
   renderRunList();
   renderRunDetail();
   renderApprovalQueue();

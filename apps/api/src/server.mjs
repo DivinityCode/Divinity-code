@@ -5,6 +5,7 @@ import { createAuditRecord, exportAuditLog } from '../../../packages/audit/src/i
 import { createInitialRunEvents, createRunEvent } from '../../../packages/events/src/index.mjs';
 import { executeStep } from '../../../packages/execution/src/index.mjs';
 import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
+import { createObservabilitySummary } from '../../../packages/observability/src/index.mjs';
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
 import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
 import { evaluatePreflight, evaluateStepGate } from '../../../packages/policy-engine/src/index.mjs';
@@ -203,6 +204,13 @@ const server = http.createServer((req, res) => {
     sendJson(res, 200, {
       runs: Array.from(runs.values()).filter(run => run.status === 'awaiting_approval').map(publicRun)
     });
+    return;
+  }
+
+  if (req.method === 'GET' && req.url === '/observability') {
+    sendJson(res, 200, createObservabilitySummary({
+      runs: Array.from(runs.values())
+    }));
     return;
   }
 

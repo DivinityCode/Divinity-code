@@ -8,6 +8,7 @@ Implemented views:
 - Run detail timeline with contract-shaped run events.
 - Approval queue with local approve/reject state transitions.
 - Cost, risk, artifact, and audit metadata panels.
+- Observability summary with run health, budget pressure, and failure taxonomy.
 - Decision trace panel with chosen path, rejected alternative, rationale, and supporting evidence.
 
 Open `index.html` directly in a browser for local inspection. The shell uses
@@ -21,6 +22,7 @@ To load local API data instead, start the API and open:
 index.html?api=http://127.0.0.1:3000
 ```
 
-With an API base URL present, refresh loads `GET /runs` and approve/reject posts
-to `POST /runs/:id/approval`. The selected run also subscribes to
-`GET /runs/:id/stream` for live status updates.
+With an API base URL present, refresh loads `GET /runs` and
+`GET /observability`, and approve/reject posts to `POST /runs/:id/approval`.
+The selected run also subscribes to `GET /runs/:id/stream` for live status
+updates.

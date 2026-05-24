@@ -1,0 +1,30 @@
+{
+  "format": "divinity.observability.v1",
+  "generated_at": "2026-05-24T00:00:00.000Z",
+  "totals": {
+    "run_count": -1,
+    "approvals_pending": 0,
+    "estimated_cost_usd": 0,
+    "soft_limit_usd": 0,
+    "hard_limit_usd": 0
+  },
+  "status_counts": {
+    "queued": 0,
+    "running": 0,
+    "awaiting_approval": 0,
+    "paused": 0,
+    "completed": 0,
+    "failed": 0
+  },
+  "risk_counts": {
+    "low": 0,
+    "medium": 0,
+    "high": 0,
+    "critical": 0
+  },
+  "budget": {
+    "soft_limit_utilization": 0,
+    "hard_limit_utilization": 0
+  },
+  "failure_taxonomy": []
+}

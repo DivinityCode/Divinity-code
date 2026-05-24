@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.16.0
+- Added `ObservabilitySummary` schema and examples for run health, budget utilization, approval backlog, and failure taxonomy reporting.
+
 ## v1.15.0
 - Added `workspace_cleaned` run events for execution workspace lifecycle tracking.
 
