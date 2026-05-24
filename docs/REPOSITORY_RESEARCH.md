@@ -98,3 +98,4 @@ The goal is to translate repo-level patterns into product and implementation dec
 6. **Diagnostics:** implemented `divinity doctor` for Node, npm, git, package manifest, and API server source readiness checks.
 7. **Operator observability:** implemented run health, budget utilization, approval backlog, and policy/budget/execution failure taxonomy summaries in the API and dashboard.
 8. **Execution adapter expansion:** implemented constrained package-script execution for Node-based package scripts without shell interpolation.
+9. **Capability discovery:** implemented a shared `divinity.capabilities.v1` catalog so clients can discover policy presets, execution adapters, and starter recipes.

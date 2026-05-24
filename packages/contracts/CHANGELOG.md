@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.18.0
+- Added `CapabilitiesCatalog` schema and examples for policy preset, execution adapter, and starter recipe discovery.
+
 ## v1.17.0
 - Added `package_script` as an ExecutionRecord adapter for constrained Node-based package script execution.
 

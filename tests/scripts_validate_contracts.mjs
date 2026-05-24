@@ -26,6 +26,8 @@ const checks = [
   ['packages/contracts/schemas/audit.v1.json','packages/contracts/examples/audit.invalid.json',false],
   ['packages/contracts/schemas/observability.v1.json','packages/contracts/examples/observability.valid.json',true],
   ['packages/contracts/schemas/observability.v1.json','packages/contracts/examples/observability.invalid.json',false],
+  ['packages/contracts/schemas/capabilities.v1.json','packages/contracts/examples/capabilities.valid.json',true],
+  ['packages/contracts/schemas/capabilities.v1.json','packages/contracts/examples/capabilities.invalid.json',false],
 ];
 
 let failed = false;

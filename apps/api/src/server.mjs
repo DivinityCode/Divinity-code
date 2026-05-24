@@ -2,6 +2,7 @@ import http from 'http';
 
 import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
 import { createAuditRecord, exportAuditLog } from '../../../packages/audit/src/index.mjs';
+import { createCapabilitiesCatalog } from '../../../packages/capabilities/src/index.mjs';
 import { createInitialRunEvents, createRunEvent } from '../../../packages/events/src/index.mjs';
 import { executeStep } from '../../../packages/execution/src/index.mjs';
 import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
@@ -192,6 +193,11 @@ const server = http.createServer((req, res) => {
   }
 
   if (!authenticateRequest(req, res)) return;
+
+  if (req.method === 'GET' && req.url === '/capabilities') {
+    sendJson(res, 200, createCapabilitiesCatalog());
+    return;
+  }
 
   if (req.method === 'GET' && req.url === '/runs') {
     sendJson(res, 200, {

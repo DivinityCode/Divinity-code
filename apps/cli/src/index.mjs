@@ -5,6 +5,7 @@ import path from 'path';
 import { createInterface } from 'readline/promises';
 
 import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
+import { createCapabilitiesCatalog } from '../../../packages/capabilities/src/index.mjs';
 import { createInitialRunEvents } from '../../../packages/events/src/index.mjs';
 import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
@@ -223,6 +224,10 @@ function recipes() {
   print({ ok: true, command: 'recipes', recipes: publicStarterRecipes() });
 }
 
+function capabilities() {
+  print({ ok: true, command: 'capabilities', catalog: createCapabilitiesCatalog() });
+}
+
 function doctor() {
   const checks = [
     { check_id: 'node', ok: true, required: true, summary: process.version },
@@ -244,11 +249,12 @@ switch (command) {
   case 'run': run(); break;
   case 'status': status(); break;
   case 'approve': approve(); break;
+  case 'capabilities': capabilities(); break;
   case 'recipes': recipes(); break;
   case 'doctor': doctor(); break;
   default:
     print({
       ok: false,
-      usage: 'divinity <init|run|status|approve|recipes|doctor> [args]'
+      usage: 'divinity <init|run|status|approve|capabilities|recipes|doctor> [args]'
     });
 }
