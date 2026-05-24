@@ -8,6 +8,7 @@ import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/ar
 import { createInitialRunEvents } from '../../../packages/events/src/index.mjs';
 import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
+import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
 import { evaluatePreflight, POLICY_PRESETS } from '../../../packages/policy-engine/src/index.mjs';
 import { publicStarterRecipes } from '../../../packages/recipes/src/index.mjs';
 
@@ -201,6 +202,7 @@ function run() {
     run_id,
     status,
     preflight,
+    policy_pack: resolvePolicyPackForTask(payload),
     orchestration: createOrchestrationTrace({ run_id, task: payload, status, preflight }),
     memory: createRunMemoryEntries({ run_id, task: payload, preflight, recorded_at: payload.created_at }),
     artifacts: createRunArtifacts({ run_id, task: payload, status, preflight }).map(publicArtifactMetadata),

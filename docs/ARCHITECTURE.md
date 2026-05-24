@@ -88,6 +88,7 @@
 ## Security and Governance
 - Principle of least privilege by default.
 - API key authentication for control-plane routes when `DIVINITY_API_KEY` or `DIVINITY_API_KEYS` is configured; health checks and CORS preflight stay public.
+- Team policy packs resolve org-scoped defaults for policy, approval threshold, and budget ceilings on run payloads.
 - Scoped credentials per workspace.
 - Immutable run audit logs.
 - Team-level policy templates.

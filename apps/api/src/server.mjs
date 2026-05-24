@@ -5,6 +5,7 @@ import { createAuditRecord, exportAuditLog } from '../../../packages/audit/src/i
 import { createInitialRunEvents, createRunEvent } from '../../../packages/events/src/index.mjs';
 import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
+import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
 import { evaluatePreflight, evaluateStepGate } from '../../../packages/policy-engine/src/index.mjs';
 
 const runs = new Map();
@@ -231,6 +232,7 @@ const server = http.createServer((req, res) => {
         status,
         risk_level: preflight.risk_level,
         preflight,
+        policy_pack: resolvePolicyPackForTask(scopedTask),
         orchestration: createOrchestrationTrace({ run_id: runId, task: scopedTask, status, preflight }),
         memory: createRunMemoryEntries({ run_id: runId, task: scopedTask, preflight, recorded_at: events[0]?.created_at }),
         artifacts: runArtifacts.map(publicArtifactMetadata),
