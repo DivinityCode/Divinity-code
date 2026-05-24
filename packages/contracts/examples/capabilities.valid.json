@@ -16,6 +16,30 @@
       "shell_interpolation": false
     }
   ],
+  "runner_isolation_profiles": [
+    {
+      "profile_id": "workspace_snapshot",
+      "kind": "workspace",
+      "description": "Execute from a per-run workspace snapshot or shallow Git clone managed by Divinity Code.",
+      "requires_runtime": false,
+      "runtime": null,
+      "image": null,
+      "network": "host_default",
+      "workspace_mount": null,
+      "shell_interpolation": false
+    },
+    {
+      "profile_id": "container_sandbox",
+      "kind": "container",
+      "description": "Plan execution inside a Docker container with the run workspace bind-mounted at /workspace.",
+      "requires_runtime": true,
+      "runtime": "docker",
+      "image": "node:22-bookworm-slim",
+      "network": "none",
+      "workspace_mount": "/workspace",
+      "shell_interpolation": false
+    }
+  ],
   "connector_adapters": [
     {
       "adapter": "ticket_reference",

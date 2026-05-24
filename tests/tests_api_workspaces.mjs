@@ -46,6 +46,8 @@ try {
   assert.equal(createRes.status, 201);
   assert.equal(run.workspace.kind, 'local_snapshot');
   assert.equal(run.workspace.source_path, sourceDir);
+  assert.equal(run.workspace.isolation.profile_id, 'workspace_snapshot');
+  assert.equal(run.workspace.isolation.requires_runtime, false);
   assert.match(readFileSync(path.join(run.workspace.path, 'README.md'), 'utf8'), /Snapshot read/);
 
   writeFileSync(path.join(sourceDir, 'README.md'), '# Workspace Fixture\n\nSource changed.\n');
@@ -109,6 +111,7 @@ try {
   assert.equal(remoteCreateRes.status, 201);
   assert.equal(remoteRun.workspace.kind, 'remote_git_clone');
   assert.equal(remoteRun.workspace.repo_url, remoteUrl);
+  assert.equal(remoteRun.workspace.isolation.profile_id, 'workspace_snapshot');
   assert.match(readFileSync(path.join(remoteRun.workspace.path, 'README.md'), 'utf8'), /Remote clone read/);
 
   const { response: remoteStepRes } = await requestJson(`${baseUrl}/runs/${remoteRun.run_id}/steps`, {

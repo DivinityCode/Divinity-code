@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.26.0
+- Added runner isolation profile metadata to `CapabilitiesCatalog` for workspace snapshot and Docker container-sandbox discovery.
+
 ## v1.25.0
 - Added `scope_rollups` to `ObservabilitySummary` for org/project run counts, approval backlog, and budget utilization.
 

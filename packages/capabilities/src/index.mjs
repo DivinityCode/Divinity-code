@@ -2,6 +2,7 @@ import { publicExecutionAdapters } from '../../execution/src/index.mjs';
 import { publicConnectorAdapters } from '../../connectors/src/index.mjs';
 import { POLICY_PRESETS } from '../../policy-engine/src/index.mjs';
 import { publicStarterRecipes } from '../../recipes/src/index.mjs';
+import { publicRunnerIsolationProfiles } from '../../runner-isolation/src/index.mjs';
 
 function publicPolicies() {
   return Object.values(POLICY_PRESETS).map(policy => ({
@@ -27,6 +28,7 @@ export function createCapabilitiesCatalog({ generated_at = new Date().toISOStrin
     generated_at,
     policies: publicPolicies(),
     execution_adapters: publicExecutionAdapters(),
+    runner_isolation_profiles: publicRunnerIsolationProfiles(),
     connector_adapters: publicConnectorAdapters(),
     starter_recipes: publicRecipeCapabilities()
   };

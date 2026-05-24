@@ -27,6 +27,14 @@ assert.ok(catalog.execution_adapters.every(adapter => adapter.description));
 assert.ok(catalog.execution_adapters.every(adapter => Array.isArray(adapter.action_types)));
 assert.equal(catalog.execution_adapters.find(adapter => adapter.adapter === 'package_script').shell_interpolation, false);
 
+assert.deepEqual(catalog.runner_isolation_profiles.map(profile => profile.profile_id), [
+  'workspace_snapshot',
+  'container_sandbox'
+]);
+assert.equal(catalog.runner_isolation_profiles.find(profile => profile.profile_id === 'workspace_snapshot').requires_runtime, false);
+assert.equal(catalog.runner_isolation_profiles.find(profile => profile.profile_id === 'container_sandbox').runtime, 'docker');
+assert.equal(catalog.runner_isolation_profiles.find(profile => profile.profile_id === 'container_sandbox').network, 'none');
+
 assert.deepEqual(catalog.connector_adapters.map(adapter => adapter.adapter), [
   'ticket_reference',
   'docs_reference',

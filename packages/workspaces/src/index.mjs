@@ -3,6 +3,8 @@ import { cpSync, existsSync, mkdirSync, rmSync, statSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 
+import { resolveRunnerIsolationProfile } from '../../runner-isolation/src/index.mjs';
+
 const DEFAULT_WORKSPACE_ROOT = path.join(tmpdir(), 'divinity-run-workspaces');
 const EXCLUDED_DIRECTORIES = new Set(['node_modules']);
 
@@ -41,10 +43,16 @@ function isPathInside(childPath, parentPath) {
   return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
-export function createRunWorkspace({ runId, repoPath, rootDir = process.env.DIVINITY_WORKSPACE_ROOT || DEFAULT_WORKSPACE_ROOT } = {}) {
+export function createRunWorkspace({
+  runId,
+  repoPath,
+  rootDir = process.env.DIVINITY_WORKSPACE_ROOT || DEFAULT_WORKSPACE_ROOT,
+  isolationProfileId = process.env.DIVINITY_RUNNER_ISOLATION_PROFILE || 'workspace_snapshot'
+} = {}) {
   const workspaceRoot = path.resolve(rootDir);
   mkdirSync(workspaceRoot, { recursive: true });
   const workspacePath = path.join(workspaceRoot, `${safeRunSegment(runId)}-${Date.now()}`);
+  const isolation = resolveRunnerIsolationProfile({ profile_id: isolationProfileId });
 
   if (isLocalDirectory(repoPath)) {
     const sourcePath = path.resolve(repoPath);
@@ -59,6 +67,7 @@ export function createRunWorkspace({ runId, repoPath, rootDir = process.env.DIVI
       source_path: sourcePath,
       root_path: workspaceRoot,
       path: workspacePath,
+      isolation,
       created_at: new Date().toISOString()
     };
   }
@@ -77,6 +86,7 @@ export function createRunWorkspace({ runId, repoPath, rootDir = process.env.DIVI
       repo_url: repoPath,
       root_path: workspaceRoot,
       path: null,
+      isolation,
       created_at: new Date().toISOString(),
       error: clone.stderr || clone.error?.message || 'git clone failed'
     };
@@ -90,6 +100,7 @@ export function createRunWorkspace({ runId, repoPath, rootDir = process.env.DIVI
     repo_url: repoPath,
     root_path: workspaceRoot,
     path: workspacePath,
+    isolation,
     created_at: new Date().toISOString()
   };
 }
