@@ -2,6 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 
+import { createInitialRunEvents } from '../../../packages/events/src/index.mjs';
 import { evaluatePreflight } from '../../../packages/policy-engine/src/index.mjs';
 
 const [, , command, ...args] = process.argv;
@@ -38,6 +39,7 @@ function run() {
     created_at: new Date().toISOString()
   };
   const preflight = evaluatePreflight({ task: payload });
+  const run_id = `run_${Date.now()}`;
   const status = preflight.decision === 'requires_approval'
     ? 'awaiting_approval'
     : preflight.decision === 'block'
@@ -47,9 +49,10 @@ function run() {
   print({
     ok: true,
     command: 'run',
-    run_id: `run_${Date.now()}`,
+    run_id,
     status,
     preflight,
+    events: createInitialRunEvents({ run_id, task: payload, preflight, status }),
     task: payload
   });
 }

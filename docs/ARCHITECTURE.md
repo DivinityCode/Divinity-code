@@ -55,6 +55,11 @@
 - Approval moves the run back to `queued`; rejection marks the run `failed`.
 - Each transition records decision, actor, reason, and timestamp metadata.
 
+## Run Event Timeline
+- CLI and API runs emit structured events for task creation, preflight completion, status changes, and approval decisions.
+- API timelines are available from `GET /runs/:id/events`.
+- Event envelopes include event id, run id, event type, lifecycle status, message, metadata, and creation timestamp.
+
 ## Security and Governance
 - Principle of least privilege by default.
 - Scoped credentials per workspace.

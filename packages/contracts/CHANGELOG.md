@@ -1,5 +1,9 @@
 # Contracts Changelog
 
+## v1.4.0
+- Added RunEvent schema and examples for timeline events.
+- Added repository-level validation checks for event valid/invalid examples.
+
 ## v1.3.0
 - Added ApprovalDecision schema and examples for approve/reject transitions.
 - Added repository-level validation checks for approval valid/invalid examples.

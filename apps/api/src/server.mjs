@@ -1,5 +1,6 @@
 import http from 'http';
 
+import { createInitialRunEvents, createRunEvent } from '../../../packages/events/src/index.mjs';
 import { evaluatePreflight } from '../../../packages/policy-engine/src/index.mjs';
 
 const runs = new Map();
@@ -51,16 +52,19 @@ const server = http.createServer((req, res) => {
   if (req.method === 'POST' && req.url === '/tasks') {
     readJson(req, (task) => {
       const preflight = evaluatePreflight({ task });
+      const runId = `run_${Date.now()}`;
+      const status = preflight.decision === 'requires_approval'
+        ? 'awaiting_approval'
+        : preflight.decision === 'block'
+          ? 'failed'
+          : 'queued';
       const run = {
-        run_id: `run_${Date.now()}`,
+        run_id: runId,
         task_id: task.task_id || 'unknown',
-        status: preflight.decision === 'requires_approval'
-          ? 'awaiting_approval'
-          : preflight.decision === 'block'
-            ? 'failed'
-            : 'queued',
+        status,
         risk_level: preflight.risk_level,
-        preflight
+        preflight,
+        events: createInitialRunEvents({ run_id: runId, task, preflight, status })
       };
       runs.set(run.run_id, run);
       sendJson(res, 201, run);
@@ -88,9 +92,35 @@ const server = http.createServer((req, res) => {
       }
 
       run.approval = approvalPayload(body);
+      run.events.push(createRunEvent({
+        run_id: run.run_id,
+        type: 'approval_decided',
+        status: run.status,
+        message: `Approval decision: ${body.decision}`,
+        metadata: run.approval
+      }));
       run.status = body.decision === 'approve' ? 'queued' : 'failed';
+      run.events.push(createRunEvent({
+        run_id: run.run_id,
+        type: 'status_changed',
+        status: run.status,
+        message: `Run status changed to ${run.status}`,
+        metadata: { decision: body.decision }
+      }));
       sendJson(res, 200, run);
     });
+    return;
+  }
+
+  const eventsMatch = req.url.match(/^\/runs\/([^/]+)\/events$/);
+  if (req.method === 'GET' && eventsMatch) {
+    const run = runs.get(eventsMatch[1]);
+    if (!run) {
+      sendJson(res, 404, { error: 'run not found' });
+      return;
+    }
+
+    sendJson(res, 200, { run_id: run.run_id, events: run.events });
     return;
   }
 
