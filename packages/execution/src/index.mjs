@@ -2,6 +2,39 @@ import { spawnSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
+export const EXECUTION_ADAPTERS = [
+  {
+    adapter: 'file_read',
+    description: 'Read README.md from the run workspace.',
+    action_types: ['file_read'],
+    shell_interpolation: false
+  },
+  {
+    adapter: 'git_status',
+    description: 'Run git status --short in the run workspace.',
+    action_types: ['shell'],
+    shell_interpolation: false
+  },
+  {
+    adapter: 'node_test',
+    description: 'Run whitelisted Node test scripts with process.execPath.',
+    action_types: ['shell'],
+    shell_interpolation: false
+  },
+  {
+    adapter: 'package_script',
+    description: 'Run named Node-based package scripts without shell interpolation.',
+    action_types: ['shell'],
+    shell_interpolation: false
+  },
+  {
+    adapter: 'manual',
+    description: 'Record an unsupported action as a non-executed manual adapter result.',
+    action_types: [],
+    shell_interpolation: false
+  }
+];
+
 function predictedActionTypes(step) {
   return new Set((step?.pre_execution_check?.predicted_actions || []).map(action => action.type));
 }
@@ -206,6 +239,13 @@ export function resolveExecutionAdapter(step) {
   if (actionTypes.has('shell') && nodeTestScriptForAction(step?.action)) return 'node_test';
   if (actionTypes.has('shell') && packageScriptNameForAction(step?.action)) return 'package_script';
   return 'manual';
+}
+
+export function publicExecutionAdapters() {
+  return EXECUTION_ADAPTERS.map(adapter => ({
+    ...adapter,
+    action_types: [...adapter.action_types]
+  }));
 }
 
 export function executeStep({ run, step, cwd }) {

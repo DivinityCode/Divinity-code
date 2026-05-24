@@ -33,6 +33,7 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: local-directory tasks execute from per-run workspace snapshots rather than directly from the source path, and explicit Git URLs are shallow-cloned into run workspaces.
    - Bootstrap status: run workspaces can be cleaned through the API with timeline/audit evidence.
    - Bootstrap status: API run state can persist to a file-backed store when `DIVINITY_RUN_STORE_PATH` is configured.
+   - Bootstrap status: CLI/API capability catalogs expose current policy presets, execution adapters, and starter recipes.
 2. **Operator Mode**
    - Task queue dashboard.
    - Approval queue for high-risk steps.

@@ -37,6 +37,11 @@
 - The IDE extension scaffold contributes commands for task submission, dashboard launch, and local diagnostics.
 - IDE commands delegate to the repo-local CLI to preserve shared Task/Run/Preflight contracts across Builder Mode surfaces.
 
+## Capability Discovery
+- CLI `capabilities` and API `GET /capabilities` expose `divinity.capabilities.v1`.
+- The catalog lists policy presets, constrained execution adapters, and starter recipe summaries from the shared package layer.
+- Capability discovery keeps extension points explicit so clients do not hard-code supported policies or adapters.
+
 ## Run Lifecycle
 1. Task created
 2. Preflight analysis (risk + cost estimate)
