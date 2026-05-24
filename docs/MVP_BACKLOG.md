@@ -37,8 +37,9 @@
 
 ## Current Implementation Notes
 - CLI `run` now returns `run_id`, status, task payload, and preflight decision metadata.
-- CLI `init` supports default, flag-driven, and prompt-driven project config creation for policy preset and soft/hard budget caps.
+- CLI `init` supports default, flag-driven, and prompt-driven project config creation for policy preset, soft/hard budget caps, and org/project scope.
 - API exposes `POST /preflight`; `POST /tasks` records preflight metadata and moves high-risk allowed work to `awaiting_approval`.
+- API task creation normalizes missing org/project scope to `default-org/default-project`; authentication is still pending.
 - API exposes `GET /runs`, `GET /approvals`, and `POST /runs/:id/approval` for dashboard loading and approve/reject transitions.
 - API exposes `POST /runs/:id/steps` to run policy and budget gates before a step can enter pending execution.
 - Hard budget cap excess now maps to `paused` for CLI/API runs and pauses an API run when a proposed step exceeds the hard cap.

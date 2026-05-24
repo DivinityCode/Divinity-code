@@ -9,6 +9,17 @@ const runs = new Map();
 const artifacts = new Map();
 const auditRecords = [];
 const runSubscribers = new Map();
+const DEFAULT_SCOPE = { org_id: 'default-org', project_id: 'default-project' };
+
+function taskWithScope(task) {
+  return {
+    ...task,
+    scope: {
+      org_id: task?.scope?.org_id || DEFAULT_SCOPE.org_id,
+      project_id: task?.scope?.project_id || DEFAULT_SCOPE.project_id
+    }
+  };
+}
 
 function readJson(req, callback) {
   let body = '';
@@ -161,22 +172,23 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'POST' && req.url === '/preflight') {
     readJson(req, (task) => {
-      sendJson(res, 200, evaluatePreflight({ task }));
+      sendJson(res, 200, evaluatePreflight({ task: taskWithScope(task) }));
     });
     return;
   }
 
   if (req.method === 'POST' && req.url === '/tasks') {
     readJson(req, (task) => {
-      const preflight = evaluatePreflight({ task });
+      const scopedTask = taskWithScope(task);
+      const preflight = evaluatePreflight({ task: scopedTask });
       const runId = `run_${Date.now()}`;
       const status = preflight.run_status;
-      const runArtifacts = createRunArtifacts({ run_id: runId, task, status, preflight });
-      const events = createInitialRunEvents({ run_id: runId, task, preflight, status });
+      const runArtifacts = createRunArtifacts({ run_id: runId, task: scopedTask, status, preflight });
+      const events = createInitialRunEvents({ run_id: runId, task: scopedTask, preflight, status });
       const run = {
         run_id: runId,
-        task_id: task.task_id || 'unknown',
-        task,
+        task_id: scopedTask.task_id || 'unknown',
+        task: scopedTask,
         created_at: events[0]?.created_at || new Date().toISOString(),
         status,
         risk_level: preflight.risk_level,

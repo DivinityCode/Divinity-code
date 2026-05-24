@@ -16,3 +16,5 @@ Planned endpoints: task creation, run retrieval, preflight checks.
 - `GET /artifacts/:artifact_id`
 - `POST /runs/:id/steps`
 - `POST /runs/:id/approval`
+
+Task creation normalizes missing scope to `default-org/default-project`; callers can pass `scope.org_id` and `scope.project_id` to associate a run with an org and project.

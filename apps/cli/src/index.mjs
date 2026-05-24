@@ -12,7 +12,8 @@ const cwd = process.cwd();
 const configPath = path.join(cwd, '.divinity.json');
 const DEFAULT_CONFIG = {
   policy_id: 'safe_exec',
-  budget: { soft_limit_usd: 2, hard_limit_usd: 5 }
+  budget: { soft_limit_usd: 2, hard_limit_usd: 5 },
+  scope: { org_id: 'default-org', project_id: 'default-project' }
 };
 const POLICY_IDS = Object.keys(POLICY_PRESETS);
 
@@ -25,7 +26,9 @@ function parseInitArgs(values) {
     wizard: false,
     policy_id: DEFAULT_CONFIG.policy_id,
     soft_limit_usd: DEFAULT_CONFIG.budget.soft_limit_usd,
-    hard_limit_usd: DEFAULT_CONFIG.budget.hard_limit_usd
+    hard_limit_usd: DEFAULT_CONFIG.budget.hard_limit_usd,
+    org_id: DEFAULT_CONFIG.scope.org_id,
+    project_id: DEFAULT_CONFIG.scope.project_id
   };
 
   for (let index = 0; index < values.length; index += 1) {
@@ -43,6 +46,12 @@ function parseInitArgs(values) {
     } else if (value === '--hard-limit' || value === '--hard-limit-usd') {
       options.hard_limit_usd = next;
       index += 1;
+    } else if (value === '--org' || value === '--org-id') {
+      options.org_id = next;
+      index += 1;
+    } else if (value === '--project' || value === '--project-id') {
+      options.project_id = next;
+      index += 1;
     } else {
       throw new Error(`unknown init option: ${value}`);
     }
@@ -55,6 +64,14 @@ function asBudgetNumber(value, label) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) {
     throw new Error(`${label} must be a non-negative number`);
+  }
+  return parsed;
+}
+
+function asScopeId(value, label) {
+  const parsed = String(value || '').trim();
+  if (!parsed) {
+    throw new Error(`${label} must be a non-empty string`);
   }
   return parsed;
 }
@@ -75,6 +92,10 @@ function buildConfig(options) {
     budget: {
       soft_limit_usd: softLimit,
       hard_limit_usd: hardLimit
+    },
+    scope: {
+      org_id: asScopeId(options.org_id, 'org_id'),
+      project_id: asScopeId(options.project_id, 'project_id')
     }
   };
 }
@@ -85,12 +106,16 @@ async function askForConfig(options) {
     process.stderr.write(`Policy preset [${options.policy_id}]: `);
     process.stderr.write(`Soft budget USD [${options.soft_limit_usd}]: `);
     process.stderr.write(`Hard budget USD [${options.hard_limit_usd}]: `);
-    const [policy = '', soft = '', hard = ''] = fs.readFileSync(0, 'utf8').split(/\r?\n/);
+    process.stderr.write(`Org ID [${options.org_id}]: `);
+    process.stderr.write(`Project ID [${options.project_id}]: `);
+    const [policy = '', soft = '', hard = '', org = '', project = ''] = fs.readFileSync(0, 'utf8').split(/\r?\n/);
     return {
       ...options,
       policy_id: policy.trim() || options.policy_id,
       soft_limit_usd: soft.trim() || options.soft_limit_usd,
-      hard_limit_usd: hard.trim() || options.hard_limit_usd
+      hard_limit_usd: hard.trim() || options.hard_limit_usd,
+      org_id: org.trim() || options.org_id,
+      project_id: project.trim() || options.project_id
     };
   }
 
@@ -100,11 +125,15 @@ async function askForConfig(options) {
     const policy = await rl.question(`Policy preset [${options.policy_id}]: `);
     const soft = await rl.question(`Soft budget USD [${options.soft_limit_usd}]: `);
     const hard = await rl.question(`Hard budget USD [${options.hard_limit_usd}]: `);
+    const org = await rl.question(`Org ID [${options.org_id}]: `);
+    const project = await rl.question(`Project ID [${options.project_id}]: `);
     return {
       ...options,
       policy_id: policy.trim() || options.policy_id,
       soft_limit_usd: soft.trim() || options.soft_limit_usd,
-      hard_limit_usd: hard.trim() || options.hard_limit_usd
+      hard_limit_usd: hard.trim() || options.hard_limit_usd,
+      org_id: org.trim() || options.org_id,
+      project_id: project.trim() || options.project_id
     };
   } finally {
     rl.close();
@@ -133,6 +162,7 @@ function run() {
     task_id: `task_${Date.now()}`,
     objective,
     repo: cwd,
+    scope: config.scope || DEFAULT_CONFIG.scope,
     policy_id: config.policy_id,
     budget: config.budget,
     created_at: new Date().toISOString()

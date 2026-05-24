@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.11.0
+- Added required Task `scope.org_id` and `scope.project_id` fields for org/project run association.
+
 ## v1.10.0
 - Added `claim_type` to evidence references so outputs can distinguish observed facts from inferred classifications.
 

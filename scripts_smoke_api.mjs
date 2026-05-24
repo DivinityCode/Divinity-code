@@ -35,6 +35,8 @@ try {
   assert(config.policy_id === 'safe_exec', 'CLI init policy_id mismatch');
   assert(config.budget?.soft_limit_usd === 2, 'CLI init soft budget mismatch');
   assert(config.budget?.hard_limit_usd === 5, 'CLI init hard budget mismatch');
+  assert(config.scope?.org_id === 'default-org', 'CLI init org scope mismatch');
+  assert(config.scope?.project_id === 'default-project', 'CLI init project scope mismatch');
 
   const runResult = runCli(tmpDir, 'run', 'smoke task');
   assert(runResult.ok === true, 'CLI run did not return ok=true');
@@ -44,6 +46,8 @@ try {
   assert(runResult.preflight?.decision === 'allow', 'CLI run preflight decision mismatch');
   assert(runResult.task?.objective === 'smoke task', 'CLI run objective mismatch');
   assert(runResult.task?.repo === tmpDir, 'CLI run repo should be the temp dir');
+  assert(runResult.task?.scope?.org_id === 'default-org', 'CLI run org scope mismatch');
+  assert(runResult.task?.scope?.project_id === 'default-project', 'CLI run project scope mismatch');
 
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address();
@@ -78,6 +82,8 @@ try {
   assert(createRes.status === 201, 'API task creation returned non-201 status');
   const run = await createRes.json();
   assert(run.task_id === 'task_smoke', 'API task creation task_id mismatch');
+  assert(run.task?.scope?.org_id === 'default-org', 'API task creation org scope mismatch');
+  assert(run.task?.scope?.project_id === 'default-project', 'API task creation project scope mismatch');
   assert(run.status === 'queued', 'API task creation status mismatch');
   assert(run.risk_level === 'low', 'API task creation risk_level mismatch');
 
