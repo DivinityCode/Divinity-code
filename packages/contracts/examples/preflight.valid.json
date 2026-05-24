@@ -19,5 +19,13 @@
     "hard_cap_exceeded": false
   },
   "warnings": [],
-  "blocked_reasons": []
+  "blocked_reasons": [],
+  "evidence_refs": [
+    {
+      "evidence_id": "evidence_task_objective",
+      "source": "task.objective",
+      "summary": "Objective indicates shell execution.",
+      "supports": ["predicted_actions", "risk_level", "decision"]
+    }
+  ]
 }

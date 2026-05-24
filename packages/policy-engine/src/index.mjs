@@ -86,6 +86,29 @@ function estimateCost(actions) {
   ), 0).toFixed(2));
 }
 
+function createEvidenceRefs({ task, predicted_actions, resolvedPolicy, budget, objectiveSource = 'task.objective' }) {
+  return [
+    {
+      evidence_id: objectiveSource === 'step.action' ? 'evidence_step_action' : 'evidence_task_objective',
+      source: objectiveSource,
+      summary: `Classified objective: ${task?.objective || 'No objective provided'}`,
+      supports: ['predicted_actions', 'risk_level', 'decision']
+    },
+    {
+      evidence_id: 'evidence_policy_permissions',
+      source: 'policy.permissions',
+      summary: `Policy ${resolvedPolicy.policy_id} grants: ${(resolvedPolicy.permissions || []).join(', ') || 'none'}`,
+      supports: ['approval_required', 'blocked_reasons', 'decision']
+    },
+    {
+      evidence_id: 'evidence_task_budget',
+      source: 'task.budget',
+      summary: `Estimated $${budget.estimated_cost_usd} against soft $${budget.soft_limit_usd ?? 'none'} and hard $${budget.hard_limit_usd ?? 'none'} limits`,
+      supports: ['budget', 'warnings', 'run_status']
+    }
+  ];
+}
+
 export function runStatusForDecision(decision) {
   if (decision?.budget?.hard_cap_exceeded) return 'paused';
   if (decision?.decision === 'requires_approval') return 'awaiting_approval';
@@ -99,7 +122,7 @@ export function resolvePolicy(policyOrId) {
   return policyOrId;
 }
 
-export function evaluatePreflight({ task, policy }) {
+export function evaluatePreflight({ task, policy, objectiveSource }) {
   const resolvedPolicy = resolvePolicy(policy || task?.policy_id);
   const predicted_actions = inferActions(task?.objective);
   const risk_level = maxRisk(predicted_actions);
@@ -150,7 +173,14 @@ export function evaluatePreflight({ task, policy }) {
     predicted_actions,
     budget,
     warnings,
-    blocked_reasons
+    blocked_reasons,
+    evidence_refs: createEvidenceRefs({
+      task,
+      predicted_actions,
+      resolvedPolicy,
+      budget,
+      objectiveSource
+    })
   };
   return {
     ...result,
@@ -166,7 +196,8 @@ export function evaluateStepGate({ run, step, policy }) {
       task_id: step?.step_id || run?.task_id || run?.run_id || 'step',
       created_at: new Date().toISOString()
     },
-    policy: policy || run?.task?.policy_id
+    policy: policy || run?.task?.policy_id,
+    objectiveSource: 'step.action'
   });
 
   return {

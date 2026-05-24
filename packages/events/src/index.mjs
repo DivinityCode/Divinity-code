@@ -45,7 +45,8 @@ export function createInitialRunEvents({ run_id, task, preflight, status }) {
       metadata: {
         decision: preflight.decision,
         risk_level: preflight.risk_level,
-        approval_required: preflight.approval_required
+        approval_required: preflight.approval_required,
+        evidence_refs: preflight.evidence_refs || []
       }
     }),
     createRunEvent({

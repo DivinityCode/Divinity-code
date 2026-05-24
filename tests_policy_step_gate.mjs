@@ -14,6 +14,12 @@ const run = {
   }
 };
 
+function assertEvidenceRefs(decision) {
+  assert.ok(Array.isArray(decision.evidence_refs));
+  assert.ok(decision.evidence_refs.length > 0);
+  assert.ok(decision.evidence_refs.some(evidence => evidence.source === 'step.action'));
+}
+
 {
   const gate = evaluateStepGate({
     run,
@@ -25,6 +31,7 @@ const run = {
   assert.equal(gate.status, 'allowed');
   assert.equal(gate.risk_level, 'low');
   assert.deepEqual(gate.blocked_reasons, []);
+  assertEvidenceRefs(gate);
 }
 
 {
@@ -38,6 +45,7 @@ const run = {
   assert.equal(gate.status, 'blocked');
   assert.equal(gate.risk_level, 'high');
   assert.equal(gate.approval_required, true);
+  assertEvidenceRefs(gate);
 }
 
 {
@@ -50,6 +58,7 @@ const run = {
   assert.equal(gate.decision, 'block');
   assert.equal(gate.status, 'blocked');
   assert.ok(gate.blocked_reasons.includes('permission_denied:git_push'));
+  assertEvidenceRefs(gate);
 }
 
 console.log(JSON.stringify({ ok: true, test: 'policy-step-gate' }));

@@ -48,6 +48,7 @@
 - The policy engine infers predicted action classes from the task objective, maps each action to a risk level and required permission, estimates cost, and compares the result with the selected policy preset and task budget.
 - Decisions are `allow`, `requires_approval`, or `block`, with a derived run status for lifecycle handling.
 - High-risk actions under `safe_exec` enter `awaiting_approval`; missing permissions fail the run before execution; hard budget overruns pause the run.
+- Decision payloads include evidence references for the objective or step action, policy permissions, and budget limits that supported the outcome.
 
 ## Approval Flow
 - Runs in `awaiting_approval` appear in `GET /approvals`.
@@ -58,7 +59,7 @@
 ## Run Event Timeline
 - CLI and API runs emit structured events for task creation, preflight completion, status changes, and approval decisions.
 - API timelines are available from `GET /runs/:id/events`.
-- Event envelopes include event id, run id, event type, lifecycle status, message, metadata, and creation timestamp.
+- Event envelopes include event id, run id, event type, lifecycle status, message, metadata, and creation timestamp; preflight event metadata carries the same evidence references as the decision.
 
 ## Artifact Model
 - CLI and API runs expose patch, log, and summary artifact metadata.

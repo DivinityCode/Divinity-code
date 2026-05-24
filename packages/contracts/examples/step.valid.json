@@ -8,6 +8,14 @@
     "status": "allowed",
     "risk_level": "low",
     "approval_required": false,
-    "blocked_reasons": []
+    "blocked_reasons": [],
+    "evidence_refs": [
+      {
+        "evidence_id": "evidence_step_action",
+        "source": "step.action",
+        "summary": "Step action indicates file read work.",
+        "supports": ["predicted_actions", "decision"]
+      }
+    ]
   }
 }

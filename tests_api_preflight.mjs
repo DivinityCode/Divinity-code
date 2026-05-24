@@ -27,6 +27,7 @@ try {
   assert.equal(preflight.decision, 'requires_approval');
   assert.equal(preflight.risk_level, 'high');
   assert.equal(preflight.approval_required, true);
+  assert.ok(preflight.evidence_refs.length > 0);
 
   const createTaskRes = await fetch(`${baseUrl}/tasks`, {
     method: 'POST',
@@ -39,12 +40,14 @@ try {
   assert.equal(run.status, 'awaiting_approval');
   assert.equal(run.risk_level, 'high');
   assert.equal(run.preflight.decision, 'requires_approval');
+  assert.ok(run.preflight.evidence_refs.some(evidence => evidence.source === 'task.objective'));
 
   const getRunRes = await fetch(`${baseUrl}/runs/${run.run_id}`);
   assert.equal(getRunRes.status, 200);
   const storedRun = await getRunRes.json();
   assert.equal(storedRun.run_id, run.run_id);
   assert.equal(storedRun.preflight.decision, 'requires_approval');
+  assert.ok(storedRun.preflight.evidence_refs.length > 0);
 
   const hardCapRes = await fetch(`${baseUrl}/tasks`, {
     method: 'POST',
@@ -63,6 +66,7 @@ try {
   assert.equal(pausedRun.preflight.run_status, 'paused');
   assert.equal(pausedRun.preflight.budget.hard_cap_exceeded, true);
   assert.ok(pausedRun.preflight.blocked_reasons.includes('estimated_cost_exceeds_hard_limit'));
+  assert.ok(pausedRun.preflight.evidence_refs.some(evidence => evidence.source === 'task.budget'));
 
   console.log(JSON.stringify({ ok: true, test: 'api-preflight' }));
 } finally {
