@@ -33,6 +33,10 @@
 - **Policy**: permissions, network constraints, approval thresholds.
 - **Memory Entry**: persisted fact with source, timestamp, confidence.
 
+## Builder IDE Surface
+- The IDE extension scaffold contributes commands for task submission, dashboard launch, and local diagnostics.
+- IDE commands delegate to the repo-local CLI to preserve shared Task/Run/Preflight contracts across Builder Mode surfaces.
+
 ## Run Lifecycle
 1. Task created
 2. Preflight analysis (risk + cost estimate)

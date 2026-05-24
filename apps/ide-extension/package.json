@@ -1,0 +1,33 @@
+{
+  "name": "divinity-code-ide-extension",
+  "displayName": "Divinity Code",
+  "publisher": "divinity-code",
+  "version": "0.1.0",
+  "description": "Builder Mode IDE commands for Divinity Code.",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "onCommand:divinity.runTask",
+    "onCommand:divinity.openDashboard",
+    "onCommand:divinity.showDoctor"
+  ],
+  "main": "./src/extension.mjs",
+  "contributes": {
+    "commands": [
+      {
+        "command": "divinity.runTask",
+        "title": "Divinity: Run Task"
+      },
+      {
+        "command": "divinity.openDashboard",
+        "title": "Divinity: Open Dashboard"
+      },
+      {
+        "command": "divinity.showDoctor",
+        "title": "Divinity: Doctor"
+      }
+    ]
+  }
+}

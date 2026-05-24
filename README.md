@@ -14,12 +14,14 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 
 ## Implemented Surfaces
 1. Builder CLI: `init`, `run`, `status`, `approve`, `recipes`, and `doctor`.
-2. Control Plane API: health, preflight, task creation, run retrieval, approvals, steps, artifacts, audit export, and live run streams.
-3. Operator dashboard: run queue, approvals, run timeline, decision trace, artifacts, audit metadata, and API-backed live updates.
+2. IDE extension scaffold: task run, dashboard launch, and doctor commands delegated to the repo-local CLI.
+3. Control Plane API: health, preflight, task creation, run retrieval, approvals, steps, artifacts, audit export, and live run streams.
+4. Operator dashboard: run queue, approvals, run timeline, decision trace, artifacts, audit metadata, and API-backed live updates.
 
 
 ## Repo Layout
 - `apps/cli` - Builder Mode CLI
+- `apps/ide-extension` - Builder Mode IDE extension scaffold
 - `apps/api` - Control Plane API
 - `apps/dashboard` - Operator Mode dashboard
 - `packages/contracts` - versioned task/run/policy schemas
