@@ -1,0 +1,10 @@
+{
+  "lock_id": "lock_run_123_step_readme_2026-05-25T00:00:00.000Z",
+  "run_id": "run_123",
+  "step_id": "step_readme",
+  "actor": "executor@divinity",
+  "status": "released",
+  "locked_at": "2026-05-25T00:00:00.000Z",
+  "expires_at": "2026-05-25T00:10:00.000Z",
+  "released_at": "2026-05-25T00:00:01.000Z"
+}

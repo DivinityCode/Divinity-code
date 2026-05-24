@@ -1,0 +1,10 @@
+{
+  "lock_id": "lock_run_123_step_readme",
+  "run_id": "run_123",
+  "step_id": "step_readme",
+  "actor": "",
+  "status": "running",
+  "locked_at": "not-a-date",
+  "expires_at": "not-a-date",
+  "released_at": 1
+}

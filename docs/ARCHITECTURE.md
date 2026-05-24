@@ -77,8 +77,10 @@
 - Execution adapters run from `run.workspace.path` when present, preventing source-directory mutations after task creation from changing read/test evidence.
 - Execution adapters include `file_read`, which reads `README.md` from the run workspace, `git_status`, which runs `git status --short`, `node_test`, which runs whitelisted Node test scripts, and `package_script`, which runs named Node-based package scripts without shell interpolation.
 - Blocked or approval-required steps cannot execute through the execution package; the package requires the step gate decision to be `allow`.
+- Before a step executes, the API acquires a per-run execution lock; active lock conflicts return `409` and stale expired locks no longer block execution.
 - Each execution produces a deterministic post-execution verifier record with observed status, exit-code, and output-capture checks.
 - Verifier records are attached to the step and run, emit `step_verified` timeline events, and write `verification_record` audit entries.
+- Execution locks emit `execution_lock_acquired` and `execution_lock_released` timeline events and write `execution_lock_record` audit entries.
 - Workspace snapshots exclude or remove `node_modules` and preserve Git metadata.
 - Workspace cleanup is available from `POST /runs/:id/workspace/cleanup`, records a `workspace_cleaned` timeline event, and refuses to delete paths outside the recorded workspace root.
 - Containerized runner isolation is still future work.
@@ -95,7 +97,7 @@
 - Each transition records decision, actor, reason, and timestamp metadata.
 
 ## Run Event Timeline
-- CLI and API runs emit structured events for task creation, preflight completion, status changes, approval decisions, step execution, verification, heartbeats, and workspace cleanup.
+- CLI and API runs emit structured events for task creation, preflight completion, status changes, approval decisions, execution locks, step execution, verification, heartbeats, and workspace cleanup.
 - API timelines are available from `GET /runs/:id/events`.
 - Event envelopes include event id, run id, event type, lifecycle status, message, metadata, and creation timestamp; preflight event metadata carries the same observed/inferred evidence references as the decision.
 
@@ -103,6 +105,11 @@
 - API runs keep `heartbeats` and `last_heartbeat_at` fields for operator liveness checks.
 - `POST /runs/:id/heartbeat` records an `alive`, `warning`, or `stale` heartbeat for the run.
 - Heartbeat records emit `heartbeat_recorded` timeline events, update run state, and write `heartbeat_record` audit entries.
+
+## Execution Locks
+- API runs keep `execution_locks` and `active_execution_lock` fields for execution ownership.
+- `POST /runs/:id/steps/:step_id/execute` records a lock before adapter execution and releases it after execution or failure.
+- Active non-expired locks prevent overlapping step execution and return the active lock payload to the caller.
 
 ## Run Storage
 - API run state uses `packages/run-store` for runs, artifact records, and hash-backed audit records.
@@ -118,7 +125,7 @@
 - API artifact lists are available from `GET /runs/:id/artifacts`; full artifact content is available from `GET /artifacts/:artifact_id`.
 
 ## Audit Export
-- API lifecycle actions create hash-backed audit records for run creation, run events, approval decisions, execution records, verification records, heartbeat records, workspace cleanup, and artifact records.
+- API lifecycle actions create hash-backed audit records for run creation, run events, approval decisions, execution lock records, execution records, verification records, heartbeat records, workspace cleanup, and artifact records.
 - Audit exports are available from `GET /audit`.
 - Optional `from` and `to` query parameters filter records by creation timestamp.
 

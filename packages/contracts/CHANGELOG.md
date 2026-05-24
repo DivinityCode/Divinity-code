@@ -1,5 +1,9 @@
 # Contracts Changelog
 
+## v1.22.0
+- Added `ExecutionLockRecord` schema and examples for per-run execution ownership.
+- Added `execution_lock_acquired` and `execution_lock_released` run events plus `execution_lock_record` audit entries.
+
 ## v1.21.0
 - Added `HeartbeatRecord` schema and examples for run liveness reporting.
 - Added `heartbeat_recorded` run events, `heartbeat_record` audit entries, and observability liveness fields.

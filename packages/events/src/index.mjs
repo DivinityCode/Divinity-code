@@ -3,6 +3,8 @@ const EVENT_TYPES = new Set([
   'preflight_completed',
   'status_changed',
   'approval_decided',
+  'execution_lock_acquired',
+  'execution_lock_released',
   'step_executed',
   'step_verified',
   'heartbeat_recorded',

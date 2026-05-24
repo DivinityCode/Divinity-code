@@ -12,7 +12,7 @@
     },
     "type": {
       "type": "string",
-      "enum": ["task_created", "preflight_completed", "status_changed", "approval_decided", "step_executed", "step_verified", "heartbeat_recorded", "workspace_cleaned"]
+      "enum": ["task_created", "preflight_completed", "status_changed", "approval_decided", "execution_lock_acquired", "execution_lock_released", "step_executed", "step_verified", "heartbeat_recorded", "workspace_cleaned"]
     },
     "status": {
       "type": "string",
