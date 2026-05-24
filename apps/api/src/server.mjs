@@ -9,7 +9,7 @@ import { createOrchestrationTrace } from '../../../packages/orchestration/src/in
 import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
 import { evaluatePreflight, evaluateStepGate } from '../../../packages/policy-engine/src/index.mjs';
 import { createConfiguredRunStore } from '../../../packages/run-store/src/index.mjs';
-import { createRunWorkspace, executionCwdForRun } from '../../../packages/workspaces/src/index.mjs';
+import { cleanupRunWorkspace, createRunWorkspace, executionCwdForRun } from '../../../packages/workspaces/src/index.mjs';
 
 const runStore = createConfiguredRunStore();
 const { runs, artifacts, auditRecords } = runStore;
@@ -424,6 +424,53 @@ const server = http.createServer((req, res) => {
     } catch (error) {
       sendJson(res, 409, { error: error.message, step });
     }
+    return;
+  }
+
+  const workspaceCleanupMatch = req.url.match(/^\/runs\/([^/]+)\/workspace\/cleanup$/);
+  if (req.method === 'POST' && workspaceCleanupMatch) {
+    const run = runs.get(workspaceCleanupMatch[1]);
+    if (!run) {
+      sendJson(res, 404, { error: 'run not found' });
+      return;
+    }
+
+    const cleanup = cleanupRunWorkspace(run.workspace);
+    if (!cleanup.cleaned) {
+      sendJson(res, 409, { error: 'workspace cleanup skipped', workspace: cleanup });
+      return;
+    }
+
+    run.workspace = {
+      ...run.workspace,
+      cleaned: true,
+      cleaned_at: cleanup.cleaned_at
+    };
+    const event = createRunEvent({
+      run_id: run.run_id,
+      type: 'workspace_cleaned',
+      status: run.status,
+      message: 'Run workspace cleaned',
+      metadata: {
+        path: cleanup.path
+      }
+    });
+    run.events.push(event);
+    recordAudit({
+      type: 'workspace_cleaned',
+      run_id: run.run_id,
+      created_at: cleanup.cleaned_at,
+      payload: cleanup
+    });
+    recordAudit({
+      type: 'run_event',
+      run_id: run.run_id,
+      created_at: event.created_at,
+      payload: event
+    });
+    persistRunStore();
+    broadcastRun(run);
+    sendJson(res, 200, { workspace: cleanup, run: publicRun(run) });
     return;
   }
 

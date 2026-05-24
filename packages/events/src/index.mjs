@@ -3,7 +3,8 @@ const EVENT_TYPES = new Set([
   'preflight_completed',
   'status_changed',
   'approval_decided',
-  'step_executed'
+  'step_executed',
+  'workspace_cleaned'
 ]);
 
 export function createRunEvent({

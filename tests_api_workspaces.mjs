@@ -1,5 +1,5 @@
 import assert from 'assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 
@@ -61,6 +61,26 @@ try {
   assert.equal(executed.execution.adapter, 'file_read');
   assert.match(executed.execution.stdout, /Snapshot read/);
   assert.doesNotMatch(executed.execution.stdout, /Source changed/);
+
+  const { response: cleanupRes, body: cleanup } = await requestJson(`${baseUrl}/runs/${run.run_id}/workspace/cleanup`, {
+    method: 'POST',
+    body: JSON.stringify({})
+  });
+  assert.equal(cleanupRes.status, 200);
+  assert.equal(cleanup.workspace.cleaned, true);
+  assert.equal(cleanup.workspace.path, run.workspace.path);
+  assert.equal(existsSync(run.workspace.path), false);
+  assert.equal(cleanup.run.workspace.cleaned, true);
+  assert.match(cleanup.run.workspace.cleaned_at, /^\d{4}-\d{2}-\d{2}T/);
+  assert.ok(cleanup.run.events.some(event => event.type === 'workspace_cleaned'));
+
+  const { response: secondCleanupRes, body: secondCleanup } = await requestJson(`${baseUrl}/runs/${run.run_id}/workspace/cleanup`, {
+    method: 'POST',
+    body: JSON.stringify({})
+  });
+  assert.equal(secondCleanupRes.status, 409);
+  assert.equal(secondCleanup.error, 'workspace cleanup skipped');
+  assert.equal(secondCleanup.workspace.reason, 'workspace_not_found');
 
   console.log(JSON.stringify({ ok: true, test: 'api-workspaces' }));
 } finally {
