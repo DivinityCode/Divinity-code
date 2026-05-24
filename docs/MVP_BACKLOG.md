@@ -39,14 +39,14 @@
 - CLI `run` now returns `run_id`, status, task payload, and preflight decision metadata.
 - CLI `init` supports default, flag-driven, and prompt-driven project config creation for policy preset, soft/hard budget caps, and org/project scope.
 - API exposes `POST /preflight`; `POST /tasks` records preflight metadata and moves high-risk allowed work to `awaiting_approval`.
-- API task creation normalizes missing org/project scope to `default-org/default-project`; authentication is still pending.
+- API task creation normalizes missing org/project scope to `default-org/default-project`; configured API keys protect control-plane routes when `DIVINITY_API_KEY` or `DIVINITY_API_KEYS` is set.
 - API exposes `GET /runs`, `GET /approvals`, and `POST /runs/:id/approval` for dashboard loading and approve/reject transitions.
 - API exposes `POST /runs/:id/steps` to run policy and budget gates before a step can enter pending execution.
 - Hard budget cap excess now maps to `paused` for CLI/API runs and pauses an API run when a proposed step exceeds the hard cap.
 - CLI and API expose structured run events; dashboard can subscribe to live selected-run updates through API server-sent events.
 - CLI and API expose patch/log/summary artifact metadata; real patch payload generation is still pending.
 - API exposes `GET /audit` for hash-backed run audit exports with optional timeframe filters.
-- Dashboard shell exists at `apps/dashboard` with contract-shaped local sample data plus opt-in API loading through `?api=<base-url>` for task filtering, run timeline, approval decisions, cost/risk badges, artifacts, and audit metadata; live updates are still pending.
+- Dashboard shell exists at `apps/dashboard` with contract-shaped local sample data plus opt-in API loading through `?api=<base-url>` for task filtering, run timeline, approval decisions, cost/risk badges, artifacts, audit metadata, and live updates.
 - Missing permissions still produce blocked preflight decisions; soft caps emit `estimated_cost_exceeds_soft_limit` warnings.
 - Preflight and step-gate decision payloads include evidence references for the objective/action, policy permissions, and budget limits.
 - Summary artifacts include decision traces with chosen path, rejected alternative, rationale, and evidence references.
@@ -62,8 +62,8 @@
   - Acceptance: UI/CLI marks statements as observed or inferred.
 
 ## Epic 5: Platform (M1-M3)
-- [ ] Auth + org/project model.  
-  - Acceptance: task is associated with org and project scope.
+- [x] Auth + org/project model.
+  - Acceptance: task is associated with org/project scope, and configured API keys require bearer auth for control-plane routes.
 - [x] Artifact storage and retrieval API.
   - Acceptance: artifact metadata and payload retrieval endpoint work.
 - [x] Event stream for live updates.
