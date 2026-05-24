@@ -30,6 +30,8 @@ const sampleRuns = [
       artifact('artifact_log_0012', 'log', 'artifact://run_2026_05_24_0012/run.log'),
       artifact('artifact_summary_0012', 'summary', 'artifact://run_2026_05_24_0012/summary.md')
     ],
+    heartbeats: [],
+    last_heartbeat_at: null,
     audit: {
       hash: 'b3f9c8d2e5f4a7d9b2c7e6f0a1b9c8d2f6e7a1b9c8d2e6f4a7d9b2c7e6f0a1b9',
       recorded_at: '2026-05-24T10:13:28.000Z'
@@ -56,6 +58,10 @@ const sampleRuns = [
       artifact('artifact_log_0011', 'log', 'artifact://run_2026_05_24_0011/run.log'),
       artifact('artifact_summary_0011', 'summary', 'artifact://run_2026_05_24_0011/summary.md')
     ],
+    heartbeats: [
+      heartbeat('heartbeat_0011_alive', 'run_2026_05_24_0011', 'executor@divinity', 'alive', 'Execution loop is still active.', '2026-05-24T09:49:01.000Z')
+    ],
+    last_heartbeat_at: '2026-05-24T09:49:01.000Z',
     audit: {
       hash: '8f3a7c2d5e6f4a1bb3f9c8d2e5f4a7d9b2c7e6f0a1b9c8d2f6e7a1b9c8d2e6f4',
       recorded_at: '2026-05-24T09:48:01.000Z'
@@ -236,6 +242,7 @@ const selectors = {
   runList: document.querySelector('[data-run-list]'),
   approvalList: document.querySelector('[data-approval-list]'),
   observabilitySummary: document.querySelector('[data-observability-summary]'),
+  livenessSummary: document.querySelector('[data-liveness-summary]'),
   failureTaxonomy: document.querySelector('[data-failure-taxonomy]'),
   statusFilter: document.querySelector('[data-status-filter]'),
   search: document.querySelector('[data-run-search]'),
@@ -264,6 +271,10 @@ function evidence(claim_type, source, summary) {
 
 function artifact(artifact_id, type, uri) {
   return { artifact_id, run_id: '', type, uri };
+}
+
+function heartbeat(heartbeat_id, run_id, actor, status, message, recorded_at) {
+  return { heartbeat_id, run_id, actor, status, message, recorded_at };
 }
 
 function agentActivity(activity_id, role, status, budget_estimate_usd) {
@@ -345,6 +356,28 @@ function classifyRunFailure(run) {
   return null;
 }
 
+function latestHeartbeatAt(run) {
+  const heartbeats = Array.isArray(run.heartbeats) ? run.heartbeats : [];
+  return heartbeats
+    .map(item => item.recorded_at)
+    .filter(Boolean)
+    .sort()
+    .at(-1) || run.last_heartbeat_at || null;
+}
+
+function staleRunIds(sourceRuns, generated_at, staleAfterMs = 5 * 60 * 1000) {
+  const activeStatuses = new Set(['queued', 'running', 'awaiting_approval']);
+  const generatedMs = Date.parse(generated_at);
+  if (!Number.isFinite(generatedMs)) return [];
+
+  return sourceRuns.filter(run => {
+    if (!activeStatuses.has(run.status)) return false;
+    const lastSeenAt = latestHeartbeatAt(run) || run.created_at;
+    const lastSeenMs = Date.parse(lastSeenAt);
+    return Number.isFinite(lastSeenMs) && generatedMs - lastSeenMs > staleAfterMs;
+  }).map(run => run.run_id);
+}
+
 function createObservabilitySummary({ runs: sourceRuns, generated_at = new Date().toISOString() }) {
   const status_counts = Object.fromEntries(['queued', 'running', 'awaiting_approval', 'paused', 'completed', 'failed'].map(status => [status, 0]));
   const risk_counts = Object.fromEntries(['low', 'medium', 'high', 'critical'].map(risk => [risk, 0]));
@@ -352,10 +385,12 @@ function createObservabilitySummary({ runs: sourceRuns, generated_at = new Date(
   let estimatedCost = 0;
   let softLimit = 0;
   let hardLimit = 0;
+  let heartbeatCount = 0;
 
   for (const run of sourceRuns) {
     if (status_counts[run.status] != null) status_counts[run.status] += 1;
     if (risk_counts[run.risk_level] != null) risk_counts[run.risk_level] += 1;
+    heartbeatCount += Array.isArray(run.heartbeats) ? run.heartbeats.length : 0;
     const budget = runBudget(run);
     estimatedCost += budget.estimated_cost_usd;
     softLimit += budget.soft_limit_usd;
@@ -364,6 +399,8 @@ function createObservabilitySummary({ runs: sourceRuns, generated_at = new Date(
     const failureCategory = classifyRunFailure(run);
     if (failureCategory) failureBuckets.get(failureCategory).push(run.run_id);
   }
+
+  const staleRuns = staleRunIds(sourceRuns, generated_at);
 
   return {
     format: 'divinity.observability.v1',
@@ -380,6 +417,11 @@ function createObservabilitySummary({ runs: sourceRuns, generated_at = new Date(
     budget: {
       soft_limit_utilization: softLimit ? rounded(estimatedCost / softLimit) : 0,
       hard_limit_utilization: hardLimit ? rounded(estimatedCost / hardLimit) : 0
+    },
+    liveness: {
+      heartbeat_count: heartbeatCount,
+      stale_run_count: staleRuns.length,
+      stale_run_ids: staleRuns
     },
     failure_taxonomy: ['policy', 'budget', 'execution', 'unknown'].map(category => ({
       category,
@@ -430,6 +472,8 @@ function normalizeApiRun(run) {
     executions: run.executions || stepExecutions,
     verifications: run.verifications || stepVerifications,
     artifacts: run.artifacts || [],
+    heartbeats: run.heartbeats || [],
+    last_heartbeat_at: run.last_heartbeat_at || null,
     audit: {
       hash: run.audit?.hash || '0'.repeat(64),
       recorded_at: run.audit?.recorded_at || createdAt
@@ -504,6 +548,7 @@ function hydrateRunReferences(sourceRuns) {
     for (const runArtifact of run.artifacts) runArtifact.run_id = run.run_id;
     for (const activity of run.agent_activity || []) activity.run_id = run.run_id;
     for (const runVerification of run.verifications || []) runVerification.run_id = run.run_id;
+    for (const runHeartbeat of run.heartbeats || []) runHeartbeat.run_id = run.run_id;
   }
 }
 
@@ -630,7 +675,24 @@ function renderObservability() {
       <dd>${Math.round(summary.budget.soft_limit_utilization * 100)}%</dd>
     </div>
   `;
+  selectors.livenessSummary.innerHTML = renderLivenessSummary(summary.liveness);
   selectors.failureTaxonomy.innerHTML = renderFailureTaxonomy(summary.failure_taxonomy);
+}
+
+function renderLivenessSummary(liveness = { heartbeat_count: 0, stale_run_count: 0, stale_run_ids: [] }) {
+  return `
+    <article class="liveness-card">
+      <div>
+        <strong>${liveness.heartbeat_count}</strong>
+        <span>heartbeats</span>
+      </div>
+      <div>
+        <strong>${liveness.stale_run_count}</strong>
+        <span>stale runs</span>
+      </div>
+      <code>${(liveness.stale_run_ids || []).join(', ') || 'none'}</code>
+    </article>
+  `;
 }
 
 function renderFailureTaxonomy(items = []) {

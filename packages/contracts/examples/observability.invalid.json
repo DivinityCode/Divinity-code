@@ -26,5 +26,10 @@
     "soft_limit_utilization": 0,
     "hard_limit_utilization": 0
   },
+  "liveness": {
+    "heartbeat_count": -1,
+    "stale_run_count": 0,
+    "stale_run_ids": []
+  },
   "failure_taxonomy": []
 }

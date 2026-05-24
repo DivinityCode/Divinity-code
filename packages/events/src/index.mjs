@@ -5,6 +5,7 @@ const EVENT_TYPES = new Set([
   'approval_decided',
   'step_executed',
   'step_verified',
+  'heartbeat_recorded',
   'workspace_cleaned'
 ]);
 

@@ -9,6 +9,7 @@
     "status_counts",
     "risk_counts",
     "budget",
+    "liveness",
     "failure_taxonomy"
   ],
   "properties": {
@@ -62,6 +63,19 @@
       "properties": {
         "soft_limit_utilization": { "type": "number", "minimum": 0 },
         "hard_limit_utilization": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "liveness": {
+      "type": "object",
+      "required": ["heartbeat_count", "stale_run_count", "stale_run_ids"],
+      "properties": {
+        "heartbeat_count": { "type": "integer", "minimum": 0 },
+        "stale_run_count": { "type": "integer", "minimum": 0 },
+        "stale_run_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
       },
       "additionalProperties": false
     },

@@ -1,5 +1,9 @@
 # Contracts Changelog
 
+## v1.21.0
+- Added `HeartbeatRecord` schema and examples for run liveness reporting.
+- Added `heartbeat_recorded` run events, `heartbeat_record` audit entries, and observability liveness fields.
+
 ## v1.20.0
 - Added `AgentActivityRecord` schema and examples for observable planner/executor/verifier activity.
 

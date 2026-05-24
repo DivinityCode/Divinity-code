@@ -1,0 +1,8 @@
+{
+  "heartbeat_id": "heartbeat_run_123_2026-05-25T00:00:00.000Z",
+  "run_id": "run_123",
+  "actor": "executor@divinity",
+  "status": "alive",
+  "message": "Workspace is still processing.",
+  "recorded_at": "2026-05-25T00:00:00.000Z"
+}

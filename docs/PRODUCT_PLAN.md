@@ -35,6 +35,7 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: API run state can persist to a file-backed store when `DIVINITY_RUN_STORE_PATH` is configured.
    - Bootstrap status: CLI/API capability catalogs expose current policy presets, execution adapters, and starter recipes.
    - Bootstrap status: API step execution emits post-execution verifier records into run state, events, audit export, and the operator dashboard.
+   - Bootstrap status: API runs accept heartbeat records for liveness reporting and stale-run detection.
 2. **Operator Mode**
    - Task queue dashboard.
    - Approval queue for high-risk steps.
@@ -61,7 +62,7 @@ Build a best-in-class AI engineering platform that combines:
 4. Team policy packs and audit export.
    - Bootstrap status: org-scoped starter and regulated policy packs are resolved into CLI/API run payloads; audit export is available from the API.
 5. Operator observability.
-   - Bootstrap status: API and dashboard expose run health, budget utilization, approval backlog, and policy/budget/execution failure taxonomy.
+   - Bootstrap status: API and dashboard expose run health, heartbeat liveness, budget utilization, approval backlog, and policy/budget/execution failure taxonomy.
 
 ## Success Metrics
 - Time-to-first-value: < 10 minutes from signup to first completed task.

@@ -26,6 +26,11 @@
     "soft_limit_utilization": 0.47,
     "hard_limit_utilization": 0.24
   },
+  "liveness": {
+    "heartbeat_count": 1,
+    "stale_run_count": 1,
+    "stale_run_ids": ["run_queued"]
+  },
   "failure_taxonomy": [
     {
       "category": "policy",

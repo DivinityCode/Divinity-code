@@ -6,6 +6,7 @@ import { createAuditRecord, exportAuditLog } from '../../../packages/audit/src/i
 import { createCapabilitiesCatalog } from '../../../packages/capabilities/src/index.mjs';
 import { createInitialRunEvents, createRunEvent } from '../../../packages/events/src/index.mjs';
 import { executeStep } from '../../../packages/execution/src/index.mjs';
+import { createRunHeartbeat, latestHeartbeatAt } from '../../../packages/heartbeats/src/index.mjs';
 import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
 import { createObservabilitySummary } from '../../../packages/observability/src/index.mjs';
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
@@ -268,6 +269,8 @@ const server = http.createServer((req, res) => {
         memory: createRunMemoryEntries({ run_id: runId, task: scopedTask, preflight, recorded_at: createdAt }),
         artifacts: runArtifacts.map(publicArtifactMetadata),
         events,
+        heartbeats: [],
+        last_heartbeat_at: null,
         executions: [],
         verifications: [],
         steps: [],
@@ -478,6 +481,61 @@ const server = http.createServer((req, res) => {
     } catch (error) {
       sendJson(res, 409, { error: error.message, step });
     }
+    return;
+  }
+
+  const heartbeatMatch = req.url.match(/^\/runs\/([^/]+)\/heartbeat$/);
+  if (req.method === 'POST' && heartbeatMatch) {
+    const run = runs.get(heartbeatMatch[1]);
+    if (!run) {
+      sendJson(res, 404, { error: 'run not found' });
+      return;
+    }
+
+    readJson(req, (body) => {
+      try {
+        const heartbeat = createRunHeartbeat({
+          run,
+          actor: body.actor,
+          status: body.status || 'alive',
+          message: body.message
+        });
+        run.heartbeats = run.heartbeats || [];
+        run.heartbeats.push(heartbeat);
+        run.last_heartbeat_at = latestHeartbeatAt(run);
+
+        recordAudit({
+          type: 'heartbeat_record',
+          run_id: run.run_id,
+          created_at: heartbeat.recorded_at,
+          payload: heartbeat
+        });
+
+        const event = createRunEvent({
+          run_id: run.run_id,
+          type: 'heartbeat_recorded',
+          status: run.status,
+          message: `Heartbeat ${heartbeat.status} from ${heartbeat.actor}`,
+          metadata: {
+            heartbeat_id: heartbeat.heartbeat_id,
+            actor: heartbeat.actor,
+            status: heartbeat.status
+          }
+        });
+        run.events.push(event);
+        recordAudit({
+          type: 'run_event',
+          run_id: run.run_id,
+          created_at: event.created_at,
+          payload: event
+        });
+        persistRunStore();
+        broadcastRun(run);
+        sendJson(res, 200, { heartbeat, run: publicRun(run) });
+      } catch (error) {
+        sendJson(res, 400, { error: error.message });
+      }
+    });
     return;
   }
 
