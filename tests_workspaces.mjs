@@ -1,4 +1,5 @@
 import assert from 'assert/strict';
+import { execFileSync } from 'child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
@@ -7,6 +8,8 @@ import { cleanupRunWorkspace, createRunWorkspace } from './packages/workspaces/s
 
 const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-workspaces-test-'));
 const sourceDir = path.join(tmpDir, 'source');
+const remoteSourceDir = path.join(tmpDir, 'remote-source');
+const bareRemoteDir = path.join(tmpDir, 'remote.git');
 const workspaceRoot = path.join(tmpDir, 'workspaces');
 
 try {
@@ -53,6 +56,32 @@ try {
     path: sourceDir,
     source_path: sourceDir
   }).cleaned, false);
+
+  mkdirSync(remoteSourceDir, { recursive: true });
+  writeFileSync(path.join(remoteSourceDir, 'README.md'), '# Remote README\n\nCloned evidence.\n');
+  execFileSync('git', ['init'], { cwd: remoteSourceDir, stdio: 'ignore' });
+  execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: remoteSourceDir });
+  execFileSync('git', ['config', 'user.name', 'Divinity Test'], { cwd: remoteSourceDir });
+  execFileSync('git', ['add', 'README.md'], { cwd: remoteSourceDir });
+  execFileSync('git', ['commit', '-m', 'seed remote'], { cwd: remoteSourceDir, stdio: 'ignore' });
+  execFileSync('git', ['clone', '--bare', remoteSourceDir, bareRemoteDir], { stdio: 'ignore' });
+
+  const remoteUrl = `file://${bareRemoteDir}`;
+  const remoteWorkspace = createRunWorkspace({
+    runId: 'run_remote_git',
+    repoPath: remoteUrl,
+    rootDir: workspaceRoot
+  });
+  assert.ok(remoteWorkspace);
+  assert.equal(remoteWorkspace.kind, 'remote_git_clone');
+  assert.equal(remoteWorkspace.repo_url, remoteUrl);
+  assert.equal(path.dirname(remoteWorkspace.path), workspaceRoot);
+  assert.match(readFileSync(path.join(remoteWorkspace.path, 'README.md'), 'utf8'), /Cloned evidence/);
+  assert.equal(existsSync(path.join(remoteWorkspace.path, '.git')), true);
+
+  const remoteCleanup = cleanupRunWorkspace(remoteWorkspace);
+  assert.equal(remoteCleanup.cleaned, true);
+  assert.equal(existsSync(remoteWorkspace.path), false);
 
   assert.equal(createRunWorkspace({
     runId: 'run_remote',
