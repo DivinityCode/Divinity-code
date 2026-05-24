@@ -42,6 +42,34 @@ export function activeExecutionLock(run, now = new Date().toISOString()) {
   }) || null;
 }
 
+export function recoverStaleExecutionLocks({
+  run,
+  now = new Date().toISOString()
+}) {
+  const nowMs = Date.parse(now);
+  const locks = Array.isArray(run?.execution_locks) ? run.execution_locks : [];
+  const recovered = [];
+
+  for (const lock of locks) {
+    if (lock?.status !== 'locked') continue;
+    const expiresMs = Date.parse(lock.expires_at);
+    if (!Number.isFinite(expiresMs) || !Number.isFinite(nowMs) || expiresMs > nowMs) continue;
+
+    Object.assign(lock, releaseExecutionLock({
+      lock,
+      status: 'stale',
+      released_at: now
+    }));
+    recovered.push(lock);
+  }
+
+  if (run && 'active_execution_lock' in run) {
+    run.active_execution_lock = activeExecutionLock(run, now);
+  }
+
+  return recovered;
+}
+
 export function releaseExecutionLock({
   lock,
   status = 'released',

@@ -6,7 +6,12 @@ import { createAuditRecord, exportAuditLog } from '../../../packages/audit/src/i
 import { createCapabilitiesCatalog } from '../../../packages/capabilities/src/index.mjs';
 import { createInitialRunEvents, createRunEvent } from '../../../packages/events/src/index.mjs';
 import { executeStep } from '../../../packages/execution/src/index.mjs';
-import { activeExecutionLock, createExecutionLock, releaseExecutionLock } from '../../../packages/execution-locks/src/index.mjs';
+import {
+  activeExecutionLock,
+  createExecutionLock,
+  recoverStaleExecutionLocks,
+  releaseExecutionLock
+} from '../../../packages/execution-locks/src/index.mjs';
 import { createRunHeartbeat, latestHeartbeatAt } from '../../../packages/heartbeats/src/index.mjs';
 import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
 import { createObservabilitySummary } from '../../../packages/observability/src/index.mjs';
@@ -162,6 +167,14 @@ function recordExecutionLock(run, lock, eventType, message) {
     created_at: event.created_at,
     payload: event
   });
+}
+
+function recoverRunExecutionLocks(run) {
+  const recoveredLocks = recoverStaleExecutionLocks({ run });
+  for (const lock of recoveredLocks) {
+    recordExecutionLock(run, lock, 'execution_lock_recovered', `Execution lock recovered for ${lock.step_id}`);
+  }
+  return recoveredLocks;
 }
 
 function latestAuditForRun(runId) {
@@ -447,6 +460,7 @@ const server = http.createServer((req, res) => {
     }
 
     run.execution_locks = run.execution_locks || [];
+    recoverRunExecutionLocks(run);
     const activeLock = activeExecutionLock(run);
     if (activeLock) {
       run.active_execution_lock = activeLock;
@@ -538,6 +552,22 @@ const server = http.createServer((req, res) => {
       broadcastRun(run);
       sendJson(res, 409, { error: error.message, step });
     }
+    return;
+  }
+
+  const lockRecoverMatch = req.url.match(/^\/runs\/([^/]+)\/execution-locks\/recover$/);
+  if (req.method === 'POST' && lockRecoverMatch) {
+    const run = runs.get(lockRecoverMatch[1]);
+    if (!run) {
+      sendJson(res, 404, { error: 'run not found' });
+      return;
+    }
+
+    run.execution_locks = run.execution_locks || [];
+    const recoveredLocks = recoverRunExecutionLocks(run);
+    persistRunStore();
+    broadcastRun(run);
+    sendJson(res, 200, { recovered_locks: recoveredLocks, run: publicRun(run) });
     return;
   }
 

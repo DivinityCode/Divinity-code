@@ -80,7 +80,7 @@
 - Before a step executes, the API acquires a per-run execution lock; active lock conflicts return `409` and stale expired locks no longer block execution.
 - Each execution produces a deterministic post-execution verifier record with observed status, exit-code, and output-capture checks.
 - Verifier records are attached to the step and run, emit `step_verified` timeline events, and write `verification_record` audit entries.
-- Execution locks emit `execution_lock_acquired` and `execution_lock_released` timeline events and write `execution_lock_record` audit entries.
+- Execution locks emit `execution_lock_acquired`, `execution_lock_recovered`, and `execution_lock_released` timeline events and write `execution_lock_record` audit entries.
 - Workspace snapshots exclude or remove `node_modules` and preserve Git metadata.
 - Workspace cleanup is available from `POST /runs/:id/workspace/cleanup`, records a `workspace_cleaned` timeline event, and refuses to delete paths outside the recorded workspace root.
 - Containerized runner isolation is still future work.
@@ -109,6 +109,7 @@
 ## Execution Locks
 - API runs keep `execution_locks` and `active_execution_lock` fields for execution ownership.
 - `POST /runs/:id/steps/:step_id/execute` records a lock before adapter execution and releases it after execution or failure.
+- `POST /runs/:id/execution-locks/recover` marks expired active locks as `stale` and clears `active_execution_lock`.
 - Active non-expired locks prevent overlapping step execution and return the active lock payload to the caller.
 
 ## Run Storage

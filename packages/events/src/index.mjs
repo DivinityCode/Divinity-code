@@ -4,6 +4,7 @@ const EVENT_TYPES = new Set([
   'status_changed',
   'approval_decided',
   'execution_lock_acquired',
+  'execution_lock_recovered',
   'execution_lock_released',
   'step_executed',
   'step_verified',

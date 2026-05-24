@@ -99,6 +99,23 @@ try {
     repo: tmpDir,
     step: pendingReadStep('step_available')
   }));
+  store.runs.set('run_stale', seedRun({
+    run_id: 'run_stale',
+    repo: tmpDir,
+    step: pendingReadStep('step_stale'),
+    execution_locks: [
+      {
+        lock_id: 'lock_run_stale_step_stale_2026-05-25T00:00:00.000Z',
+        run_id: 'run_stale',
+        step_id: 'step_stale',
+        actor: 'executor@divinity',
+        status: 'locked',
+        locked_at: '2026-05-25T00:00:00.000Z',
+        expires_at: '2000-05-25T00:05:00.000Z',
+        released_at: null
+      }
+    ]
+  }));
   store.persist();
 
   process.env.DIVINITY_API_AUTOSTART = '0';
@@ -138,6 +155,26 @@ try {
       record.type === 'execution_lock_record'
         && record.run_id === 'run_available'
         && record.payload.status === 'released'
+    )));
+
+    const { response: recoverRes, body: recovered } = await requestJson(`${baseUrl}/runs/run_stale/execution-locks/recover`, {
+      method: 'POST',
+      body: JSON.stringify({})
+    });
+    assert.equal(recoverRes.status, 200);
+    assert.equal(recovered.recovered_locks.length, 1);
+    assert.equal(recovered.recovered_locks[0].status, 'stale');
+    assert.equal(recovered.run.active_execution_lock, null);
+    assert.equal(recovered.run.execution_locks[0].status, 'stale');
+
+    const { body: recoveredTimeline } = await requestJson(`${baseUrl}/runs/run_stale/events`);
+    assert.ok(recoveredTimeline.events.some(event => event.type === 'execution_lock_recovered'));
+
+    const { body: recoveredAudit } = await requestJson(`${baseUrl}/audit`);
+    assert.ok(recoveredAudit.records.some(record => (
+      record.type === 'execution_lock_record'
+        && record.run_id === 'run_stale'
+        && record.payload.status === 'stale'
     )));
 
     console.log(JSON.stringify({ ok: true, test: 'api-execution-locks' }));
