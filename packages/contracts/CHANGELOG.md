@@ -1,5 +1,10 @@
 # Contracts Changelog
 
+## v1.40.0
+- Added `ProviderToolExecution` schema and examples for approved, redacted provider tool execution records.
+- Added optional `provider_tool_executions` arrays to Run records.
+- Added `provider_tool_execution` audit records.
+
 ## v1.39.0
 - Added `ProviderToolCallApproval` schema and examples for redacted provider tool-call approve/reject decisions.
 - Added optional `provider_tool_call_approvals` arrays to Run records.

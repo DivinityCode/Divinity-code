@@ -357,6 +357,32 @@ try {
   assert.deepEqual(localToolApproval.approval.argument_keys, ['query']);
   assert.equal(localToolApproval.approval.arguments_redacted, true);
 
+  const localToolExecution = await runCli([
+    'provider-tool-execute',
+    'run_cli_tool_execution',
+    '--approval-id', 'provider_tool_call_approval_run_cli_tool_execution_call_cli_read_001',
+    '--tool-call-id', 'call_cli_read',
+    '--provider', 'custom_openai_compatible',
+    '--transport', 'chat_completions',
+    '--name', 'read_file',
+    '--argument-key', 'path',
+    '--argument', 'path=README.md',
+    '--workspace', repoFixture,
+    '--actor', 'cli@example.com',
+    '--reason', 'Execute approved read-only file request.'
+  ]);
+
+  assert.equal(localToolExecution.ok, true);
+  assert.equal(localToolExecution.command, 'provider-tool-execute');
+  assert.equal(localToolExecution.execution.format, 'divinity.provider_tool_execution.v1');
+  assert.equal(localToolExecution.execution.tool_call_id, 'call_cli_read');
+  assert.equal(localToolExecution.execution.status, 'completed');
+  assert.equal(localToolExecution.execution.adapter, 'read_file');
+  assert.equal(localToolExecution.execution.arguments_redacted, true);
+  assert.equal(localToolExecution.execution.output_redacted, true);
+  assert.equal(JSON.stringify(localToolExecution).includes('README.md'), false);
+  assert.equal(JSON.stringify(localToolExecution).includes('Provider Proxy CLI Fixture'), false);
+
   const apiToolApproval = await runCli([
     'provider-tool-approval',
     approvalRun.run_id,
@@ -376,6 +402,44 @@ try {
   assert.equal(apiToolApproval.approval.run_id, approvalRun.run_id);
   assert.equal(apiToolApproval.approval.decision, 'reject');
   assert.equal(apiToolApproval.run.provider_tool_call_approvals.length, 1);
+
+  const apiReadApproval = await runCli([
+    'provider-tool-approval',
+    approvalRun.run_id,
+    '--api', baseUrl,
+    '--tool-call-id', 'call_cli_api_read',
+    '--provider', 'custom_openai_compatible',
+    '--transport', 'chat_completions',
+    '--name', 'read_file',
+    '--argument-key', 'path',
+    '--decision', 'approve',
+    '--actor', 'cli@example.com',
+    '--reason', 'Approve read-only execution from CLI test.'
+  ]);
+
+  assert.equal(apiReadApproval.ok, true);
+  assert.equal(apiReadApproval.approval.decision, 'approve');
+
+  const apiToolExecution = await runCli([
+    'provider-tool-execute',
+    approvalRun.run_id,
+    '--api', baseUrl,
+    '--approval-id', apiReadApproval.approval.approval_id,
+    '--argument', 'path=README.md',
+    '--actor', 'cli@example.com',
+    '--reason', 'Execute approved API read-only tool request.'
+  ]);
+
+  assert.equal(apiToolExecution.ok, true);
+  assert.equal(apiToolExecution.status_code, 201);
+  assert.equal(apiToolExecution.execution.run_id, approvalRun.run_id);
+  assert.equal(apiToolExecution.execution.approval_id, apiReadApproval.approval.approval_id);
+  assert.equal(apiToolExecution.execution.status, 'completed');
+  assert.equal(apiToolExecution.execution.arguments_redacted, true);
+  assert.equal(apiToolExecution.execution.output_redacted, true);
+  assert.equal(apiToolExecution.run.provider_tool_executions.length, 1);
+  assert.equal(JSON.stringify(apiToolExecution).includes('README.md'), false);
+  assert.equal(JSON.stringify(apiToolExecution).includes('Provider Proxy CLI Fixture'), false);
 } finally {
   await server.close();
   await toolCallServer.close();

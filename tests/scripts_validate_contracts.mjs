@@ -50,6 +50,8 @@ const checks = [
   ['packages/contracts/schemas/verification.v1.json','packages/contracts/examples/verification.invalid.json',false],
   ['packages/contracts/schemas/provider-tool-call-approval.v1.json','packages/contracts/examples/provider-tool-call-approval.valid.json',true],
   ['packages/contracts/schemas/provider-tool-call-approval.v1.json','packages/contracts/examples/provider-tool-call-approval.invalid.json',false],
+  ['packages/contracts/schemas/provider-tool-execution.v1.json','packages/contracts/examples/provider-tool-execution.valid.json',true],
+  ['packages/contracts/schemas/provider-tool-execution.v1.json','packages/contracts/examples/provider-tool-execution.invalid.json',false],
 ];
 
 let failed = false;

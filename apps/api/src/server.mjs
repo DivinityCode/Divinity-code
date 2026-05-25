@@ -30,6 +30,7 @@ import {
   planProviderProxyRoute
 } from '../../../packages/provider-proxy/src/index.mjs';
 import { createProviderToolCallApproval } from '../../../packages/provider-tool-approvals/src/index.mjs';
+import { createProviderToolExecution } from '../../../packages/provider-tool-executions/src/index.mjs';
 import { createConfiguredRunStore } from '../../../packages/run-store/src/index.mjs';
 import { createExecutionVerification } from '../../../packages/verification/src/index.mjs';
 import { cleanupRunWorkspace, createRunWorkspace, executionCwdForRun } from '../../../packages/workspaces/src/index.mjs';
@@ -574,6 +575,7 @@ const server = http.createServer((req, res) => {
         verifications: [],
         approval_comments: [],
         provider_tool_call_approvals: [],
+        provider_tool_executions: [],
         steps: [],
         workspace: createRunWorkspace({ runId, repoPath: scopedTask.repo })
       };
@@ -758,6 +760,61 @@ const server = http.createServer((req, res) => {
           persistRunStore();
           broadcastRun(run);
           sendJson(res, 201, { approval, run: publicRun(run) });
+        } catch (error) {
+          sendJson(res, 400, { error: error.message });
+        }
+      });
+      return;
+    }
+  }
+
+  const providerToolExecutionsMatch = req.url.match(/^\/runs\/([^/]+)\/provider-tool-executions$/);
+  if (providerToolExecutionsMatch) {
+    const run = runs.get(providerToolExecutionsMatch[1]);
+    if (!run) {
+      sendJson(res, 404, { error: 'run not found' });
+      return;
+    }
+
+    if (req.method === 'GET') {
+      sendJson(res, 200, {
+        run_id: run.run_id,
+        executions: run.provider_tool_executions || []
+      });
+      return;
+    }
+
+    if (req.method === 'POST') {
+      readJson(req, (body) => {
+        try {
+          const approvals = run.provider_tool_call_approvals || [];
+          const approvalId = String(body.approval_id || '').trim();
+          const approval = approvals.find(candidate => candidate.approval_id === approvalId);
+          if (!approval) {
+            sendJson(res, 404, { error: 'provider tool-call approval not found' });
+            return;
+          }
+
+          const executions = run.provider_tool_executions || [];
+          const execution = createProviderToolExecution({
+            ...body,
+            run_id: run.run_id,
+            approval,
+            workspace_root: executionCwdForRun(run),
+            index: executions.length + 1
+          });
+          run.provider_tool_executions = executions;
+          run.provider_tool_executions.push(execution);
+          recordAudit({
+            type: 'provider_tool_execution',
+            run_id: run.run_id,
+            created_at: execution.completed_at,
+            payload: execution
+          });
+
+          persistRunStore();
+          broadcastRun(run);
+          sendJson(res, 201, { execution, run: publicRun(run) });
         } catch (error) {
           sendJson(res, 400, { error: error.message });
         }

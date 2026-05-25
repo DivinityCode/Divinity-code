@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProviderToolExecution",
+  "type": "object",
+  "required": [
+    "format",
+    "execution_id",
+    "run_id",
+    "approval_id",
+    "tool_call_id",
+    "provider_id",
+    "transport",
+    "name",
+    "argument_keys",
+    "arguments_redacted",
+    "status",
+    "adapter",
+    "actor",
+    "reason",
+    "started_at",
+    "completed_at",
+    "output_summary",
+    "output_redacted",
+    "output_metadata"
+  ],
+  "properties": {
+    "format": {
+      "type": "string",
+      "const": "divinity.provider_tool_execution.v1"
+    },
+    "execution_id": { "type": "string", "minLength": 1 },
+    "run_id": { "type": "string", "minLength": 1 },
+    "approval_id": { "type": "string", "minLength": 1 },
+    "tool_call_id": { "type": "string", "minLength": 1 },
+    "provider_id": { "type": "string", "minLength": 1 },
+    "transport": {
+      "type": "string",
+      "enum": ["chat_completions", "anthropic_messages", "codex_responses"]
+    },
+    "name": { "type": "string", "minLength": 1 },
+    "argument_keys": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "arguments_redacted": { "const": true },
+    "status": {
+      "type": "string",
+      "enum": ["completed", "failed", "blocked"]
+    },
+    "adapter": {
+      "type": "string",
+      "enum": ["read_file", "unsupported"]
+    },
+    "actor": { "type": "string", "minLength": 1 },
+    "reason": { "type": "string", "minLength": 1 },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": "string", "format": "date-time" },
+    "output_summary": { "type": "string" },
+    "output_redacted": { "const": true },
+    "output_metadata": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "error": { "type": "string" }
+  },
+  "additionalProperties": false
+}

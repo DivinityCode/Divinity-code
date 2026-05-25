@@ -89,7 +89,7 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: provider route planning is exposed through CLI `provider-route`, API `POST /provider-proxy/route`, and `packages/provider-proxy`, with explicit blocks for public shared keys and limit-bypass intent.
    - Bootstrap status: OpenAI-compatible Chat Completions, Anthropic Messages, and OpenAI Responses execution is exposed through CLI `provider-chat`, API `POST /provider-proxy/chat`, API `POST /provider-proxy/chat/stream`, `executeProviderProxyChat()`, and `executeProviderProxyChatStream()`, with prompt/secret redaction, raw tool-argument redaction, Anthropic thinking/signature redaction, credentialed endpoint-override blocking, transport-specific token fields, fail-closed `429` handling, managed provider retry-window tracking, and normalized stream metadata.
    - Bootstrap status: provider limit ledgers can be in-process for API runtime or file-backed through `DIVINITY_PROVIDER_LIMIT_LEDGER_PATH`, storing provider ids and retry timestamps without prompts, request bodies, credentials, or repo-root state pollution.
-   - Next production slice: add fuller request/token budget ledgers, approved hosted secret integration, and approved tool execution loops behind the same route policy.
+   - Next production slice: add fuller request/token budget ledgers, approved hosted secret integration, and more approved tool execution adapters behind the same route policy.
 2. Toolset governance.
    - Bootstrap status: public toolset metadata and default resolution are exposed through capabilities, CLI `toolsets`, API `/toolsets`, and `doctor`.
    - Bootstrap status: CLI/API task assembly carries toolset resolution metadata on task/run payloads.
@@ -97,9 +97,10 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: provider chat execution enforces selected toolset compatibility before upstream calls and returns `toolset_resolution` metadata on completed or blocked proxy results.
    - Bootstrap status: selected tool schemas are projected into Chat Completions, Anthropic Messages, and OpenAI Responses request bodies so providers can request tool calls while execution remains operator-gated.
    - Bootstrap status: provider-returned tool calls are detected across Chat Completions, Anthropic Messages, and OpenAI Responses, then returned as `requires_action` with redacted `tool_call_requests` and required `tool_call_review` operator controls instead of being executed automatically.
-   - Bootstrap status: per-tool-call approve/reject decisions are represented as `divinity.provider_tool_call_approval.v1` records through CLI `provider-tool-approval` and API `GET`/`POST /runs/:id/provider-tool-call-approvals`, with raw arguments still redacted and no automatic execution.
+   - Bootstrap status: per-tool-call approve/reject decisions are represented as `divinity.provider_tool_call_approval.v1` records through CLI `provider-tool-approval` and API `GET`/`POST /runs/:id/provider-tool-call-approvals`, with raw arguments still redacted.
+   - Bootstrap status: approved provider tool execution is represented as `divinity.provider_tool_execution.v1` records through CLI `provider-tool-execute` and API `GET`/`POST /runs/:id/provider-tool-executions`; the first adapter supports read-only `read_file`, requires fresh operator-supplied arguments matching approved keys, redacts arguments/output, and records unsupported tools as blocked.
    - Bootstrap status: dashboard run detail and approval cards render provider/toolset operator controls from `task.toolset_resolution`.
-   - Next production slice: add approved live tool execution loops that consume recorded tool-call approvals.
+   - Next production slice: add more approved tool adapters and model-result continuation after operator-reviewed execution records.
 3. Public onboarding and release packaging.
    - Next production slice: add install/upgrade docs, release artifacts, environment bootstrap checks, and a first-run quickstart that does not require repo internals.
 4. Hosted/identity/billing boundary.

@@ -1,0 +1,25 @@
+{
+  "format": "divinity.provider_tool_execution.v1",
+  "execution_id": "provider_tool_execution_run_provider_tool_call_read_1_001",
+  "run_id": "run_provider_tool",
+  "approval_id": "provider_tool_call_approval_run_provider_tool_call_read_1_001",
+  "tool_call_id": "call_read_1",
+  "provider_id": "custom_openai_compatible",
+  "transport": "chat_completions",
+  "name": "read_file",
+  "argument_keys": ["path"],
+  "arguments_redacted": true,
+  "status": "completed",
+  "adapter": "read_file",
+  "actor": "operator@example.com",
+  "reason": "Read-only execution approved.",
+  "started_at": "2026-05-25T12:01:00Z",
+  "completed_at": "2026-05-25T12:01:01Z",
+  "output_summary": "read_file completed; content redacted",
+  "output_redacted": true,
+  "output_metadata": {
+    "bytes_read": 128,
+    "line_count": 4,
+    "content_redacted": true
+  }
+}

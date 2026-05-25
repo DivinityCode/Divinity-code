@@ -289,6 +289,57 @@ try {
   assert.equal(toolApprovalListBody.approvals.length, 1);
   assert.equal(toolApprovalListBody.approvals[0].approval_id, toolApprovalBody.approval.approval_id);
 
+  const { response: readApprovalResponse, body: readApprovalBody } = await requestJson(`${baseUrl}/runs/${approvalRun.run_id}/provider-tool-call-approvals`, {
+    method: 'POST',
+    body: JSON.stringify({
+      tool_call_id: 'call_api_read',
+      provider_id: 'custom_openai_compatible',
+      transport: 'chat_completions',
+      name: 'read_file',
+      argument_keys: ['path'],
+      arguments_redacted: true,
+      decision: 'approve',
+      actor: 'operator@example.com',
+      reason: 'The provider requested read-only file context.',
+      decided_at: '2026-05-25T12:06:00Z'
+    })
+  });
+
+  assert.equal(readApprovalResponse.status, 201);
+  assert.equal(readApprovalBody.approval.name, 'read_file');
+
+  const { response: toolExecutionResponse, body: toolExecutionBody } = await requestJson(`${baseUrl}/runs/${approvalRun.run_id}/provider-tool-executions`, {
+    method: 'POST',
+    body: JSON.stringify({
+      approval_id: readApprovalBody.approval.approval_id,
+      argument_values: { path: 'README.md' },
+      actor: 'operator@example.com',
+      reason: 'Execute the approved read-only file request.',
+      started_at: '2026-05-25T12:07:00Z',
+      completed_at: '2026-05-25T12:07:01Z'
+    })
+  });
+
+  assert.equal(toolExecutionResponse.status, 201);
+  assert.equal(toolExecutionBody.execution.format, 'divinity.provider_tool_execution.v1');
+  assert.equal(toolExecutionBody.execution.run_id, approvalRun.run_id);
+  assert.equal(toolExecutionBody.execution.approval_id, readApprovalBody.approval.approval_id);
+  assert.equal(toolExecutionBody.execution.tool_call_id, 'call_api_read');
+  assert.equal(toolExecutionBody.execution.name, 'read_file');
+  assert.deepEqual(toolExecutionBody.execution.argument_keys, ['path']);
+  assert.equal(toolExecutionBody.execution.arguments_redacted, true);
+  assert.equal(toolExecutionBody.execution.status, 'completed');
+  assert.equal(toolExecutionBody.execution.adapter, 'read_file');
+  assert.equal(toolExecutionBody.execution.output_redacted, true);
+  assert.equal(toolExecutionBody.run.provider_tool_executions.length, 1);
+  assert.equal(JSON.stringify(toolExecutionBody).includes('README.md'), false);
+  assert.equal(JSON.stringify(toolExecutionBody).includes('Provider Proxy API Fixture'), false);
+
+  const { response: toolExecutionListResponse, body: toolExecutionListBody } = await requestJson(`${baseUrl}/runs/${approvalRun.run_id}/provider-tool-executions`);
+  assert.equal(toolExecutionListResponse.status, 200);
+  assert.equal(toolExecutionListBody.executions.length, 1);
+  assert.equal(toolExecutionListBody.executions[0].execution_id, toolExecutionBody.execution.execution_id);
+
   const { response: blockedResponse, body: blocked } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
     method: 'POST',
     body: JSON.stringify({
@@ -425,6 +476,11 @@ try {
     record.type === 'provider_tool_call_approval'
       && record.run_id === approvalRun.run_id
       && record.payload.approval_id === toolApprovalBody.approval.approval_id
+  )));
+  assert.ok(audit.records.some(record => (
+    record.type === 'provider_tool_execution'
+      && record.run_id === approvalRun.run_id
+      && record.payload.execution_id === toolExecutionBody.execution.execution_id
   )));
 } finally {
   await mock.close();
