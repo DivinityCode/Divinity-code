@@ -50,7 +50,7 @@
 - API task creation normalizes missing org/project scope to `default-org/default-project`; configured API keys protect control-plane routes when `DIVINITY_API_KEY` or `DIVINITY_API_KEYS` is set.
 - Preflight and step-gate decisions evaluate policy-pack pre-execution hooks into deterministic hook outcomes, warnings, blocks, and observed evidence before execution adapters run.
 - CLI/API run payloads include budget incident records when soft or hard budget caps are exceeded, and API audit export records those incidents as immutable evidence.
-- API exposes `GET /runs`, `GET /approvals`, and `POST /runs/:id/approval` for dashboard loading and approve/reject transitions.
+- API exposes `GET /runs`, `GET /approvals`, `POST /runs/:id/approval`, and `/runs/:id/approval/comments` for dashboard loading, approve/reject transitions, and approval review context.
 - API exposes `GET /capabilities` for policy, runtime adapter, execution adapter, runner isolation profile, connector adapter, and starter recipe discovery.
 - API exposes `GET /runs/:id/connectors` and `POST /runs/:id/connectors` for run-level ticket/docs/CI context attachments.
 - API run state can be backed by a file snapshot when `DIVINITY_RUN_STORE_PATH` is set; the default remains in-memory for local deterministic demos.
@@ -60,6 +60,7 @@
 - API exposes `POST /runs/:id/execution-locks/recover` to mark expired locks stale and preserve recovery evidence.
 - API exposes `POST /runs/:id/heartbeat` to append run liveness records, update `last_heartbeat_at`, and preserve heartbeat timeline/audit evidence.
 - API connector references emit `connector_reference_attached` events and `connector_reference` audit entries.
+- API approval comments emit `approval_comment_added` events and `approval_comment` audit entries.
 - API execution uses per-run local snapshots or shallow Git URL clones; workspaces exclude `node_modules`, preserve Git metadata for Git adapters, and record the selected runner isolation profile. When `container_sandbox` is selected, constrained shell adapters execute through the Docker command plan with network disabled.
 - API step execution now creates verifier records with observed status, exit-code, and output-capture checks; `step_verified` timeline events and `verification_record` audit records preserve the result.
 - API exposes `POST /runs/:id/workspace/cleanup` to remove managed workspaces and record `workspace_cleaned` events.

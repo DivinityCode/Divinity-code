@@ -62,7 +62,7 @@ Paperclip is the strongest control-plane reference for organizational agent work
 ## Development Plan Implications
 The code examples reinforce the current bootstrap direction and add these concrete follow-on slices:
 
-1. **Approval command family:** implemented the first expansion with `approvals`, API-backed `approve`, API-backed `reject`, and local structured decision payloads. Future slices can add get/revision/comment subcommands once approval records need richer review workflows.
+1. **Approval command family:** implemented `approvals`, API-backed `approve`, API-backed `reject`, API-backed approval comments, and local structured decision/comment payloads. Future slices can add get/revision/resubmit subcommands once approval records need richer review workflows.
 2. **Runtime adapter registry:** implemented a first catalog pass for Divinity, Claude, Codex, and generic process runtimes so CLI/API/dashboard expose the same adapter identity before runtime execution is wired in.
 3. **Policy-hook bridge:** implemented data-only policy-pack pre-execution hooks that preflight and step gates evaluate into hook outcomes, warnings, blocks, and evidence before any adapter runs.
 4. **Durable goal model:** implemented a first record-only pass that promotes task success criteria into run `goals` with budget allocation and evidence refs; future slices can add constrained mutation once completion evidence is produced by verifier flows.
@@ -79,5 +79,5 @@ The code examples reinforce the current bootstrap direction and add these concre
 | App/server schemas | `packages/contracts/schemas`, `packages/contracts/examples`, `tests/scripts_validate_contracts.mjs` |
 | Doctor/setup diagnostics | `apps/cli/src/index.mjs`, `tests/tests_cli_doctor.mjs` |
 | Runtime adapters and execution records | `packages/runtime-adapters`, `packages/execution`, `packages/runner-isolation`, API step execution routes |
-| Approval lifecycle | `packages/contracts/schemas/approval.v1.json`, API approval routes, dashboard approval queue |
+| Approval lifecycle | `packages/contracts/schemas/approval.v1.json`, `packages/contracts/schemas/approval-comment.v1.json`, `packages/approval-comments`, API approval routes, CLI approval commands, dashboard approval queue |
 | Heartbeats and liveness | `packages/heartbeats`, `packages/observability`, dashboard liveness card |

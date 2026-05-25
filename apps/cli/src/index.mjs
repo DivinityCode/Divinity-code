@@ -7,6 +7,7 @@ import path from 'path';
 import { createInterface } from 'readline/promises';
 
 import { createAgentActivityRecords } from '../../../packages/agent-activity/src/index.mjs';
+import { createApprovalComment } from '../../../packages/approval-comments/src/index.mjs';
 import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
 import { createBudgetIncidents } from '../../../packages/budget-incidents/src/index.mjs';
 import { createCapabilitiesCatalog } from '../../../packages/capabilities/src/index.mjs';
@@ -335,6 +336,51 @@ function parseApprovalsArgs(values) {
   return options;
 }
 
+function parseApprovalCommentArgs(values) {
+  const options = {
+    run_id: '',
+    api: '',
+    actor: 'cli',
+    body: ''
+  };
+
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    const next = values[index + 1];
+
+    if (value === '--api' || value === '--api-url') {
+      options.api = next;
+      index += 1;
+    } else if (value.startsWith('--api=')) {
+      options.api = value.slice('--api='.length);
+    } else if (value === '--actor') {
+      options.actor = next;
+      index += 1;
+    } else if (value.startsWith('--actor=')) {
+      options.actor = value.slice('--actor='.length);
+    } else if (value === '--body' || value === '--comment') {
+      options.body = next;
+      index += 1;
+    } else if (value.startsWith('--body=')) {
+      options.body = value.slice('--body='.length);
+    } else if (value.startsWith('--comment=')) {
+      options.body = value.slice('--comment='.length);
+    } else if (!options.run_id) {
+      options.run_id = value;
+    } else if (!options.body) {
+      options.body = value;
+    } else {
+      throw new Error(`unknown approval comment option: ${value}`);
+    }
+  }
+
+  options.api = String(options.api || '').trim().replace(/\/+$/, '');
+  options.actor = String(options.actor || '').trim() || 'cli';
+  options.body = String(options.body || '').trim();
+  options.run_id = String(options.run_id || '').trim();
+  return options;
+}
+
 async function fetchJson(url, options = {}) {
   const parsedUrl = new URL(url);
   const client = parsedUrl.protocol === 'https:' ? https : http;
@@ -629,6 +675,82 @@ async function approve(commandName = 'approve', defaultDecision = 'approve') {
   }
 }
 
+async function approvalComment() {
+  try {
+    const options = parseApprovalCommentArgs(args);
+    if (!options.run_id) {
+      throw new Error('approval-comment requires a run_id');
+    }
+
+    if (!options.api) {
+      const comment = createApprovalComment({
+        run_id: options.run_id,
+        actor: options.actor,
+        body: options.body,
+        index: 1
+      });
+      print({ ok: true, command: 'approval-comment', run_id: options.run_id, comment });
+      return;
+    }
+
+    const { response, body } = await fetchJson(`${options.api}/runs/${options.run_id}/approval/comments`, {
+      method: 'POST',
+      body: JSON.stringify({
+        actor: options.actor,
+        body: options.body
+      })
+    });
+    print({
+      ok: response.ok,
+      command: 'approval-comment',
+      api: options.api,
+      run_id: options.run_id,
+      status_code: response.status,
+      comment: body.comment,
+      run: body.run,
+      response: body
+    });
+    if (!response.ok) process.exitCode = 1;
+  } catch (error) {
+    print({ ok: false, command: 'approval-comment', error: error.message });
+    process.exitCode = 1;
+  }
+}
+
+async function approvalComments() {
+  try {
+    const options = parseApprovalCommentArgs(args);
+    if (!options.run_id) {
+      throw new Error('approval-comments requires a run_id');
+    }
+    if (!options.api) {
+      print({
+        ok: true,
+        command: 'approval-comments',
+        run_id: options.run_id,
+        comments: [],
+        note: 'pass --api <url> to read API approval comments'
+      });
+      return;
+    }
+
+    const { response, body } = await fetchJson(`${options.api}/runs/${options.run_id}/approval/comments`);
+    print({
+      ok: response.ok,
+      command: 'approval-comments',
+      api: options.api,
+      run_id: options.run_id,
+      status_code: response.status,
+      comments: body.comments || [],
+      response: body
+    });
+    if (!response.ok) process.exitCode = 1;
+  } catch (error) {
+    print({ ok: false, command: 'approval-comments', error: error.message });
+    process.exitCode = 1;
+  }
+}
+
 function recipes() {
   print({ ok: true, command: 'recipes', recipes: publicStarterRecipes() });
 }
@@ -682,6 +804,8 @@ switch (command) {
   case 'approvals': await approvals(); break;
   case 'approve': await approve('approve', 'approve'); break;
   case 'reject': await approve('reject', 'reject'); break;
+  case 'approval-comment': await approvalComment(); break;
+  case 'approval-comments': await approvalComments(); break;
   case 'capabilities': capabilities(); break;
   case 'recipes': recipes(); break;
   case 'doctor': doctor(); break;
@@ -689,6 +813,6 @@ switch (command) {
   default:
     print({
       ok: false,
-      usage: 'divinity <init|run|status|approvals|approve|reject|capabilities|recipes|doctor|bug> [args]'
+      usage: 'divinity <init|run|status|approvals|approve|reject|approval-comment|approval-comments|capabilities|recipes|doctor|bug> [args]'
     });
 }

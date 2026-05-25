@@ -13,8 +13,8 @@ This baseline defines who Divinity Code is for, what work it must help them comp
 ### Operator
 - **Profile:** Engineering lead, reviewer, or platform operator responsible for supervising multiple agent runs.
 - **Main need:** Understand what each run is doing, why it is allowed or blocked, where approval is needed, and what evidence supports the state.
-- **Current surfaces:** API, dashboard, approval queue, run timeline, goal records, budget incidents, audit export, observability rollups, connector references, execution locks, and verification records.
-- **Success signal:** Can triage queued and approval-required runs, inspect evidence and artifacts, approve or reject risky work, and export immutable audit history.
+- **Current surfaces:** API, dashboard, approval queue, approval comments, run timeline, goal records, budget incidents, audit export, observability rollups, connector references, execution locks, and verification records.
+- **Success signal:** Can triage queued and approval-required runs, inspect evidence and artifacts, add review context, approve or reject risky work, and export immutable audit history.
 
 ### Platform Administrator
 - **Profile:** Person configuring policy, execution, and governance defaults for a team or organization.
@@ -33,7 +33,7 @@ This baseline defines who Divinity Code is for, what work it must help them comp
 ### Operator Mode
 1. List runs by status and identify approval backlog.
 2. Inspect a selected run's goals, timeline, evidence references, connector context, budget incidents, execution records, verification records, liveness, audit metadata, and artifacts.
-3. Approve or reject high-risk work with actor, reason, and timestamp evidence.
+3. Comment on, approve, or reject high-risk work with actor, reason, and timestamp evidence.
 4. Monitor health, budget utilization, stale runs, risk mix, failure taxonomy, and org/project rollups.
 5. Export audit records for a selected timeframe.
 

@@ -1,0 +1,7 @@
+{
+  "comment_id": "approval_comment_run_123_001",
+  "run_id": "run_123",
+  "actor": "operator@example.com",
+  "body": "Please confirm migration rollback plan before approval.",
+  "created_at": "2026-05-25T00:00:01.000Z"
+}

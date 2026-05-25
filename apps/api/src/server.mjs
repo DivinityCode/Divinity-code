@@ -1,6 +1,7 @@
 import http from 'http';
 
 import { createAgentActivityRecords } from '../../../packages/agent-activity/src/index.mjs';
+import { createApprovalComment } from '../../../packages/approval-comments/src/index.mjs';
 import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
 import { createAuditRecord, exportAuditLog } from '../../../packages/audit/src/index.mjs';
 import { createBudgetIncidents } from '../../../packages/budget-incidents/src/index.mjs';
@@ -374,6 +375,7 @@ const server = http.createServer((req, res) => {
         active_execution_lock: null,
         executions: [],
         verifications: [],
+        approval_comments: [],
         steps: [],
         workspace: createRunWorkspace({ runId, repoPath: scopedTask.repo })
       };
@@ -447,6 +449,72 @@ const server = http.createServer((req, res) => {
           persistRunStore();
           broadcastRun(run);
           sendJson(res, 201, { connector_reference: connectorReference, run: publicRun(run) });
+        } catch (error) {
+          sendJson(res, 400, { error: error.message });
+        }
+      });
+      return;
+    }
+  }
+
+  const approvalCommentsMatch = req.url.match(/^\/runs\/([^/]+)\/approval\/comments$/);
+  if (approvalCommentsMatch) {
+    const run = runs.get(approvalCommentsMatch[1]);
+    if (!run) {
+      sendJson(res, 404, { error: 'run not found' });
+      return;
+    }
+
+    if (req.method === 'GET') {
+      sendJson(res, 200, {
+        run_id: run.run_id,
+        comments: run.approval_comments || []
+      });
+      return;
+    }
+
+    if (req.method === 'POST') {
+      readJson(req, (body) => {
+        try {
+          const comments = run.approval_comments || [];
+          const comment = createApprovalComment({
+            run_id: run.run_id,
+            actor: body.actor || 'operator',
+            body: body.body || body.comment,
+            created_at: body.created_at || new Date().toISOString(),
+            index: comments.length + 1
+          });
+          run.approval_comments = comments;
+          run.approval_comments.push(comment);
+
+          const event = createRunEvent({
+            run_id: run.run_id,
+            type: 'approval_comment_added',
+            status: run.status,
+            message: `Approval comment added by ${comment.actor}`,
+            metadata: {
+              comment_id: comment.comment_id,
+              actor: comment.actor
+            }
+          });
+          run.events.push(event);
+
+          recordAudit({
+            type: 'approval_comment',
+            run_id: run.run_id,
+            created_at: comment.created_at,
+            payload: comment
+          });
+          recordAudit({
+            type: 'run_event',
+            run_id: run.run_id,
+            created_at: event.created_at,
+            payload: event
+          });
+
+          persistRunStore();
+          broadcastRun(run);
+          sendJson(res, 201, { comment, run: publicRun(run) });
         } catch (error) {
           sendJson(res, 400, { error: error.message });
         }

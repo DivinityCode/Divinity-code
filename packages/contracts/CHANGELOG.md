@@ -1,5 +1,10 @@
 # Contracts Changelog
 
+## v1.33.0
+- Added `ApprovalComment` schema and examples for approval discussion records.
+- Added `approval_comment_added` run events and `approval_comment` audit records.
+- Added optional `approval_comments` arrays to Run payloads.
+
 ## v1.32.0
 - Added `GoalRecord` schema and examples for task success criteria promoted into durable run goals.
 - Added optional `goals` arrays to the Run schema for bootstrap goal visibility.
