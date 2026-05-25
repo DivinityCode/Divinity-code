@@ -23,7 +23,11 @@ import { createObservabilitySummary } from '../../../packages/observability/src/
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
 import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
 import { evaluatePreflight, evaluateStepGate } from '../../../packages/policy-engine/src/index.mjs';
-import { executeProviderProxyChat, planProviderProxyRoute } from '../../../packages/provider-proxy/src/index.mjs';
+import {
+  createConfiguredProviderLimitLedger,
+  executeProviderProxyChat,
+  planProviderProxyRoute
+} from '../../../packages/provider-proxy/src/index.mjs';
 import { createConfiguredRunStore } from '../../../packages/run-store/src/index.mjs';
 import { createExecutionVerification } from '../../../packages/verification/src/index.mjs';
 import { cleanupRunWorkspace, createRunWorkspace, executionCwdForRun } from '../../../packages/workspaces/src/index.mjs';
@@ -32,6 +36,7 @@ import { publicToolsets, resolveToolsets } from '../../../packages/toolsets/src/
 
 const runStore = createConfiguredRunStore();
 const { runs, artifacts, auditRecords } = runStore;
+const providerLimitLedger = createConfiguredProviderLimitLedger(process.env, { memoryFallback: true });
 const runSubscribers = new Map();
 const DEFAULT_SCOPE = { org_id: 'default-org', project_id: 'default-project' };
 const DEFAULT_ENABLED_TOOLSETS = resolveToolsets().toolsets.map(toolset => toolset.toolset_id);
@@ -369,6 +374,7 @@ const server = http.createServer((req, res) => {
       const route = planProviderProxyRoute({
         candidates: body.candidates,
         limit_state: body.limit_state,
+        limit_ledger: providerLimitLedger,
         rotation_intent: body.rotation_intent,
         requested_model: body.requested_model || body.model
       });
@@ -383,6 +389,7 @@ const server = http.createServer((req, res) => {
         const result = await executeProviderProxyChat({
           candidates: body.candidates,
           limit_state: body.limit_state,
+          limit_ledger: providerLimitLedger,
           rotation_intent: body.rotation_intent,
           requested_model: body.requested_model || body.model,
           messages: body.messages,

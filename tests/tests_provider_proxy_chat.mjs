@@ -1,7 +1,7 @@
 import assert from 'assert/strict';
 import http from 'http';
 
-import { executeProviderProxyChat } from '../packages/provider-proxy/src/index.mjs';
+import { createProviderLimitLedger, executeProviderProxyChat } from '../packages/provider-proxy/src/index.mjs';
 
 async function createMockChatServer(handler) {
   const requests = [];
@@ -163,6 +163,83 @@ try {
   assert.equal(JSON.stringify(limited).includes(apiSecret), false);
 } finally {
   await limitedServer.close();
+}
+
+const ledgerLimitedServer = await createMockChatServer(async ({ res }) => {
+  res.statusCode = 429;
+  res.setHeader('content-type', 'application/json');
+  res.setHeader('retry-after', '60');
+  res.end(JSON.stringify({ error: { message: 'rate limited' } }));
+});
+
+const ledgerBackupServer = await createMockChatServer(async ({ req, res, body }) => {
+  assert.equal(req.method, 'POST');
+  assert.equal(req.url, '/v1/messages');
+  assert.equal(body.model, 'claude-mock');
+  res.statusCode = 200;
+  res.setHeader('content-type', 'application/json');
+  res.end(JSON.stringify({
+    id: 'msg_ledger_backup',
+    type: 'message',
+    role: 'assistant',
+    model: 'claude-mock',
+    content: [{ type: 'text', text: 'ledger backup response' }],
+    stop_reason: 'end_turn',
+    usage: {
+      input_tokens: 5,
+      output_tokens: 4
+    }
+  }));
+});
+
+try {
+  const providerLimitLedger = createProviderLimitLedger({
+    now: () => new Date('2026-05-25T10:00:00.000Z')
+  });
+
+  const limited = await executeProviderProxyChat({
+    candidates: [{ provider_id: 'custom_openai_compatible', base_url: ledgerLimitedServer.base_url }],
+    env: { CUSTOM_LLM_API_KEY: apiSecret },
+    requested_model: 'mock-model',
+    messages: [{ role: 'user', content: secretPrompt }],
+    max_completion_tokens: 32,
+    limit_ledger: providerLimitLedger
+  });
+
+  assert.equal(limited.status, 'limited');
+  assert.equal(limited.retry_after_seconds, 60);
+  assert.equal(limited.limit_ledger_record.provider_id, 'custom_openai_compatible');
+  assert.equal(limited.limit_ledger_record.retry_after_seconds, 60);
+  assert.equal(JSON.stringify(limited).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(limited).includes(apiSecret), false);
+
+  const rerouted = await executeProviderProxyChat({
+    candidates: [
+      { provider_id: 'custom_openai_compatible', base_url: ledgerLimitedServer.base_url },
+      { provider_id: 'custom_anthropic_compatible', base_url: ledgerBackupServer.base_url }
+    ],
+    env: {
+      CUSTOM_LLM_API_KEY: apiSecret,
+      CUSTOM_ANTHROPIC_API_KEY: apiSecret
+    },
+    requested_model: 'claude-mock',
+    messages: [{ role: 'user', content: secretPrompt }],
+    max_output_tokens: 32,
+    limit_ledger: providerLimitLedger
+  });
+
+  assert.equal(rerouted.status, 'completed');
+  assert.equal(rerouted.provider_id, 'custom_anthropic_compatible');
+  assert.equal(rerouted.output_text, 'ledger backup response');
+  assert.equal(ledgerLimitedServer.requests.length, 1);
+  assert.equal(ledgerBackupServer.requests.length, 1);
+  assert.equal(rerouted.route.candidate_results[0].status, 'limited');
+  assert.equal(rerouted.route.candidate_results[0].retry_after_seconds, 60);
+  assert.equal(JSON.stringify(rerouted).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(rerouted).includes(apiSecret), false);
+} finally {
+  await ledgerLimitedServer.close();
+  await ledgerBackupServer.close();
 }
 
 const exfilServer = await createMockChatServer(async ({ res }) => {

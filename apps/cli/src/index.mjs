@@ -17,7 +17,11 @@ import { createInitialRunEvents } from '../../../packages/events/src/index.mjs';
 import { completeGoalRecord, createGoalRecords } from '../../../packages/goals/src/index.mjs';
 import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
-import { executeProviderProxyChat, planProviderProxyRoute } from '../../../packages/provider-proxy/src/index.mjs';
+import {
+  createConfiguredProviderLimitLedger,
+  executeProviderProxyChat,
+  planProviderProxyRoute
+} from '../../../packages/provider-proxy/src/index.mjs';
 import { providerCredentialReadiness, publicLlmProviders, resolveProviderRuntime } from '../../../packages/provider-runtime/src/index.mjs';
 import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
 import { evaluatePreflight, POLICY_PRESETS } from '../../../packages/policy-engine/src/index.mjs';
@@ -1438,6 +1442,7 @@ function providers() {
 function providerRoute() {
   try {
     const options = parseProviderRouteArgs(args);
+    options.limit_ledger = createConfiguredProviderLimitLedger(process.env);
     const route = planProviderProxyRoute(options);
     print({ ok: route.status === 'ready', command: 'provider-route', route });
   } catch (error) {
@@ -1448,6 +1453,7 @@ function providerRoute() {
 async function providerChat() {
   try {
     const options = parseProviderChatArgs(args);
+    options.limit_ledger = createConfiguredProviderLimitLedger(process.env);
     const result = await executeProviderProxyChat(options);
     print({ ok: result.status === 'completed', command: 'provider-chat', result });
   } catch (error) {

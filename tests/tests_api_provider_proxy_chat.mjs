@@ -64,6 +64,30 @@ process.env.OPENROUTER_API_KEY = apiSecret;
 process.env.CEREBRAS_API_KEY = 'cerebras-secret';
 const { server } = await import('../apps/api/src/server.mjs');
 const mock = await createMockChatServer();
+const ledgerLimitedMock = await createMockChatServer(({ res }) => {
+  res.statusCode = 429;
+  res.setHeader('content-type', 'application/json');
+  res.setHeader('retry-after', '60');
+  res.end(JSON.stringify({ error: { message: 'rate limited' } }));
+});
+const ledgerBackupMock = await createMockChatServer(({ req, res, body }) => {
+  assert.equal(req.url, '/v1/messages');
+  assert.equal(body.model, 'claude-mock');
+  res.statusCode = 200;
+  res.setHeader('content-type', 'application/json');
+  res.end(JSON.stringify({
+    id: 'msg_api_ledger_backup',
+    type: 'message',
+    role: 'assistant',
+    model: body.model,
+    content: [{ type: 'text', text: 'api ledger backup' }],
+    stop_reason: 'end_turn',
+    usage: {
+      input_tokens: 4,
+      output_tokens: 3
+    }
+  }));
+});
 const toolCallMock = await createMockChatServer(({ res }) => {
   res.statusCode = 200;
   res.setHeader('content-type', 'application/json');
@@ -229,8 +253,51 @@ try {
   assert.equal(anthropicMock.requests.length, 1);
   assert.equal(JSON.stringify(anthropicBody).includes(secretPrompt), false);
   assert.equal(JSON.stringify(anthropicBody).includes(apiSecret), false);
+
+  const { response: limitedLedgerResponse, body: limitedLedgerBody } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
+    method: 'POST',
+    body: JSON.stringify({
+      candidates: [{ provider_id: 'custom_openai_compatible', base_url: ledgerLimitedMock.base_url }],
+      model: 'mock-model',
+      messages: [{ role: 'user', content: secretPrompt }],
+      max_completion_tokens: 32
+    })
+  });
+
+  assert.equal(limitedLedgerResponse.status, 429);
+  assert.equal(limitedLedgerBody.result.status, 'limited');
+  assert.equal(limitedLedgerBody.result.limit_ledger_record.provider_id, 'custom_openai_compatible');
+  assert.equal(limitedLedgerBody.result.retry_after_seconds, 60);
+  assert.equal(ledgerLimitedMock.requests.length, 1);
+  assert.equal(JSON.stringify(limitedLedgerBody).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(limitedLedgerBody).includes(apiSecret), false);
+
+  const { response: reroutedResponse, body: reroutedBody } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
+    method: 'POST',
+    body: JSON.stringify({
+      candidates: [
+        { provider_id: 'custom_openai_compatible', base_url: ledgerLimitedMock.base_url },
+        { provider_id: 'custom_anthropic_compatible', base_url: ledgerBackupMock.base_url }
+      ],
+      model: 'claude-mock',
+      messages: [{ role: 'user', content: secretPrompt }],
+      max_output_tokens: 32
+    })
+  });
+
+  assert.equal(reroutedResponse.status, 200);
+  assert.equal(reroutedBody.result.status, 'completed');
+  assert.equal(reroutedBody.result.provider_id, 'custom_anthropic_compatible');
+  assert.equal(reroutedBody.result.output_text, 'api ledger backup');
+  assert.equal(ledgerLimitedMock.requests.length, 1);
+  assert.equal(ledgerBackupMock.requests.length, 1);
+  assert.equal(reroutedBody.result.route.candidate_results[0].status, 'limited');
+  assert.equal(JSON.stringify(reroutedBody).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(reroutedBody).includes(apiSecret), false);
 } finally {
   await mock.close();
+  await ledgerLimitedMock.close();
+  await ledgerBackupMock.close();
   await toolCallMock.close();
   await anthropicMock.close();
   if (server.listening) {
