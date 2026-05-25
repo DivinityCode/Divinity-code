@@ -8,7 +8,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 - **Run centered:** operational state is anchored to a run so approvals, events, artifacts, executions, verification, audit, and observability can be correlated.
 - **Evidence carrying:** policy decisions, execution results, and summaries carry evidence references instead of relying on prose alone.
 - **Governance visible:** policy, budget, approval, audit, and liveness state are first-class data, not hidden runtime behavior.
-- **Extensible by catalog:** clients discover policy presets, runtime adapters, execution adapters, runner isolation profiles, connector adapters, and recipes through capabilities.
+- **Extensible by catalog:** clients discover policy presets, runtime adapters, execution adapters, runner isolation profiles, connector adapters, LLM providers, toolsets, and recipes through capabilities.
 
 ## Core Objects
 | Object | Contract | Owner package or surface | Role |
@@ -34,6 +34,8 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 | AuditExport | `packages/contracts/schemas/audit.v1.json` | Audit package and API export | Provides immutable audit records and timeframe export shape. |
 | ObservabilitySummary | `packages/contracts/schemas/observability.v1.json` | Observability package and dashboard | Aggregates run health, liveness, budget, risk, failure taxonomy, and org/project rollups. |
 | CapabilitiesCatalog | `packages/contracts/schemas/capabilities.v1.json` | Capabilities package, CLI/API discovery | Lists supported policies, runtime adapters, execution adapters, isolation profiles, connectors, and recipes. |
+| LlmProvider | `packages/contracts/schemas/capabilities.v1.json` | Provider runtime package, CLI/API discovery | Describes public LLM provider identity, transport, base URL, auth modes, credential env var names, default model, and capability labels without secret values. |
+| Toolset | `packages/contracts/schemas/capabilities.v1.json` | Toolsets package, CLI/API discovery | Describes tool groups, default enablement, risk level, and required policy permissions for provider-aware runtime setup. |
 | BugReport | `packages/contracts/schemas/bug-report.v1.json` | CLI bug command | Captures local diagnostic evidence and GitHub-ready issue Markdown. |
 
 ## Relationships
@@ -70,7 +72,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 | Object group | Builder CLI | Control Plane API | Operator Dashboard |
 | --- | --- | --- | --- |
 | Task, Run, Goals, Preflight | `run` output | `/tasks`, `/preflight`, `/runs/:id` | run queue and selected-run header/detail |
-| Policy and Capabilities | `capabilities`, `doctor` readiness context | `/capabilities` | capability-informed labels and operator context |
+| Policy and Capabilities | `capabilities`, `providers`, `toolsets`, `doctor` readiness context | `/capabilities`, `/providers`, `/toolsets` | capability-informed labels and operator context |
 | Events, Goals, and Approvals | event array in `run`; `goal-complete`, `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `approval-revision`, `approval-resubmit` | `/runs/:id/events`, `/runs/:id/goals/:goal_id/complete`, `/approvals`, `/runs/:id/approval`, `/runs/:id/approval/comments`, `/runs/:id/approval/revision`, `/runs/:id/approval/resubmit` | timeline, goal panel, and approval panel |
 | Artifacts | artifact metadata in `run` | `/runs/:id/artifacts`, `/artifacts/:id` | artifact panel |
 | Execution and Verification | not directly executed by CLI bootstrap | `/runs/:id/steps`, `/runs/:id/steps/:step_id/execute` | execution and verification panels |
@@ -85,6 +87,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 - Budget incident examples: `packages/contracts/examples/budget-incident.valid.json`, `packages/contracts/examples/budget-incident.invalid.json`
 - Approval comment examples: `packages/contracts/examples/approval-comment.valid.json`, `packages/contracts/examples/approval-comment.invalid.json`
 - Approval revision examples: `packages/contracts/examples/approval-revision.valid.json`, `packages/contracts/examples/approval-revision.invalid.json`
+- Capabilities examples, including LLM provider and toolset arrays: `packages/contracts/examples/capabilities.valid.json`, `packages/contracts/examples/capabilities.invalid.json`
 - Policy schema: `packages/contracts/schemas/policy.v1.json`
 - Validation entrypoint: `tests/scripts_validate_contracts.mjs`
 - Smoke entrypoint: `tests/scripts_smoke_api.mjs`

@@ -26,6 +26,8 @@ import { evaluatePreflight, evaluateStepGate } from '../../../packages/policy-en
 import { createConfiguredRunStore } from '../../../packages/run-store/src/index.mjs';
 import { createExecutionVerification } from '../../../packages/verification/src/index.mjs';
 import { cleanupRunWorkspace, createRunWorkspace, executionCwdForRun } from '../../../packages/workspaces/src/index.mjs';
+import { publicLlmProviders } from '../../../packages/provider-runtime/src/index.mjs';
+import { publicToolsets, resolveToolsets } from '../../../packages/toolsets/src/index.mjs';
 
 const runStore = createConfiguredRunStore();
 const { runs, artifacts, auditRecords } = runStore;
@@ -289,6 +291,16 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'GET' && req.url === '/capabilities') {
     sendJson(res, 200, createCapabilitiesCatalog());
+    return;
+  }
+
+  if (req.method === 'GET' && req.url === '/providers') {
+    sendJson(res, 200, { llm_providers: publicLlmProviders() });
+    return;
+  }
+
+  if (req.method === 'GET' && req.url === '/toolsets') {
+    sendJson(res, 200, { toolsets: publicToolsets(), resolution: resolveToolsets() });
     return;
   }
 

@@ -1,4 +1,4 @@
-# Divinity Code Product Plan (Phase 0 -> Phase 2)
+# Divinity Code Product Plan (Phase 0 -> Phase 3)
 
 ## Vision
 Build a best-in-class AI engineering platform that combines:
@@ -39,7 +39,7 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: runner isolation profiles expose default workspace snapshot isolation and Docker container-sandbox execution for constrained shell adapters through CLI/API capabilities and workspace metadata.
    - Bootstrap status: run workspaces can be cleaned through the API with timeline/audit evidence.
    - Bootstrap status: API run state can persist to a file-backed store when `DIVINITY_RUN_STORE_PATH` is configured.
-   - Bootstrap status: CLI/API capability catalogs expose current policy presets, execution adapters, runner isolation profiles, connector adapters, and starter recipes.
+   - Bootstrap status: CLI/API capability catalogs expose current policy presets, execution adapters, runner isolation profiles, connector adapters, LLM provider catalogs, toolset catalogs, and starter recipes.
    - Bootstrap status: API step execution records execution locks, rejects overlapping execution attempts, and exposes stale-lock recovery.
    - Bootstrap status: API step execution supports bounded retries for failed allowed steps and records retry attempt metadata for operator review.
    - Bootstrap status: API step execution emits post-execution verifier records into run state, events, audit export, and the operator dashboard.
@@ -74,6 +74,24 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: API and dashboard expose run health, heartbeat liveness, budget utilization, org/project scope rollups, approval backlog, and policy/budget/execution failure taxonomy.
 6. External context references.
    - Bootstrap status: connector references attach ticket, docs, and CI context to runs and render in the operator dashboard.
+
+## Phase 3: Production Public Readiness (Weeks 15-22)
+### Goals
+- Make the platform usable by external builders without repository-specific setup knowledge.
+- Convert provider, tool, and runtime configuration into predictable public surfaces.
+- Prepare installer, packaging, and support workflows for public adoption.
+
+### Deliverables
+1. LLM provider runtime configuration.
+   - Bootstrap status: LLM provider metadata and side-effect-free credential readiness are exposed through capabilities, CLI `providers`, API `/providers`, and `doctor`.
+   - Next production slice: wire live provider invocation behind explicit provider runtime resolution without printing or storing secret values.
+2. Toolset governance.
+   - Bootstrap status: public toolset metadata and default resolution are exposed through capabilities, CLI `toolsets`, API `/toolsets`, and `doctor`.
+   - Next production slice: connect toolset resolution to execution policy, provider capability checks, and operator controls.
+3. Public onboarding and release packaging.
+   - Next production slice: add install/upgrade docs, release artifacts, environment bootstrap checks, and a first-run quickstart that does not require repo internals.
+4. Hosted/identity/billing boundary.
+   - Non-goal for the current bootstrap: hosted identity, billing, and managed secrets are not implemented until local provider/tool/runtime behavior is stable.
 
 ## Success Metrics
 - Time-to-first-value: < 10 minutes from signup to first completed task.

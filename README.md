@@ -3,7 +3,7 @@
 Divinity Code is an AI engineering platform designed to combine best-in-class coding execution, multi-agent orchestration, and a user-friendly trust-first UX.
 
 ## Current Status
-Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows with explicit task success criteria, durable goal records with verifier-backed completion, policy and budget gates, budget incident records, policy-pack pre-execution hook checks, approval transitions, approval comments, approval revision/resubmission records, execution locks, bounded execution retries, execution adapter and verifier records, observable planner/executor/verifier activity, run heartbeats, isolated local and Git URL execution workspaces with cleanup, runner isolation profiles with Docker-backed constrained command execution, patch/log/summary/PR-summary artifacts, structured bug reports, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, team policy packs, constrained package-script execution, discoverable runtime and connector adapters, run-level connector references, org/project observability rollups, a shared capabilities catalog, and opt-in file-backed API run storage.
+Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows with explicit task success criteria, durable goal records with verifier-backed completion, policy and budget gates, budget incident records, policy-pack pre-execution hook checks, approval transitions, approval comments, approval revision/resubmission records, execution locks, bounded execution retries, execution adapter and verifier records, observable planner/executor/verifier activity, run heartbeats, isolated local and Git URL execution workspaces with cleanup, runner isolation profiles with Docker-backed constrained command execution, patch/log/summary/PR-summary artifacts, structured bug reports, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, team policy packs, constrained package-script execution, discoverable runtime, connector, LLM provider, and toolset catalogs, run-level connector references, org/project observability rollups, a shared capabilities catalog, and opt-in file-backed API run storage.
 
 ## Documents
 - [Product Plan](docs/PRODUCT_PLAN.md)
@@ -17,9 +17,9 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - [Week 1 Execution Plan](docs/WEEK1_EXECUTION_PLAN.md)
 
 ## Implemented Surfaces
-1. Builder CLI: `init`, `run`, API-backed `status`, `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `approval-revision`, `approval-resubmit`, `goal-complete`, `capabilities`, `recipes`, `doctor`, and `bug`.
+1. Builder CLI: `init`, `run`, API-backed `status`, `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `approval-revision`, `approval-resubmit`, `goal-complete`, `capabilities`, `providers`, `toolsets`, `recipes`, `doctor`, and `bug`.
 2. IDE extension scaffold: task run, dashboard launch, and doctor commands delegated to the repo-local CLI.
-3. Control Plane API: health, preflight, task creation, run retrieval, approvals, approval comments, approval revisions, goal completion, step gates and execution locks, verifier evidence, run heartbeats, connector references, artifacts, audit export, and live run streams.
+3. Control Plane API: health, capabilities, provider and toolset catalogs, preflight, task creation, run retrieval, approvals, approval comments, approval revisions, goal completion, step gates and execution locks, verifier evidence, run heartbeats, connector references, artifacts, audit export, and live run streams.
 4. Operator dashboard: run queue, approvals, approval comments, approval revisions, run timeline, decision trace, goal records, connector references, agent activity, execution and verification evidence with retry attempts, liveness summary, artifacts, audit metadata, and API-backed live updates.
 
 
@@ -30,8 +30,10 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - `apps/dashboard` - Operator Mode dashboard
 - `packages/contracts` - versioned task/run/policy/capability/approval-comment/approval-revision/verification/agent-activity/execution-lock/heartbeat/connector-reference/budget-incident/goal/bug-report schemas
 - `packages/agent-activity` - observable planner/executor/verifier activity records
-- `packages/capabilities` - shared policy, runtime adapter, execution adapter, connector adapter, and recipe capability catalog
+- `packages/capabilities` - shared policy, runtime adapter, execution adapter, connector adapter, LLM provider, toolset, and recipe capability catalog
 - `packages/runtime-adapters` - agent runtime adapter metadata for Divinity, local CLI runtimes, and generic processes
+- `packages/provider-runtime` - LLM provider metadata and side-effect-free credential readiness helpers
+- `packages/toolsets` - toolset catalog and default tool resolution helpers
 - `packages/connectors` - ticket, docs, and CI connector adapter metadata and run reference helpers
 - `packages/policy-engine` - trust and budget gate evaluation
 - `packages/execution` - policy-approved step execution adapters
@@ -60,6 +62,8 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - Run `npm install`
 - Run `npm run validate:contracts` to validate schema examples and CI contract checks.
 - Run `npm run test:smoke` for the local MVP demo flow plus CLI/API smoke path.
+- Run `npm run test:providers` for focused LLM provider catalog coverage.
+- Run `npm run test:toolsets` for focused toolset catalog coverage.
 - Run `npm run test:goals` for focused success-criteria-to-goal and verifier-backed completion coverage.
 - Run `npm run test:approval` for focused approval decision, approval comment, and approval revision coverage.
 - Run `npm test` for preflight engine, approval API, execution adapters, run events, artifacts, audit export, CLI, and smoke checks.

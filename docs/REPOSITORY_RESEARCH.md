@@ -21,7 +21,7 @@ Source-level examples for the same repositories are tracked in [Referenced Repos
 | `NousResearch/hermes-agent` | Python | [`v2026.5.16`](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.5.16) | Self-improving multi-channel agent with memory, skills, schedulers, and portable runtimes. |
 | `paperclipai/paperclip` | TypeScript | [`v2026.517.0`](https://github.com/paperclipai/paperclip/releases/tag/v2026.517.0) | Agent-management control plane for goals, budgets, governance, heartbeats, and audit trails. |
 
-The 2026-05-25 refresh confirmed the latest observed releases above are still current. Notable live release signals since the prior research pass: Codex now enables durable goals by default and expands plugin/permission-profile inspection; Hermes emphasizes lighter installs, local proxy/runtime portability, per-write verification, and API approval events; Paperclip emphasizes first-class local runtimes, document locks, sandbox reliability, and faster PR verification.
+The 2026-05-25 refresh confirmed the latest observed releases above are still current. Notable live release signals since the prior research pass: Codex now enables durable goals by default and expands plugin/permission-profile inspection; Hermes emphasizes lighter installs, local proxy/runtime portability, per-write verification, and API approval events; Paperclip emphasizes first-class local runtimes, document locks, sandbox reliability, and faster PR verification. A deeper Hermes provider/tooling pass inspected default-branch commit `4117fc3645b59c5c0f9d623e0991fc9bc864c0e2` plus release tag `v2026.5.16`, confirming that provider identity, runtime credential resolution, transport implementations, and toolset selection are separate layers.
 
 ## 1) Claude Code
 ### Observed strengths
@@ -59,12 +59,16 @@ The 2026-05-25 refresh confirmed the latest observed releases above are still cu
 - Runtime portability is a core feature: local, Docker, SSH, Singularity, Modal, Daytona, and Vercel Sandbox.
 - Subagents and parallel workstreams are part of the core operating model.
 - The command surface includes setup, doctor, tools, model switching, gateway setup, and migration flows.
+- Provider setup separates catalog identity, transport mode, base URL overrides, credential sources, OAuth, external processes, and local no-key endpoints.
+- Tools are grouped into configurable toolsets with dynamic schema discovery and provider-aware setup prompts.
 
 ### Product takeaways for Divinity Code
 1. Design memory as provenance-first data, not opaque long-term context.
 2. Make subagent delegation observable: who did what, why, with what evidence, and under which budget.
 3. Add a `doctor`-style diagnostic command before deep integrations.
 4. Keep runtime abstractions portable enough for local worktrees now and cloud runners later.
+5. Resolve provider identity, transport, and credential readiness once instead of duplicating ad hoc logic per CLI/API/dashboard surface.
+6. Expose toolsets as cataloged, governable units with policy permissions and setup checks rather than hidden prompt/tool lists.
 
 ## 4) Paperclip
 ### Observed strengths
@@ -98,6 +102,7 @@ The 2026-05-25 refresh confirmed the latest observed releases above are still cu
 8. Emit structured bug reports from the CLI so support evidence is generated from the same local checks operators already run.
 9. Carry task success criteria in the shared Task contract so goal/subgoal-style acceptance signals survive across CLI, API, and run storage.
 10. Promote success criteria into durable goal records before adding mutable goal routes, so budget accounting and completion evidence stay contract-visible.
+11. Keep LLM provider and toolset discovery contract-visible before implementing live provider invocation, so public clients can inspect supported runtime shape without handling secrets.
 
 ## Build Slices Adopted From Research
 1. **Approval queue:** implemented run storage with an in-memory default, opt-in file-backed persistence, approval-required runs, and approve/reject transitions.
@@ -133,3 +138,4 @@ The 2026-05-25 refresh confirmed the latest observed releases above are still cu
 31. **Approval snapshots:** implemented `GET /runs/:id/approval` and CLI `approval <run_id> --api <base-url>` so operators can inspect approval-required state, decisions, comments, and run payloads without mutating run state.
 32. **Approval revision/resubmission:** implemented `divinity.approval_revision.v1` records, API `POST /runs/:id/approval/revision`, API `POST /runs/:id/approval/resubmit`, CLI `approval-revision`, and CLI `approval-resubmit` so operators can request changes, pause approval runs, and return resubmitted work to the approval queue without changing approve/reject semantics.
 33. **Dashboard approval revision visibility:** implemented dashboard rendering for approval revision requested/resubmitted state from static samples and API-loaded runs so operators can inspect requested changes beside approval comments and goals.
+34. **Provider and toolset runtime foundation:** implemented `divinity.llm_provider.v1` metadata, `divinity.toolset.v1` metadata, CLI/API `providers` and `toolsets` discovery, capability catalog fields, doctor readiness checks, and contract examples. This slice does not make live LLM calls or persist credentials.

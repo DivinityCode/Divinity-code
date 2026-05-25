@@ -17,9 +17,11 @@ import { createInitialRunEvents } from '../../../packages/events/src/index.mjs';
 import { completeGoalRecord, createGoalRecords } from '../../../packages/goals/src/index.mjs';
 import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
+import { providerCredentialReadiness, publicLlmProviders } from '../../../packages/provider-runtime/src/index.mjs';
 import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
 import { evaluatePreflight, POLICY_PRESETS } from '../../../packages/policy-engine/src/index.mjs';
 import { publicStarterRecipes } from '../../../packages/recipes/src/index.mjs';
+import { publicToolsets, resolveToolsets } from '../../../packages/toolsets/src/index.mjs';
 
 const [, , command, ...args] = process.argv;
 const cwd = process.cwd();
@@ -121,6 +123,41 @@ function packageManagerCheck(npmCheck, pnpmCheck) {
   };
 }
 
+function providerCatalogCheck() {
+  const providers = publicLlmProviders();
+  return {
+    check_id: 'provider_catalog',
+    ok: providers.length > 0,
+    required: true,
+    summary: `${providers.length} providers: ${providers.map(provider => provider.provider_id).join(', ')}`
+  };
+}
+
+function toolsetCatalogCheck() {
+  const toolsets = publicToolsets();
+  return {
+    check_id: 'toolset_catalog',
+    ok: toolsets.length > 0,
+    required: true,
+    summary: `${toolsets.length} toolsets: ${toolsets.map(toolset => toolset.toolset_id).join(', ')}`
+  };
+}
+
+function llmProviderCredentialsCheck() {
+  const readiness = providerCredentialReadiness();
+  const configured = readiness.providers
+    .filter(provider => provider.credential_configured)
+    .map(provider => provider.provider_id);
+  return {
+    check_id: 'llm_provider_credentials',
+    ok: readiness.any_configured,
+    required: false,
+    summary: configured.length
+      ? `configured: ${configured.join(', ')}`
+      : 'not configured: set one provider API key or use a local custom endpoint'
+  };
+}
+
 function buildDoctorChecks() {
   const npmCheck = optionalCommandCheck('npm', 'npm', ['--version']);
   const pnpmCheck = cachedPnpmCheck();
@@ -135,6 +172,9 @@ function buildDoctorChecks() {
     fileCheck('package_json', path.join(cwd, 'package.json')),
     directoryCheck('node_modules', path.join(cwd, 'node_modules')),
     dependencyCheck('ajv_dependencies', ['ajv', 'ajv-cli', 'ajv-formats']),
+    providerCatalogCheck(),
+    toolsetCatalogCheck(),
+    llmProviderCredentialsCheck(),
     fileCheck('api_server_source', path.join(cwd, 'apps/api/src/server.mjs'))
   ];
 }
@@ -1115,6 +1155,14 @@ function capabilities() {
   print({ ok: true, command: 'capabilities', catalog: createCapabilitiesCatalog() });
 }
 
+function providers() {
+  print({ ok: true, command: 'providers', llm_providers: publicLlmProviders() });
+}
+
+function toolsets() {
+  print({ ok: true, command: 'toolsets', toolsets: publicToolsets(), resolution: resolveToolsets() });
+}
+
 function doctorPayload() {
   const checks = buildDoctorChecks();
   return {
@@ -1167,12 +1215,14 @@ switch (command) {
   case 'approval-resubmit': await approvalResubmit(); break;
   case 'goal-complete': await goalComplete(); break;
   case 'capabilities': capabilities(); break;
+  case 'providers': providers(); break;
+  case 'toolsets': toolsets(); break;
   case 'recipes': recipes(); break;
   case 'doctor': doctor(); break;
   case 'bug': bug(); break;
   default:
     print({
       ok: false,
-      usage: 'divinity <init|run|status|approvals|approval|approve|reject|approval-comment|approval-comments|approval-revision|approval-resubmit|goal-complete|capabilities|recipes|doctor|bug> [args]'
+      usage: 'divinity <init|run|status|approvals|approval|approve|reject|approval-comment|approval-comments|approval-revision|approval-resubmit|goal-complete|capabilities|providers|toolsets|recipes|doctor|bug> [args]'
     });
 }
