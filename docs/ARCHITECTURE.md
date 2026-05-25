@@ -81,7 +81,7 @@
 ## Execution Plane
 - API step execution is available from `POST /runs/:id/steps/:step_id/execute` after `POST /runs/:id/steps` creates a pending allowed step.
 - API task creation creates a per-run local workspace snapshot when `task.repo` is an existing local directory, or a shallow Git clone when `task.repo` is an explicit Git URL.
-- Run workspaces carry runner isolation metadata. The default `workspace_snapshot` profile records managed local/Git workspace isolation; the `container_sandbox` profile advertises Docker-backed command planning with the workspace mounted at `/workspace` and network disabled.
+- Run workspaces carry runner isolation metadata. The default `workspace_snapshot` profile records managed local/Git workspace isolation; the `container_sandbox` profile runs constrained shell adapters through Docker with the workspace mounted at `/workspace` and network disabled.
 - Execution adapters run from `run.workspace.path` when present, preventing source-directory mutations after task creation from changing read/test evidence.
 - Execution adapters include `file_read`, which reads `README.md` from the run workspace, `git_status`, which runs `git status --short`, `node_test`, which runs whitelisted Node test scripts, and `package_script`, which runs named Node-based package scripts without shell interpolation.
 - Blocked or approval-required steps cannot execute through the execution package; the package requires the step gate decision to be `allow`.
@@ -91,7 +91,7 @@
 - Execution locks emit `execution_lock_acquired`, `execution_lock_recovered`, and `execution_lock_released` timeline events and write `execution_lock_record` audit entries.
 - Workspace snapshots exclude or remove `node_modules` and preserve Git metadata.
 - Workspace cleanup is available from `POST /runs/:id/workspace/cleanup`, records a `workspace_cleaned` timeline event, and refuses to delete paths outside the recorded workspace root.
-- Containerized runner isolation is represented by a deterministic Docker argv plan in `packages/runner-isolation`; executing through Docker remains an execution-backend integration step beyond the default local adapter path.
+- Containerized runner isolation uses the deterministic Docker argv plan in `packages/runner-isolation` for `git_status`, `node_test`, and `package_script`. If Docker is unavailable, the execution record fails with the runtime error in `stderr`; `file_read` remains a direct read from the managed workspace snapshot.
 
 ## Memory Provenance
 - CLI and API run payloads include session, project, and team memory entries derived from run context.

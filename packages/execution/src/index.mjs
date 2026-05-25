@@ -2,6 +2,8 @@ import { spawnSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
+import { createContainerCommandPlan } from '../../runner-isolation/src/index.mjs';
+
 export const EXECUTION_ADAPTERS = [
   {
     adapter: 'file_read',
@@ -41,6 +43,45 @@ function predictedActionTypes(step) {
 
 function workspacePath({ run, cwd }) {
   return path.resolve(cwd || run?.task?.repo || process.cwd());
+}
+
+function containerIsolationProfile(run) {
+  const isolation = run?.workspace?.isolation;
+  return isolation?.kind === 'container' ? isolation : null;
+}
+
+function spawnConstrainedCommand({
+  run,
+  cwd,
+  localCommand,
+  containerCommand = localCommand
+}) {
+  const root = workspacePath({ run, cwd });
+  const containerProfile = containerIsolationProfile(run);
+
+  if (containerProfile) {
+    try {
+      const plan = createContainerCommandPlan({
+        workspacePath: root,
+        command: containerCommand,
+        profile_id: containerProfile.profile_id
+      });
+      return spawnSync(plan.argv[0], plan.argv.slice(1), {
+        encoding: 'utf8'
+      });
+    } catch (error) {
+      return {
+        status: 1,
+        stdout: '',
+        stderr: error.message
+      };
+    }
+  }
+
+  return spawnSync(localCommand[0], localCommand.slice(1), {
+    cwd: root,
+    encoding: 'utf8'
+  });
 }
 
 function ensureAllowedStep(step) {
@@ -95,9 +136,10 @@ function executeFileRead({ run, step, cwd, started_at }) {
 }
 
 function executeGitStatus({ run, step, cwd, started_at }) {
-  const result = spawnSync('git', ['status', '--short'], {
-    cwd: workspacePath({ run, cwd }),
-    encoding: 'utf8'
+  const result = spawnConstrainedCommand({
+    run,
+    cwd,
+    localCommand: ['git', 'status', '--short']
   });
 
   return executionEnvelope({
@@ -166,9 +208,11 @@ function executePackageScript({ run, step, cwd, started_at }) {
 
     for (const commandTarget of commands) {
       const relativeTarget = assertWorkspaceRelative(root, commandTarget);
-      const result = spawnSync(process.execPath, [relativeTarget], {
-        cwd: root,
-        encoding: 'utf8'
+      const result = spawnConstrainedCommand({
+        run,
+        cwd,
+        localCommand: [process.execPath, relativeTarget],
+        containerCommand: ['node', relativeTarget]
       });
       stdout += result.stdout || '';
       stderr += result.stderr || result.error?.message || '';
@@ -214,9 +258,11 @@ function executePackageScript({ run, step, cwd, started_at }) {
 
 function executeNodeTest({ run, step, cwd, started_at }) {
   const targetPath = nodeTestScriptForAction(step?.action);
-  const result = spawnSync(process.execPath, [targetPath], {
-    cwd: workspacePath({ run, cwd }),
-    encoding: 'utf8'
+  const result = spawnConstrainedCommand({
+    run,
+    cwd,
+    localCommand: [process.execPath, targetPath],
+    containerCommand: ['node', targetPath]
   });
 
   return executionEnvelope({

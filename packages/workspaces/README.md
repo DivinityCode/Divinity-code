@@ -9,6 +9,6 @@ Creates per-run execution workspaces for the Control Plane.
 
 Local snapshots copy the repository into `DIVINITY_WORKSPACE_ROOT` when set, or the OS temp directory by default. Explicit Git URLs use `git clone --depth 1` into the same workspace root. `node_modules` is excluded or removed to keep snapshots bounded; Git metadata is preserved so Git-based execution adapters can inspect workspace status.
 
-The default runner isolation profile is `workspace_snapshot`. Set `DIVINITY_RUNNER_ISOLATION_PROFILE=container_sandbox` or pass `isolationProfileId` to record Docker container-sandbox intent on workspace metadata. Container command argv planning lives in `packages/runner-isolation`; the default execution adapters still run locally from the managed workspace path.
+The default runner isolation profile is `workspace_snapshot`. Set `DIVINITY_RUNNER_ISOLATION_PROFILE=container_sandbox` or pass `isolationProfileId` to record Docker container-sandbox intent on workspace metadata. Constrained shell adapters execute through the `packages/runner-isolation` Docker argv plan when that profile is selected; `file_read` remains a deterministic local workspace read.
 
 The API exposes `POST /runs/:id/workspace/cleanup` to remove a run workspace and record a `workspace_cleaned` timeline event.

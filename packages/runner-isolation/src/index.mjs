@@ -15,7 +15,7 @@ export const RUNNER_ISOLATION_PROFILES = [
   {
     profile_id: 'container_sandbox',
     kind: 'container',
-    description: 'Plan execution inside a Docker container with the run workspace bind-mounted at /workspace.',
+    description: 'Execute constrained commands inside a Docker container with the run workspace bind-mounted at /workspace.',
     requires_runtime: true,
     runtime: 'docker',
     image: 'node:22-bookworm-slim',
