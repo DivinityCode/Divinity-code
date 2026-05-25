@@ -68,11 +68,12 @@ for (const command of [
   'pnpm run validate:contracts',
   'pnpm run test:providers',
   'pnpm run test:smoke',
+  'pnpm run test:deprecations',
   'pnpm test'
 ]) {
   assertIncludes(upgrade, command, 'upgrade guide');
 }
-assertIncludes(upgrade, 'deprecation review', 'upgrade guide');
+assertIncludes(upgrade, 'deprecation audit', 'upgrade guide');
 
 const releaseChecklist = read('docs/RELEASE_CHECKLIST.md');
 for (const item of [
@@ -83,6 +84,7 @@ for (const item of [
   'pnpm run release:artifacts',
   'pnpm run test:release-artifacts',
   'pnpm run validate:contracts',
+  'pnpm run test:deprecations',
   'pnpm test',
   'pnpm run test:smoke',
   'pnpm run test:providers',

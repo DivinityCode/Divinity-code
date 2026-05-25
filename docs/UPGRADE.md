@@ -49,12 +49,20 @@ The provider test suite uses local mock servers for proxy behavior and does not 
 
 ## 5. Run A Deprecation Review
 
-Before relying on new behavior, do a deprecation review:
+Before relying on new behavior, run the automated deprecation audit:
+
+```bash
+pnpm run test:deprecations
+```
+
+This gate checks public action docs, release artifact metadata, and provider proxy token-field usage for known stale or unsafe instructions.
+
+Optional manual follow-up:
 
 - Check `docs/REPOSITORY_RESEARCH.md` for the latest observed upstream release signals.
 - Check `docs/FREE_LLM_PROVIDER_RESEARCH.md` for current provider-source policy.
 - Check `docs/PRODUCT_PLAN.md` for implemented and remaining production-readiness slices.
-- Search for deprecated local instructions:
+- Search for deprecated local instructions not yet covered by the audit:
 
 ```bash
 rg -n "deprecated|deprecation|npm install -g|npx[[:space:]]+divinity" README.md docs apps packages tests

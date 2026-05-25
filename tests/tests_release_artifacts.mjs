@@ -55,6 +55,7 @@ for (const command of [
   'pnpm run test:package',
   'node apps/cli/src/index.mjs doctor',
   'node apps/cli/src/index.mjs doctor --profile source',
+  'pnpm run test:deprecations',
   'pnpm run validate:contracts',
   'pnpm run test:smoke',
   'pnpm run test:providers',
