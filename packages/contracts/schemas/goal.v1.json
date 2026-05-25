@@ -47,6 +47,7 @@
       "type": "array",
       "items": { "$ref": "#/$defs/evidence_ref" }
     },
+    "completed_at": { "type": "string", "format": "date-time" },
     "created_at": { "type": "string", "format": "date-time" }
   },
   "additionalProperties": false,

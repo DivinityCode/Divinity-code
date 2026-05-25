@@ -52,6 +52,16 @@ function criterionEvidenceRef(criterion, index) {
   };
 }
 
+function verificationEvidenceRef(goal, verification) {
+  return {
+    evidence_id: `evidence_${stableIdPart(goal?.goal_id)}_${stableIdPart(verification?.verification_id)}`,
+    source: 'verification.result',
+    claim_type: 'observed',
+    summary: `Verification ${verification.verification_id} passed for goal completion.`,
+    supports: ['goal.status', 'goal.completion_evidence_refs']
+  };
+}
+
 export function createGoalRecords({
   run_id,
   task,
@@ -84,4 +94,23 @@ export function createGoalRecords({
     completion_evidence_refs: [],
     created_at
   }));
+}
+
+export function completeGoalRecord(goal, {
+  verification,
+  completed_at = new Date().toISOString()
+} = {}) {
+  if (!verification || verification.result !== 'passed') {
+    throw new Error('goal completion requires passed verification evidence');
+  }
+
+  return {
+    ...goal,
+    status: 'completed',
+    completion_evidence_refs: [
+      ...(goal.completion_evidence_refs || []),
+      verificationEvidenceRef(goal, verification)
+    ],
+    completed_at
+  };
 }

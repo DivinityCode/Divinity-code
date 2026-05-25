@@ -14,7 +14,7 @@ import { createBudgetIncidents } from '../../../packages/budget-incidents/src/in
 import { createCapabilitiesCatalog } from '../../../packages/capabilities/src/index.mjs';
 import { createConnectorReferences } from '../../../packages/connectors/src/index.mjs';
 import { createInitialRunEvents } from '../../../packages/events/src/index.mjs';
-import { createGoalRecords } from '../../../packages/goals/src/index.mjs';
+import { completeGoalRecord, createGoalRecords } from '../../../packages/goals/src/index.mjs';
 import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
 import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
@@ -456,6 +456,46 @@ function parseApprovalRevisionArgs(values) {
   options.reason = String(options.reason || '').trim();
   options.requested_changes = options.requested_changes.map(value => String(value || '').trim()).filter(Boolean);
   options.run_id = String(options.run_id || '').trim();
+  return options;
+}
+
+function parseGoalCompleteArgs(values) {
+  const options = {
+    run_id: '',
+    goal_id: '',
+    api: '',
+    verification_id: ''
+  };
+
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    const next = values[index + 1];
+
+    if (value === '--api' || value === '--api-url') {
+      options.api = next;
+      index += 1;
+    } else if (value.startsWith('--api=')) {
+      options.api = value.slice('--api='.length);
+    } else if (value === '--verification' || value === '--verification-id') {
+      options.verification_id = next;
+      index += 1;
+    } else if (value.startsWith('--verification=')) {
+      options.verification_id = value.slice('--verification='.length);
+    } else if (value.startsWith('--verification-id=')) {
+      options.verification_id = value.slice('--verification-id='.length);
+    } else if (!options.run_id) {
+      options.run_id = value;
+    } else if (!options.goal_id) {
+      options.goal_id = value;
+    } else {
+      throw new Error(`unknown goal-complete option: ${value}`);
+    }
+  }
+
+  options.api = String(options.api || '').trim().replace(/\/+$/, '');
+  options.run_id = String(options.run_id || '').trim();
+  options.goal_id = String(options.goal_id || '').trim();
+  options.verification_id = String(options.verification_id || '').trim();
   return options;
 }
 
@@ -1008,6 +1048,65 @@ async function approval() {
   }
 }
 
+async function goalComplete() {
+  try {
+    const options = parseGoalCompleteArgs(args);
+    if (!options.run_id) {
+      throw new Error('goal-complete requires a run_id');
+    }
+    if (!options.goal_id) {
+      throw new Error('goal-complete requires a goal_id');
+    }
+    if (!options.verification_id) {
+      throw new Error('goal-complete requires --verification <verification_id>');
+    }
+
+    if (!options.api) {
+      const goal = completeGoalRecord({
+        goal_id: options.goal_id,
+        run_id: options.run_id,
+        status: 'pending',
+        completion_evidence_refs: []
+      }, {
+        verification: {
+          verification_id: options.verification_id,
+          result: 'passed'
+        }
+      });
+      print({
+        ok: true,
+        command: 'goal-complete',
+        run_id: options.run_id,
+        goal_id: options.goal_id,
+        status: goal.status,
+        goal
+      });
+      return;
+    }
+
+    const { response, body } = await fetchJson(`${options.api}/runs/${options.run_id}/goals/${options.goal_id}/complete`, {
+      method: 'POST',
+      body: JSON.stringify({ verification_id: options.verification_id })
+    });
+    print({
+      ok: response.ok,
+      command: 'goal-complete',
+      api: options.api,
+      run_id: options.run_id,
+      goal_id: options.goal_id,
+      status_code: response.status,
+      status: body.goal?.status,
+      goal: body.goal,
+      run: body.run,
+      response: body
+    });
+    if (!response.ok) process.exitCode = 1;
+  } catch (error) {
+    print({ ok: false, command: 'goal-complete', error: error.message });
+    process.exitCode = 1;
+  }
+}
+
 function recipes() {
   print({ ok: true, command: 'recipes', recipes: publicStarterRecipes() });
 }
@@ -1066,6 +1165,7 @@ switch (command) {
   case 'approval-comments': await approvalComments(); break;
   case 'approval-revision': await approvalRevision(); break;
   case 'approval-resubmit': await approvalResubmit(); break;
+  case 'goal-complete': await goalComplete(); break;
   case 'capabilities': capabilities(); break;
   case 'recipes': recipes(); break;
   case 'doctor': doctor(); break;
@@ -1073,6 +1173,6 @@ switch (command) {
   default:
     print({
       ok: false,
-      usage: 'divinity <init|run|status|approvals|approval|approve|reject|approval-comment|approval-comments|approval-revision|approval-resubmit|capabilities|recipes|doctor|bug> [args]'
+      usage: 'divinity <init|run|status|approvals|approval|approve|reject|approval-comment|approval-comments|approval-revision|approval-resubmit|goal-complete|capabilities|recipes|doctor|bug> [args]'
     });
 }

@@ -8,7 +8,7 @@
   },
   "source": "task.success_criteria",
   "title": "All contract examples validate",
-  "status": "pending",
+  "status": "completed",
   "budget_estimate_usd": 0.38,
   "evidence_refs": [
     {
@@ -26,6 +26,15 @@
       "supports": ["budget", "warnings", "run_status"]
     }
   ],
-  "completion_evidence_refs": [],
+  "completion_evidence_refs": [
+    {
+      "evidence_id": "evidence_goal_run_123_001_verify_exec_123",
+      "source": "verification.result",
+      "claim_type": "observed",
+      "summary": "Verification verify_exec_123 passed for goal completion.",
+      "supports": ["goal.status", "goal.completion_evidence_refs"]
+    }
+  ],
+  "completed_at": "2026-05-25T00:01:00.000Z",
   "created_at": "2026-05-25T00:00:01.000Z"
 }
