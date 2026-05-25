@@ -10,9 +10,15 @@ const tmpRoot = mkdtempSync(path.join(tmpdir(), 'divinity-provider-tool-executio
 const workspaceRoot = path.join(tmpRoot, 'workspace');
 const secretPath = 'secret-approved-file.md';
 const secretFileContents = 'secret provider tool execution file contents';
+const secretSearchScope = 'secret-search-scope';
+const secretSearchPath = path.join(secretSearchScope, 'secret-search-target.md');
+const secretSearchQuery = 'secret provider search query';
+const secretSearchContents = `visible heading\n${secretSearchQuery}\nsecret provider search file contents`;
 
 mkdirSync(workspaceRoot, { recursive: true });
+mkdirSync(path.join(workspaceRoot, secretSearchScope), { recursive: true });
 writeFileSync(path.join(workspaceRoot, secretPath), `${secretFileContents}\n`);
+writeFileSync(path.join(workspaceRoot, secretSearchPath), `${secretSearchContents}\n`);
 
 const approval = createProviderToolCallApproval({
   run_id: 'run_tool_execution',
@@ -120,6 +126,63 @@ try {
   assert.equal(traversal.adapter, 'read_file');
   assert.match(traversal.error, /workspace/);
   assert.equal(JSON.stringify(traversal).includes('../outside.md'), false);
+
+  const searchApproval = createProviderToolCallApproval({
+    run_id: 'run_tool_execution',
+    tool_call_id: 'call_search_files_1',
+    provider_id: 'custom_openai_compatible',
+    transport: 'chat_completions',
+    name: 'search_files',
+    argument_keys: ['query', 'path'],
+    arguments_redacted: true,
+    decision: 'approve',
+    actor: 'operator@example.com',
+    reason: 'Read-only repository search is approved.',
+    decided_at: '2026-05-25T12:02:00Z',
+    index: 4
+  });
+
+  const searchExecution = createProviderToolExecution({
+    run_id: 'run_tool_execution',
+    approval: searchApproval,
+    argument_values: { path: secretSearchScope, query: secretSearchQuery },
+    workspace_root: workspaceRoot,
+    actor: 'operator@example.com',
+    reason: 'Execute the approved redacted repository search.',
+    started_at: '2026-05-25T12:02:01Z',
+    completed_at: '2026-05-25T12:02:02Z',
+    index: 4
+  });
+
+  assert.equal(searchExecution.status, 'completed');
+  assert.equal(searchExecution.adapter, 'search_files');
+  assert.deepEqual(searchExecution.argument_keys, ['path', 'query']);
+  assert.equal(searchExecution.output_redacted, true);
+  assert.equal(searchExecution.output_metadata.files_scanned, 1);
+  assert.equal(searchExecution.output_metadata.match_count, 1);
+  assert.equal(searchExecution.output_metadata.matching_files_count, 1);
+  assert.equal(searchExecution.output_metadata.query_redacted, true);
+  assert.equal(searchExecution.output_metadata.paths_redacted, true);
+  assert.equal(searchExecution.output_metadata.content_redacted, true);
+  assert.equal(JSON.stringify(searchExecution).includes(secretSearchScope), false);
+  assert.equal(JSON.stringify(searchExecution).includes('secret-search-target.md'), false);
+  assert.equal(JSON.stringify(searchExecution).includes(secretSearchQuery), false);
+  assert.equal(JSON.stringify(searchExecution).includes(secretSearchContents), false);
+
+  const searchTraversal = createProviderToolExecution({
+    run_id: 'run_tool_execution',
+    approval: searchApproval,
+    argument_values: { path: '../outside-search', query: secretSearchQuery },
+    workspace_root: workspaceRoot,
+    reason: 'Search path traversal must fail closed.',
+    index: 5
+  });
+
+  assert.equal(searchTraversal.status, 'failed');
+  assert.equal(searchTraversal.adapter, 'search_files');
+  assert.match(searchTraversal.error, /workspace/);
+  assert.equal(JSON.stringify(searchTraversal).includes('../outside-search'), false);
+  assert.equal(JSON.stringify(searchTraversal).includes(secretSearchQuery), false);
 } finally {
   rmSync(tmpRoot, { recursive: true, force: true });
 }

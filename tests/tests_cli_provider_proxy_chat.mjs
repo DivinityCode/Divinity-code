@@ -10,7 +10,9 @@ const tmpRoot = mkdtempSync(path.join(tmpdir(), 'divinity-cli-provider-proxy-cha
 const repoFixture = path.join(tmpRoot, 'repo');
 const usageLedgerPath = path.join(tmpRoot, 'provider-usage-ledger.json');
 mkdirSync(repoFixture);
+mkdirSync(path.join(repoFixture, 'cli-search-scope'));
 writeFileSync(path.join(repoFixture, 'README.md'), '# Provider Proxy CLI Fixture\n');
+writeFileSync(path.join(repoFixture, 'cli-search-scope', 'search-target.md'), 'cli secret search needle\n');
 
 process.env.DIVINITY_API_AUTOSTART = '0';
 process.env.DIVINITY_WORKSPACE_ROOT = path.join(tmpRoot, 'workspaces');
@@ -518,6 +520,35 @@ try {
   assert.equal(localToolExecution.execution.output_redacted, true);
   assert.equal(JSON.stringify(localToolExecution).includes('README.md'), false);
   assert.equal(JSON.stringify(localToolExecution).includes('Provider Proxy CLI Fixture'), false);
+
+  const localSearchExecution = await runCli([
+    'provider-tool-execute',
+    'run_cli_tool_execution',
+    '--approval-id', 'provider_tool_call_approval_run_cli_tool_execution_call_cli_search_files_002',
+    '--tool-call-id', 'call_cli_search_files',
+    '--provider', 'custom_openai_compatible',
+    '--transport', 'chat_completions',
+    '--name', 'search_files',
+    '--argument-key', 'path',
+    '--argument-key', 'query',
+    '--argument', 'path=cli-search-scope',
+    '--argument', 'query=cli secret search needle',
+    '--workspace', repoFixture,
+    '--actor', 'cli@example.com',
+    '--reason', 'Execute approved redacted repository search.'
+  ]);
+
+  assert.equal(localSearchExecution.ok, true);
+  assert.equal(localSearchExecution.command, 'provider-tool-execute');
+  assert.equal(localSearchExecution.execution.status, 'completed');
+  assert.equal(localSearchExecution.execution.adapter, 'search_files');
+  assert.equal(localSearchExecution.execution.output_metadata.match_count, 1);
+  assert.equal(localSearchExecution.execution.output_metadata.query_redacted, true);
+  assert.equal(localSearchExecution.execution.output_metadata.paths_redacted, true);
+  assert.equal(localSearchExecution.execution.output_metadata.content_redacted, true);
+  assert.equal(JSON.stringify(localSearchExecution).includes('cli-search-scope'), false);
+  assert.equal(JSON.stringify(localSearchExecution).includes('search-target.md'), false);
+  assert.equal(JSON.stringify(localSearchExecution).includes('cli secret search needle'), false);
 
   const apiToolApproval = await runCli([
     'provider-tool-approval',

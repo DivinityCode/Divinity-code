@@ -100,7 +100,9 @@ const tmpRoot = mkdtempSync(path.join(tmpdir(), 'divinity-api-provider-proxy-cha
 const repoFixture = path.join(tmpRoot, 'repo');
 const usageLedgerPath = path.join(tmpRoot, 'provider-usage-ledger.json');
 mkdirSync(repoFixture);
+mkdirSync(path.join(repoFixture, 'api-search-scope'));
 writeFileSync(path.join(repoFixture, 'README.md'), '# Provider Proxy API Fixture\n');
+writeFileSync(path.join(repoFixture, 'api-search-scope', 'search-target.md'), 'api secret search needle\n');
 
 process.env.DIVINITY_API_AUTOSTART = '0';
 process.env.DIVINITY_WORKSPACE_ROOT = path.join(tmpRoot, 'workspaces');
@@ -453,6 +455,49 @@ try {
   assert.equal(toolExecutionListResponse.status, 200);
   assert.equal(toolExecutionListBody.executions.length, 1);
   assert.equal(toolExecutionListBody.executions[0].execution_id, toolExecutionBody.execution.execution_id);
+
+  const { response: searchApprovalResponse, body: searchApprovalBody } = await requestJson(`${baseUrl}/runs/${approvalRun.run_id}/provider-tool-call-approvals`, {
+    method: 'POST',
+    body: JSON.stringify({
+      tool_call_id: 'call_api_search_files',
+      provider_id: 'custom_openai_compatible',
+      transport: 'chat_completions',
+      name: 'search_files',
+      argument_keys: ['path', 'query'],
+      arguments_redacted: true,
+      decision: 'approve',
+      actor: 'operator@example.com',
+      reason: 'The provider requested read-only repository search.',
+      decided_at: '2026-05-25T12:08:00Z'
+    })
+  });
+
+  assert.equal(searchApprovalResponse.status, 201);
+  assert.equal(searchApprovalBody.approval.name, 'search_files');
+
+  const { response: searchExecutionResponse, body: searchExecutionBody } = await requestJson(`${baseUrl}/runs/${approvalRun.run_id}/provider-tool-executions`, {
+    method: 'POST',
+    body: JSON.stringify({
+      approval_id: searchApprovalBody.approval.approval_id,
+      argument_values: { path: 'api-search-scope', query: 'api secret search needle' },
+      actor: 'operator@example.com',
+      reason: 'Execute the approved redacted repository search.',
+      started_at: '2026-05-25T12:08:01Z',
+      completed_at: '2026-05-25T12:08:02Z'
+    })
+  });
+
+  assert.equal(searchExecutionResponse.status, 201);
+  assert.equal(searchExecutionBody.execution.name, 'search_files');
+  assert.equal(searchExecutionBody.execution.status, 'completed');
+  assert.equal(searchExecutionBody.execution.adapter, 'search_files');
+  assert.equal(searchExecutionBody.execution.output_metadata.match_count, 1);
+  assert.equal(searchExecutionBody.execution.output_metadata.query_redacted, true);
+  assert.equal(searchExecutionBody.execution.output_metadata.paths_redacted, true);
+  assert.equal(searchExecutionBody.execution.output_metadata.content_redacted, true);
+  assert.equal(JSON.stringify(searchExecutionBody).includes('api-search-scope'), false);
+  assert.equal(JSON.stringify(searchExecutionBody).includes('search-target.md'), false);
+  assert.equal(JSON.stringify(searchExecutionBody).includes('api secret search needle'), false);
 
   const { response: blockedResponse, body: blocked } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
     method: 'POST',

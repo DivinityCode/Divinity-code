@@ -7,6 +7,7 @@ The package requires an approved, redacted `divinity.provider_tool_call_approval
 
 Current adapters:
 - `read_file`: reads a workspace-relative file after path containment checks and stores only output summary metadata such as byte and line counts.
+- `search_files`: searches workspace-relative files after path containment checks and stores only redacted counts for scanned files, matches, and matching files.
 - unsupported tools: return a `blocked` execution record instead of executing.
 
 Execution records are audit evidence. They are not automatic model-driven tool loops, do not reconstruct redacted provider arguments, and do not persist file contents.
