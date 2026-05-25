@@ -11,6 +11,7 @@ Implemented views:
 - Observability summary with run health, heartbeat liveness, org/project budget rollups, budget pressure, and failure taxonomy.
 - Decision trace panel with chosen path, rejected alternative, rationale, and supporting evidence.
 - Goal panel for success-criteria-derived goal records with status, budget allocation, and evidence labels.
+- Approval revision panel for requested changes and resubmission context attached to approval workflows.
 - Approval comment panel for operator review context attached to approval workflows.
 - Connector reference panel for attached ticket, docs, and CI context.
 - Agent activity panel for planner, executor, and verifier actor/status/budget records.
@@ -18,9 +19,9 @@ Implemented views:
 
 Open `index.html` directly in a browser for local inspection. The shell uses
 sample data shaped after the current API contracts and does not require a build
-step. Run detail renders goal records, approval comments, connector references,
+step. Run detail renders goal records, approval revisions, approval comments, connector references,
 agent activity, execution records, verification records, and liveness records from
-`run.goals`, `run.approval_comments`, `run.connector_references`, `run.agent_activity`,
+`run.goals`, `run.approval_revision`, `run.approval_comments`, `run.connector_references`, `run.agent_activity`,
 `run.executions`/`run.verifications`, `run.heartbeats`, or completed step
 payloads when API data is loaded.
 

@@ -27,6 +27,18 @@ const sampleRuns = [
       goalRecord('goal_0012_001', 'All contract examples validate', 'pending', 0.75),
       goalRecord('goal_0012_002', 'Smoke path leaves no repo config behind', 'pending', 0.75)
     ],
+    approval_revision: {
+      revision_id: 'approval_revision_run_2026_05_24_0012_001',
+      run_id: 'run_2026_05_24_0012',
+      actor: 'operator@example.com',
+      reason: 'Rollback evidence needs to be attached before approval.',
+      requested_changes: ['Attach rollback plan', 'Confirm release window'],
+      status: 'resubmitted',
+      requested_at: '2026-05-24T10:14:12.000Z',
+      resubmitted_by: 'builder@example.com',
+      resubmission_reason: 'Rollback plan and release window evidence attached.',
+      resubmitted_at: '2026-05-24T10:22:41.000Z'
+    },
     approval_comments: [
       {
         comment_id: 'approval_comment_run_2026_05_24_0012_001',
@@ -78,6 +90,18 @@ const sampleRuns = [
     goals: [
       goalRecord('goal_0011_001', 'API key middleware remains backward compatible', 'pending', 0.38)
     ],
+    approval_revision: {
+      revision_id: 'approval_revision_run_2026_05_24_0011_001',
+      run_id: 'run_2026_05_24_0011',
+      actor: 'operator@example.com',
+      reason: 'Need compatibility proof before final approval.',
+      requested_changes: ['Attach middleware compatibility evidence'],
+      status: 'resubmitted',
+      requested_at: '2026-05-24T09:50:01.000Z',
+      resubmitted_by: 'builder@example.com',
+      resubmission_reason: 'Compatibility smoke evidence attached.',
+      resubmitted_at: '2026-05-24T09:55:21.000Z'
+    },
     connector_references: [
       connectorReference('ref_a11ce0000000011', 'ci_status', 'ci_run', 'ci-5812', 'https://example.test/ci/5812', 'Middleware CI')
     ],
@@ -240,22 +264,32 @@ const sampleRuns = [
     status: 'paused',
     risk_level: 'high',
     created_at: '2026-05-24T06:58:32.000Z',
-    budget: { spent: 92.14, soft: 60, hard: 90 },
+    budget: { spent: 42.14, soft: 60, hard: 90 },
     actor: 'ai-agent@divinity',
     events: [
       event('evt_071', 'task_created', 'queued', 'Task created', 'Security-sensitive endpoint flagged.', '2026-05-24T06:58:32.000Z', '130ms'),
-      event('evt_072', 'preflight_completed', 'queued', 'Preflight allowed', 'Scoped edit and safe exec permissions granted.', '2026-05-24T06:58:51.000Z', '2.1s', [
+      event('evt_072', 'preflight_completed', 'awaiting_approval', 'Preflight requires approval', 'Scoped edit and safe exec permissions granted.', '2026-05-24T06:58:51.000Z', '2.1s', [
         evidence('inferred', 'task.objective', 'Security-sensitive endpoint work was classified from objective text.'),
-        evidence('observed', 'task.budget', 'Budget limits and spend are loaded from run state.')
+        evidence('observed', 'policy.permissions', 'safe_exec policy grants scoped write and shell execution.')
       ]),
-      event('evt_073', 'status_changed', 'paused', 'Paused by budget cap', 'Hard budget cap was exceeded before the next execution step.', '2026-05-24T07:02:17.000Z', '6.12s')
+      event('evt_073', 'approval_revision_requested', 'awaiting_approval', 'Approval revision requested', 'Operator requested rate-limit rollout evidence.', '2026-05-24T07:02:17.000Z', '6.12s'),
+      event('evt_074', 'status_changed', 'paused', 'Paused for revision', 'Run paused until requested approval evidence is resubmitted.', '2026-05-24T07:02:18.000Z', '-')
     ],
-    decision_trace: decisionTrace('pause_for_budget_review', 'continue_past_hard_budget_cap', 'Hard budget cap enforcement pauses execution before additional work starts.', [
-      evidence('observed', 'task.budget', 'Budget limits and spend are loaded from run state.')
+    decision_trace: decisionTrace('request_revision', 'approve_without_requested_changes', 'Operator requested revision evidence before the run can return to the approval queue.', [
+      evidence('observed', 'policy.permissions', 'safe_exec policy grants scoped write and shell execution.')
     ]),
     goals: [
-      goalRecord('goal_0007_001', 'Rate limiting policy is budget-reviewed before more work', 'blocked', 1.5)
+      goalRecord('goal_0007_001', 'Rate limiting rollout evidence is attached before approval', 'blocked', 1.5)
     ],
+    approval_revision: {
+      revision_id: 'approval_revision_run_2026_05_24_0007_001',
+      run_id: 'run_2026_05_24_0007',
+      actor: 'operator@example.com',
+      reason: 'Need rollout evidence before approving security-sensitive rate limiting.',
+      requested_changes: ['Attach staged rollout plan', 'Confirm lockout rollback steps'],
+      status: 'requested',
+      requested_at: '2026-05-24T07:02:17.000Z'
+    },
     artifacts: [
       artifact('artifact_log_0007', 'log', 'artifact://run_2026_05_24_0007/run.log')
     ],
@@ -634,6 +668,7 @@ function normalizeApiRun(run) {
     events: (run.events || []).map(normalizeApiEvent),
     decision_trace: decisionTraceForRun(run),
     goals: run.goals || [],
+    approval_revision: run.approval_revision || null,
     approval_comments: run.approval_comments || [],
     agent_activity: run.agent_activity || [],
     executions: run.executions || stepExecutions,
@@ -658,6 +693,9 @@ function decisionTraceForRun(run) {
   }
 
   if (run.status === 'paused') {
+    if (run.approval_revision?.status === 'requested') {
+      return decisionTrace('request_revision', 'approve_without_requested_changes', 'Operator requested revision evidence before the run can return to the approval queue.', evidenceRefs);
+    }
     return decisionTrace('pause_for_budget_review', 'continue_past_hard_budget_cap', 'Hard budget cap enforcement pauses execution before additional work starts.', evidenceRefs);
   }
 
@@ -716,6 +754,7 @@ function hydrateRunReferences(sourceRuns) {
     for (const runArtifact of run.artifacts) runArtifact.run_id = run.run_id;
     for (const connector of run.connector_references || []) connector.run_id = run.run_id;
     for (const goal of run.goals || []) goal.run_id = run.run_id;
+    if (run.approval_revision) run.approval_revision.run_id = run.run_id;
     for (const comment of run.approval_comments || []) comment.run_id = run.run_id;
     for (const activity of run.agent_activity || []) activity.run_id = run.run_id;
     for (const runVerification of run.verifications || []) runVerification.run_id = run.run_id;
@@ -969,6 +1008,7 @@ function renderRunDetail() {
   document.querySelector('[data-event-timeline]').innerHTML = run.events.map(renderEvent).join('');
   document.querySelector('[data-decision-trace]').innerHTML = renderDecisionTrace(run.decision_trace);
   document.querySelector('[data-goal-list]').innerHTML = renderGoals(run);
+  document.querySelector('[data-approval-revision]').innerHTML = renderApprovalRevision(run);
   document.querySelector('[data-approval-comment-list]').innerHTML = renderApprovalComments(run);
   document.querySelector('[data-connector-reference-list]').innerHTML = renderConnectorReferences(run);
   document.querySelector('[data-agent-activity-list]').innerHTML = renderAgentActivity(run);
@@ -1097,6 +1137,42 @@ function renderApprovalComments(run) {
       <time datetime="${comment.created_at}">${formatDate(comment.created_at)}</time>
     </li>
   `).join('');
+}
+
+function renderApprovalRevision(run) {
+  const revision = run.approval_revision;
+  if (!revision) {
+    return '<div class="empty-state">Approval revision requests appear when operators ask for changes before deciding.</div>';
+  }
+
+  const changes = (revision.requested_changes || []).map(change => `<li>${change}</li>`).join('');
+  const resubmission = revision.status === 'resubmitted'
+    ? `
+      <div>
+        <dt>Resubmitted</dt>
+        <dd>${revision.resubmitted_by || 'operator'} / ${formatDate(revision.resubmitted_at)}</dd>
+      </div>
+      <p>${revision.resubmission_reason || 'No resubmission reason provided.'}</p>
+    `
+    : '';
+
+  return `
+    <article class="approval-revision-card">
+      <div class="approval-revision-header">
+        <span class="status-pill ${revision.status === 'requested' ? 'status-paused' : 'status-awaiting_approval'}">${revision.status}</span>
+        <time datetime="${revision.requested_at}">${formatDate(revision.requested_at)}</time>
+      </div>
+      <strong>${revision.reason}</strong>
+      <dl>
+        <div>
+          <dt>Requested by</dt>
+          <dd>${revision.actor}</dd>
+        </div>
+        ${resubmission}
+      </dl>
+      <ul>${changes || '<li>No specific changes listed.</li>'}</ul>
+    </article>
+  `;
 }
 
 function renderAgentActivity(run) {
