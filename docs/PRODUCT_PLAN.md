@@ -100,8 +100,9 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: provider-returned tool calls are detected across Chat Completions, Anthropic Messages, and OpenAI Responses, then returned as `requires_action` with redacted `tool_call_requests` and required `tool_call_review` operator controls instead of being executed automatically.
    - Bootstrap status: per-tool-call approve/reject decisions are represented as `divinity.provider_tool_call_approval.v1` records through CLI `provider-tool-approval` and API `GET`/`POST /runs/:id/provider-tool-call-approvals`, with raw arguments still redacted.
    - Bootstrap status: approved provider tool execution is represented as `divinity.provider_tool_execution.v1` records through CLI `provider-tool-execute` and API `GET`/`POST /runs/:id/provider-tool-executions`; the first adapter supports read-only `read_file`, requires fresh operator-supplied arguments matching approved keys, redacts arguments/output, and records unsupported tools as blocked.
+   - Bootstrap status: provider chat continuation accepts approved provider tool execution records through API `provider_tool_executions` or CLI `--tool-execution-file`, appending only redacted execution summaries and safe metadata to the next model request.
    - Bootstrap status: dashboard run detail and approval cards render provider/toolset operator controls from `task.toolset_resolution`.
-   - Next production slice: add more approved tool adapters and model-result continuation after operator-reviewed execution records.
+   - Next production slice: add more approved tool adapters and richer operator-reviewed result handoff behind the same route policy.
 3. Public onboarding and release packaging.
    - Next production slice: add install/upgrade docs, release artifacts, environment bootstrap checks, and a first-run quickstart that does not require repo internals.
 4. Hosted/identity/billing boundary.

@@ -101,6 +101,40 @@ function writeSse(res, events) {
 const apiSecret = 'openrouter-secret-value';
 const secretPrompt = 'secret prompt for cli proxy';
 const toolSecret = 'secret tool argument for cli proxy';
+const continuationSecretPath = 'secret-cli-continuation-file.md';
+const continuationSecretOutput = 'secret cli continuation file contents';
+const continuationExecutionFile = path.join(tmpRoot, 'provider-tool-execution.json');
+const invalidContinuationExecutionFile = path.join(tmpRoot, 'provider-tool-execution.invalid.json');
+writeFileSync(continuationExecutionFile, `${JSON.stringify({
+  format: 'divinity.provider_tool_execution.v1',
+  execution_id: 'provider_tool_execution_cli_run_context_call_read_context_001',
+  run_id: 'cli_run_context',
+  approval_id: 'provider_tool_call_approval_cli_run_context_call_read_context_001',
+  tool_call_id: 'call_cli_read_context',
+  provider_id: 'custom_openai_compatible',
+  transport: 'chat_completions',
+  name: 'read_file',
+  argument_keys: ['path'],
+  arguments_redacted: true,
+  argument_values: { path: continuationSecretPath },
+  status: 'completed',
+  adapter: 'read_file',
+  actor: 'cli@example.com',
+  reason: 'Approved CLI read-only continuation context.',
+  started_at: '2026-05-25T12:10:00Z',
+  completed_at: '2026-05-25T12:10:01Z',
+  output_summary: 'read_file completed; content redacted',
+  output_redacted: true,
+  output_metadata: {
+    bytes_read: 4096,
+    line_count: 40,
+    content_redacted: true,
+    path: continuationSecretPath,
+    raw_output: continuationSecretOutput
+  },
+  output: continuationSecretOutput
+}, null, 2)}\n`);
+writeFileSync(invalidContinuationExecutionFile, '{not valid json\n');
 const server = await createMockChatServer();
 const toolCallServer = await createMockChatServer(({ res }) => {
   res.statusCode = 200;
@@ -160,6 +194,42 @@ const responsesServer = await createMockChatServer(({ req, res, body }) => {
       input_tokens: 4,
       output_tokens: 3,
       total_tokens: 7
+    }
+  }));
+});
+const continuationServer = await createMockChatServer(({ req, res, body }) => {
+  assert.equal(req.url, '/chat/completions');
+  assert.equal(body.model, 'mock-model');
+  assert.equal(body.messages.length, 2);
+  assert.deepEqual(body.messages[0], { role: 'user', content: secretPrompt });
+  const continuation = body.messages[1];
+  assert.equal(continuation.role, 'user');
+  assert.match(continuation.content, /Approved provider tool execution summaries/);
+  assert.match(continuation.content, /provider_tool_execution_cli_run_context_call_read_context_001/);
+  assert.match(continuation.content, /call_cli_read_context/);
+  assert.match(continuation.content, /read_file/);
+  assert.match(continuation.content, /bytes_read/);
+  assert.match(continuation.content, /line_count/);
+  assert.equal(continuation.content.includes(continuationSecretPath), false);
+  assert.equal(continuation.content.includes(continuationSecretOutput), false);
+
+  res.statusCode = 200;
+  res.setHeader('content-type', 'application/json');
+  res.end(JSON.stringify({
+    id: 'chatcmpl_cli_continuation_mock',
+    object: 'chat.completion',
+    model: body.model,
+    choices: [
+      {
+        index: 0,
+        message: { role: 'assistant', content: 'cli continuation response' },
+        finish_reason: 'stop'
+      }
+    ],
+    usage: {
+      prompt_tokens: 12,
+      completion_tokens: 3,
+      total_tokens: 15
     }
   }));
 });
@@ -249,6 +319,44 @@ try {
   assert.equal(server.requests.length, 1);
   assert.equal(JSON.stringify(usageBlocked).includes(secretPrompt), false);
   assert.equal(JSON.stringify(usageBlocked).includes(apiSecret), false);
+
+  const continuationCompleted = await runCli([
+    'provider-chat',
+    '--provider', 'custom_openai_compatible',
+    '--base-url', continuationServer.base_url,
+    '--model', 'mock-model',
+    '--message', secretPrompt,
+    '--max-completion-tokens', '32',
+    '--tool-execution-file', continuationExecutionFile
+  ], {
+    CUSTOM_LLM_API_KEY: apiSecret
+  });
+
+  assert.equal(continuationCompleted.ok, true);
+  assert.equal(continuationCompleted.result.status, 'completed');
+  assert.equal(continuationCompleted.result.output_text, 'cli continuation response');
+  assert.equal(continuationServer.requests.length, 1);
+  assert.equal(JSON.stringify(continuationCompleted).includes(continuationSecretPath), false);
+  assert.equal(JSON.stringify(continuationCompleted).includes(continuationSecretOutput), false);
+  assert.equal(JSON.stringify(continuationCompleted).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(continuationCompleted).includes(apiSecret), false);
+
+  const invalidContinuationFile = await runCli([
+    'provider-chat',
+    '--provider', 'custom_openai_compatible',
+    '--base-url', continuationServer.base_url,
+    '--model', 'mock-model',
+    '--message', secretPrompt,
+    '--tool-execution-file', invalidContinuationExecutionFile
+  ], {
+    CUSTOM_LLM_API_KEY: apiSecret
+  });
+
+  assert.equal(invalidContinuationFile.ok, false);
+  assert.match(invalidContinuationFile.error, /failed to read provider tool execution file/);
+  assert.equal(continuationServer.requests.length, 1);
+  assert.equal(JSON.stringify(invalidContinuationFile).includes(continuationSecretOutput), false);
+  assert.equal(JSON.stringify(invalidContinuationFile).includes(apiSecret), false);
 
   const toolCall = await runCli([
     'provider-chat',
@@ -472,6 +580,7 @@ try {
   await server.close();
   await toolCallServer.close();
   await responsesServer.close();
+  await continuationServer.close();
   await streamServer.close();
   if (apiServer.listening) {
     await new Promise((resolve, reject) => {
