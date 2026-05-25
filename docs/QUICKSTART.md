@@ -29,7 +29,7 @@ divinity doctor
 
 If you do not want to link the checkout globally, replace `divinity` with `node apps/cli/src/index.mjs` in the commands below.
 
-`divinity doctor` reports Node, package-manager readiness, dependencies, provider catalog readiness, optional Docker readiness, and provider credential readiness without printing secret values.
+`divinity doctor` reports runtime-safe Node, package-manager, Git, CLI entrypoint, provider catalog, toolset catalog, optional Docker, and provider credential readiness without printing secret values or requiring the current directory to be the Divinity source tree. Contributors inside the source checkout can run `divinity doctor --profile source` for package manifest, installed dependency, AJV validator, and API source checks.
 
 ## 3. Inspect Providers And Toolsets
 
@@ -79,6 +79,7 @@ Do not use public shared keys, no-signup key pools, or rotation intended to bypa
 ## 7. Before Opening A PR
 
 ```bash
+divinity doctor --profile source
 pnpm run validate:contracts
 pnpm run test:package
 pnpm run test:providers
