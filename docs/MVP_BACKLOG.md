@@ -45,7 +45,7 @@
 - CLI `approval <run_id> --api <base-url>` fetches stored approval state, comments, and run payload without mutating the run.
 - CLI `approval-revision <run_id> --api <base-url>` requests changes on an approval run and moves it to `paused`; CLI `approval-resubmit <run_id> --api <base-url>` returns the run to `awaiting_approval`.
 - CLI `init` supports default, flag-driven, and prompt-driven project config creation for policy preset, soft/hard budget caps, and org/project scope.
-- CLI `doctor` reports Node, optional npm, optional pnpm/Corepack fallback, aggregate package-manager readiness, optional Docker runtime readiness for container-sandbox execution, installed dependencies, AJV validator dependencies, git, package manifest, and API server source readiness for local setup diagnostics.
+- CLI `doctor` defaults to runtime-safe setup diagnostics for installed or linked package use, while `doctor --profile source` adds source-checkout checks for installed dependencies, AJV validator dependencies, package manifest, and API server source readiness.
 - CLI `bug` emits `divinity.bug_report.v1` with a GitHub-ready Markdown body, environment details, git status, and local doctor diagnostics for in-workflow issue reporting.
 - CLI `capabilities` reports supported policy presets, runtime adapters, execution adapters, runner isolation profiles, connector adapters, and starter recipes for extension discovery.
 - IDE extension scaffold contributes task run, dashboard launch, and doctor commands that delegate to the repo-local CLI.

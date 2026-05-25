@@ -5,6 +5,7 @@ import http from 'http';
 import https from 'https';
 import path from 'path';
 import { createInterface } from 'readline/promises';
+import { fileURLToPath } from 'url';
 
 import { createAgentActivityRecords } from '../../../packages/agent-activity/src/index.mjs';
 import { createApprovalComment } from '../../../packages/approval-comments/src/index.mjs';
@@ -34,6 +35,7 @@ import { publicToolsets, resolveToolsets } from '../../../packages/toolsets/src/
 
 const [, , command, ...args] = process.argv;
 const cwd = process.cwd();
+const cliEntrypointPath = fileURLToPath(import.meta.url);
 const configPath = path.join(cwd, '.divinity.json');
 const DEFAULT_ENABLED_TOOLSETS = resolveToolsets().toolsets.map(toolset => toolset.toolset_id);
 const DEFAULT_CONFIG = {
@@ -92,6 +94,22 @@ function directoryCheck(check_id, directoryPath) {
     ok,
     required: true,
     summary: directoryPath
+  };
+}
+
+function cliEntrypointCheck() {
+  let ok = false;
+  try {
+    ok = fs.existsSync(cliEntrypointPath) && fs.statSync(cliEntrypointPath).isFile();
+  } catch {
+    ok = false;
+  }
+
+  return {
+    check_id: 'cli_entrypoint',
+    ok,
+    required: true,
+    summary: cliEntrypointPath
   };
 }
 
@@ -176,7 +194,7 @@ function llmProviderCredentialsCheck() {
   };
 }
 
-function buildDoctorChecks() {
+function buildRuntimeDoctorChecks() {
   const npmCheck = optionalCommandCheck('npm', 'npm', ['--version']);
   const pnpmCheck = cachedPnpmCheck();
   const dockerCheck = optionalCommandCheck('docker', 'docker', ['--version']);
@@ -187,14 +205,25 @@ function buildDoctorChecks() {
     packageManagerCheck(npmCheck, pnpmCheck),
     dockerCheck,
     commandCheck('git', 'git', ['--version']),
+    cliEntrypointCheck(),
+    providerCatalogCheck(),
+    toolsetCatalogCheck(),
+    llmProviderCredentialsCheck()
+  ];
+}
+
+function buildSourceDoctorChecks() {
+  return [
+    ...buildRuntimeDoctorChecks(),
     fileCheck('package_json', path.join(cwd, 'package.json')),
     directoryCheck('node_modules', path.join(cwd, 'node_modules')),
     dependencyCheck('ajv_dependencies', ['ajv', 'ajv-cli', 'ajv-formats']),
-    providerCatalogCheck(),
-    toolsetCatalogCheck(),
-    llmProviderCredentialsCheck(),
     fileCheck('api_server_source', path.join(cwd, 'apps/api/src/server.mjs'))
   ];
+}
+
+function buildDoctorChecks({ profile = 'runtime' } = {}) {
+  return profile === 'source' ? buildSourceDoctorChecks() : buildRuntimeDoctorChecks();
 }
 
 function runGit(values) {
@@ -636,6 +665,34 @@ function parseProviderChatArgs(values) {
   }
   options.toolsets.disabled = options.toolsets.disabled.map(value => String(value || '').trim()).filter(Boolean);
   return options;
+}
+
+function parseDoctorArgs(values) {
+  let profile = 'runtime';
+
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    const next = values[index + 1];
+
+    if (value === '--runtime') {
+      profile = 'runtime';
+    } else if (value === '--source') {
+      profile = 'source';
+    } else if (value === '--profile') {
+      profile = String(next || '').trim();
+      index += 1;
+    } else if (value.startsWith('--profile=')) {
+      profile = value.slice('--profile='.length).trim();
+    } else {
+      throw new Error(`unknown doctor option: ${value}`);
+    }
+  }
+
+  if (profile !== 'runtime' && profile !== 'source') {
+    throw new Error(`unknown doctor profile: ${profile}`);
+  }
+
+  return { profile };
 }
 
 function executionRecordsFromJson(value) {
@@ -1865,17 +1922,23 @@ function toolsets() {
   print({ ok: true, command: 'toolsets', toolsets: publicToolsets(), resolution: resolveToolsets() });
 }
 
-function doctorPayload() {
-  const checks = buildDoctorChecks();
+function doctorPayload(options = {}) {
+  const profile = options.profile || 'runtime';
+  const checks = buildDoctorChecks({ profile });
   return {
     ok: checks.every(check => !check.required || check.ok),
     command: 'doctor',
+    profile,
     checks
   };
 }
 
 function doctor() {
-  print(doctorPayload());
+  try {
+    print(doctorPayload(parseDoctorArgs(args)));
+  } catch (error) {
+    print({ ok: false, command: 'doctor', error: error.message });
+  }
 }
 
 function bug() {

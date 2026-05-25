@@ -43,11 +43,13 @@ assertIncludes(install, 'pnpm install', 'install guide');
 assertIncludes(install, 'pnpm run validate:contracts', 'install guide');
 assertIncludes(install, 'pnpm test', 'install guide');
 assertIncludes(install, 'npm is optional', 'install guide');
+assertIncludes(install, 'doctor --profile source', 'install guide');
 
 const quickstart = read('docs/QUICKSTART.md');
 for (const command of [
   'divinity init',
   'divinity doctor',
+  'divinity doctor --profile source',
   'divinity providers',
   'divinity provider-route',
   'divinity run',
@@ -74,6 +76,8 @@ const releaseChecklist = read('docs/RELEASE_CHECKLIST.md');
 for (const item of [
   'README warning review',
   'git status --short --branch',
+  'node apps/cli/src/index.mjs doctor',
+  'node apps/cli/src/index.mjs doctor --profile source',
   'pnpm run validate:contracts',
   'pnpm test',
   'pnpm run test:smoke',

@@ -34,6 +34,13 @@ test ! -e .divinity-provider-usage.json
 
 ## Required Local Verification
 
+- [ ] Runtime and source doctor profiles:
+
+```bash
+node apps/cli/src/index.mjs doctor
+node apps/cli/src/index.mjs doctor --profile source
+```
+
 - [ ] Contract validation:
 
 ```bash

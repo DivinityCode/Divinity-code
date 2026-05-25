@@ -49,11 +49,14 @@ pnpm link --global
 divinity doctor
 ```
 
+Plain `divinity doctor` runs runtime-safe checks from any directory. Inside a source checkout, use `divinity doctor --profile source` or `node apps/cli/src/index.mjs doctor --profile source` for contributor diagnostics that require repo files and installed dev dependencies.
+
 The package remains marked `private` while the non-production warning is active. Published package and binary install paths are future release work.
 
 ## Verify The Install
 
 ```bash
+node apps/cli/src/index.mjs doctor --profile source
 pnpm run test:package
 pnpm run validate:contracts
 pnpm run test:smoke
