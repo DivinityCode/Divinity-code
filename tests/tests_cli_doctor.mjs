@@ -28,6 +28,9 @@ for (const checkId of [
   'package_json',
   'node_modules',
   'ajv_dependencies',
+  'provider_catalog',
+  'toolset_catalog',
+  'llm_provider_credentials',
   'api_server_source'
 ]) {
   assert.ok(checksById.has(checkId), `missing diagnostic check: ${checkId}`);
@@ -41,11 +44,17 @@ assert.match(checksById.get('node').summary, /^v\d+\./);
 assert.equal(checksById.get('npm').required, false);
 assert.equal(checksById.get('pnpm').required, false);
 assert.equal(checksById.get('docker').required, false);
+assert.equal(checksById.get('llm_provider_credentials').required, false);
 assert.equal(checksById.get('package_manager').required, true);
+assert.equal(checksById.get('provider_catalog').required, true);
+assert.equal(checksById.get('toolset_catalog').required, true);
 assert.equal(checksById.get('node_modules').ok, true);
 assert.equal(checksById.get('ajv_dependencies').ok, true);
 assert.match(checksById.get('package_manager').summary, /(npm|pnpm)/);
 assert.match(checksById.get('ajv_dependencies').summary, /ajv/);
+assert.match(checksById.get('provider_catalog').summary, /providers/);
+assert.match(checksById.get('toolset_catalog').summary, /toolsets/);
+assert.match(checksById.get('llm_provider_credentials').summary, /(configured|not configured)/);
 assert.equal(checksById.get('package_json').ok, true);
 assert.equal(checksById.get('api_server_source').ok, true);
 

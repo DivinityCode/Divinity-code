@@ -41,6 +41,31 @@ assert.ok(catalog.runtime_adapters.find(adapter => adapter.adapter === 'divinity
 assert.ok(catalog.runtime_adapters.find(adapter => adapter.adapter === 'claude_local').capabilities.includes('resumable_session'));
 assert.ok(catalog.runtime_adapters.find(adapter => adapter.adapter === 'codex_local').capabilities.includes('structured_events'));
 
+assert.deepEqual(catalog.llm_providers.map(provider => provider.provider_id), [
+  'openrouter',
+  'anthropic',
+  'openai_api',
+  'google_gemini',
+  'custom_openai_compatible'
+]);
+assert.ok(catalog.llm_providers.every(provider => provider.format === 'divinity.llm_provider.v1'));
+assert.ok(catalog.llm_providers.every(provider => provider.transport));
+assert.ok(catalog.llm_providers.every(provider => Array.isArray(provider.credential_env_vars)));
+
+assert.deepEqual(catalog.toolsets.map(toolset => toolset.toolset_id), [
+  'web',
+  'file',
+  'terminal',
+  'code_execution',
+  'browser',
+  'memory',
+  'delegation',
+  'connectors',
+  'approvals'
+]);
+assert.ok(catalog.toolsets.every(toolset => toolset.format === 'divinity.toolset.v1'));
+assert.ok(catalog.toolsets.every(toolset => Array.isArray(toolset.tools)));
+
 assert.deepEqual(catalog.runner_isolation_profiles.map(profile => profile.profile_id), [
   'workspace_snapshot',
   'container_sandbox'

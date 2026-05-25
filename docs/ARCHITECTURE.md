@@ -51,10 +51,18 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 
 ## Capability Discovery
 - CLI `capabilities` and API `GET /capabilities` expose `divinity.capabilities.v1`.
-- The catalog lists policy presets, runtime adapters, constrained execution adapters, runner isolation profiles, connector adapters, and starter recipe summaries from the shared package layer.
+- The catalog lists policy presets, runtime adapters, constrained execution adapters, runner isolation profiles, connector adapters, LLM providers, toolsets, and starter recipe summaries from the shared package layer.
 - Runtime adapters identify which agent runtime can own work; execution adapters identify the constrained commands a policy-approved step may execute.
 - Connector adapters identify ticket, docs, and CI status reference surfaces used by task creation and run-level external context attachments.
-- Capability discovery keeps extension points explicit so clients do not hard-code supported policies, runtime adapters, execution adapters, or connector adapters.
+- Capability discovery keeps extension points explicit so clients do not hard-code supported policies, runtime adapters, execution adapters, connector adapters, providers, or toolsets.
+
+## Provider And Toolset Catalogs
+- `packages/provider-runtime` defines side-effect-free LLM provider metadata for OpenRouter, Anthropic, OpenAI API, Google Gemini, and custom OpenAI-compatible endpoints.
+- Provider metadata separates public provider identity from runtime resolution details such as transport, base URL, supported auth modes, credential environment variable names, default model, and capability labels.
+- `packages/toolsets` defines public toolset metadata and a deterministic default resolver for web, file, terminal, code execution, browser, memory, delegation, connectors, and approvals.
+- CLI `providers` and `toolsets`, API `GET /providers` and `GET /toolsets`, and the shared capabilities catalog expose the same metadata shape.
+- CLI `doctor` reports provider catalog readiness, toolset catalog readiness, and optional LLM credential readiness without printing or storing secret values.
+- This mirrors Hermes Agent's separation between provider identity, runtime credential/transport resolution, transport implementations, and toolset configuration. This slice intentionally does not make live LLM calls or persist credentials.
 
 ## Connector References
 - CLI `run --connector adapter:resource_type:resource_id[:url]` can attach initial ticket, docs, or CI context to a task and resolved run output.

@@ -16,6 +16,8 @@ try {
   assert.ok(catalog.policies.some(policy => policy.policy_id === 'read_only'));
   assert.ok(catalog.execution_adapters.some(adapter => adapter.adapter === 'package_script'));
   assert.ok(catalog.runtime_adapters.some(adapter => adapter.adapter === 'claude_local'));
+  assert.ok(catalog.llm_providers.some(provider => provider.provider_id === 'anthropic'));
+  assert.ok(catalog.toolsets.some(toolset => toolset.toolset_id === 'approvals'));
   assert.ok(catalog.runner_isolation_profiles.some(profile => profile.profile_id === 'container_sandbox'));
   assert.ok(catalog.connector_adapters.some(adapter => adapter.adapter === 'ticket_reference'));
   assert.ok(catalog.starter_recipes.length >= 4);

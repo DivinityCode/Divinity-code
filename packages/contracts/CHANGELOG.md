@@ -1,5 +1,9 @@
 # Contracts Changelog
 
+## v1.37.0
+- Added LLM provider and toolset metadata to `CapabilitiesCatalog`.
+- Updated capabilities examples so provider and toolset catalog discovery is contract-visible.
+
 ## v1.36.0
 - Added `ExecutionRecord.attempt`, `max_attempts`, and `retry_of` for bounded execution retry evidence.
 - Updated Step embedded execution records to carry the same retry metadata.
