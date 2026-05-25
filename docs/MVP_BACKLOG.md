@@ -39,7 +39,7 @@
 - CLI `run` now returns `run_id`, status, task payload, and preflight decision metadata.
 - CLI `run --connector adapter:resource_type:resource_id[:url]` attaches initial ticket/docs/CI context to task and run output.
 - CLI `init` supports default, flag-driven, and prompt-driven project config creation for policy preset, soft/hard budget caps, and org/project scope.
-- CLI `doctor` reports Node, optional npm, optional pnpm/Corepack fallback, aggregate package-manager readiness, installed dependencies, AJV validator dependencies, git, package manifest, and API server source readiness for local setup diagnostics.
+- CLI `doctor` reports Node, optional npm, optional pnpm/Corepack fallback, aggregate package-manager readiness, optional Docker runtime readiness for container-sandbox execution, installed dependencies, AJV validator dependencies, git, package manifest, and API server source readiness for local setup diagnostics.
 - CLI `capabilities` reports supported policy presets, execution adapters, runner isolation profiles, connector adapters, and starter recipes for extension discovery.
 - IDE extension scaffold contributes task run, dashboard launch, and doctor commands that delegate to the repo-local CLI.
 - API exposes `POST /preflight`; `POST /tasks` records preflight metadata and moves high-risk allowed work to `awaiting_approval`.
