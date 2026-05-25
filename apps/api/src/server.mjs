@@ -220,6 +220,17 @@ function publicRun(run) {
   };
 }
 
+function approvalSnapshot(run) {
+  return {
+    run_id: run.run_id,
+    status: run.status,
+    approval_required: run.status === 'awaiting_approval',
+    approval: run.approval || null,
+    comments: run.approval_comments || [],
+    run: publicRun(run)
+  };
+}
+
 function sendSse(res, event, payload) {
   res.write(`event: ${event}\n`);
   res.write(`data: ${JSON.stringify(payload)}\n\n`);
@@ -524,6 +535,17 @@ const server = http.createServer((req, res) => {
   }
 
   const approvalMatch = req.url.match(/^\/runs\/([^/]+)\/approval$/);
+  if (req.method === 'GET' && approvalMatch) {
+    const run = runs.get(approvalMatch[1]);
+    if (!run) {
+      sendJson(res, 404, { error: 'run not found' });
+      return;
+    }
+
+    sendJson(res, 200, approvalSnapshot(run));
+    return;
+  }
+
   if (req.method === 'POST' && approvalMatch) {
     const run = runs.get(approvalMatch[1]);
     if (!run) {

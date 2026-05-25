@@ -62,7 +62,7 @@ Paperclip is the strongest control-plane reference for organizational agent work
 ## Development Plan Implications
 The code examples reinforce the current bootstrap direction and add these concrete follow-on slices:
 
-1. **Approval command family:** implemented `approvals`, API-backed `approve`, API-backed `reject`, API-backed approval comments, and local structured decision/comment payloads. Future slices can add get/revision/resubmit subcommands once approval records need richer review workflows.
+1. **Approval command family:** implemented `approvals`, API-backed approval snapshots, API-backed `approve`, API-backed `reject`, API-backed approval comments, and local structured decision/comment payloads. Future slices can add revision/resubmit subcommands once approval records need richer review workflows.
 2. **Runtime adapter registry:** implemented a first catalog pass for Divinity, Claude, Codex, and generic process runtimes so CLI/API/dashboard expose the same adapter identity before runtime execution is wired in.
 3. **Policy-hook bridge:** implemented data-only policy-pack pre-execution hooks that preflight and step gates evaluate into hook outcomes, warnings, blocks, and evidence before any adapter runs.
 4. **Durable goal model:** implemented a first record-only pass that promotes task success criteria into run `goals` with budget allocation and evidence refs; future slices can add constrained mutation once completion evidence is produced by verifier flows.
