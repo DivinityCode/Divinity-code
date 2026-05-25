@@ -54,10 +54,10 @@
 - API exposes `POST /runs/:id/execution-locks/recover` to mark expired locks stale and preserve recovery evidence.
 - API exposes `POST /runs/:id/heartbeat` to append run liveness records, update `last_heartbeat_at`, and preserve heartbeat timeline/audit evidence.
 - API connector references emit `connector_reference_attached` events and `connector_reference` audit entries.
-- API execution uses per-run local snapshots or shallow Git URL clones; workspaces exclude `node_modules`, preserve Git metadata for Git adapters, and record the selected runner isolation profile.
+- API execution uses per-run local snapshots or shallow Git URL clones; workspaces exclude `node_modules`, preserve Git metadata for Git adapters, and record the selected runner isolation profile. When `container_sandbox` is selected, constrained shell adapters execute through the Docker command plan with network disabled.
 - API step execution now creates verifier records with observed status, exit-code, and output-capture checks; `step_verified` timeline events and `verification_record` audit records preserve the result.
 - API exposes `POST /runs/:id/workspace/cleanup` to remove managed workspaces and record `workspace_cleaned` events.
-- Execution adapters currently cover workspace `README.md` reads, `git status --short`, whitelisted Node test scripts, and constrained Node-based package scripts for approved command steps.
+- Execution adapters currently cover workspace `README.md` reads, `git status --short`, whitelisted Node test scripts, and constrained Node-based package scripts for approved command steps. Shell-backed adapters use Docker when the run workspace selects `container_sandbox`; missing Docker produces a failed execution record instead of falling back silently to host execution.
 - Hard budget cap excess now maps to `paused` for CLI/API runs and pauses an API run when a proposed step exceeds the hard cap.
 - CLI and API expose structured run events; dashboard can subscribe to live selected-run updates through API server-sent events.
 - API step execution records `execution_lock_acquired`/`execution_lock_recovered`/`execution_lock_released`/`step_executed`/`step_verified` events and `execution_lock_record`/`execution_record`/`verification_record` audit entries.

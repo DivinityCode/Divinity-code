@@ -1,19 +1,41 @@
 import assert from 'assert/strict';
 import { execFileSync } from 'child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 
 import { executeStep } from '../packages/execution/src/index.mjs';
+import { resolveRunnerIsolationProfile } from '../packages/runner-isolation/src/index.mjs';
 
 const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-execution-test-'));
+const originalPath = process.env.PATH;
 
 try {
+  const binDir = path.join(tmpDir, 'bin');
   mkdirSync(path.join(tmpDir, 'docs'));
+  mkdirSync(binDir);
   mkdirSync(path.join(tmpDir, 'scripts'));
   writeFileSync(path.join(tmpDir, 'README.md'), '# Fixture README\n\nExecution evidence.\n');
   writeFileSync(path.join(tmpDir, 'tests_execution_fixture.mjs'), "console.log('fixture node test ok');\n");
   writeFileSync(path.join(tmpDir, 'scripts', 'fixture-package.mjs'), "console.log('fixture package script ok');\n");
+  const fakeDockerPath = path.join(binDir, 'docker');
+  writeFileSync(fakeDockerPath, `#!${process.execPath}
+const args = process.argv.slice(2);
+const command = args.slice(args.indexOf('node:22-bookworm-slim') + 1);
+console.log('fake docker argv ' + JSON.stringify(args));
+console.log('fake docker command ' + command.join(' '));
+if (!args.includes('--network') || args[args.indexOf('--network') + 1] !== 'none') process.exit(11);
+if (!args.some(arg => arg.startsWith('type=bind,source=') && arg.endsWith(',target=/workspace'))) process.exit(12);
+if (!args.includes('-w') || args[args.indexOf('-w') + 1] !== '/workspace') process.exit(13);
+if (!args.includes('node:22-bookworm-slim')) process.exit(14);
+if (![
+  'git status --short',
+  'node tests_execution_fixture.mjs',
+  'node scripts/fixture-package.mjs'
+].includes(command.join(' '))) process.exit(15);
+`);
+  chmodSync(fakeDockerPath, 0o755);
+  process.env.PATH = `${binDir}${path.delimiter}${originalPath || ''}`;
   writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify({
     scripts: {
       'fixture:ok': 'node scripts/fixture-package.mjs',
@@ -72,6 +94,32 @@ try {
   assert.match(gitStatus.stdout, /\?\? README\.md/);
   assert.match(gitStatus.stdout, /\?\? changed\.txt/);
 
+  const containerRun = {
+    run_id: 'run_container_execution',
+    task: {
+      repo: tmpDir
+    },
+    workspace: {
+      kind: 'local_snapshot',
+      path: tmpDir,
+      isolation: resolveRunnerIsolationProfile({ profile_id: 'container_sandbox' })
+    }
+  };
+  const containerGitStatus = executeStep({
+    run: containerRun,
+    step: {
+      ...gitStatusStep,
+      step_id: 'step_container_git_status',
+      run_id: containerRun.run_id
+    },
+    cwd: tmpDir
+  });
+  assert.equal(containerGitStatus.adapter, 'git_status');
+  assert.equal(containerGitStatus.status, 'completed');
+  assert.equal(containerGitStatus.exit_code, 0);
+  assert.match(containerGitStatus.stdout, /fake docker argv/);
+  assert.ok(containerGitStatus.stdout.includes('git status --short'));
+
   const nodeTestStep = {
     step_id: 'step_node_test',
     run_id: run.run_id,
@@ -89,6 +137,24 @@ try {
   assert.equal(nodeTest.target_path, 'tests_execution_fixture.mjs');
   assert.match(nodeTest.stdout, /fixture node test ok/);
 
+  const containerNodeTest = executeStep({
+    run: containerRun,
+    step: {
+      ...nodeTestStep,
+      step_id: 'step_container_node_test',
+      run_id: containerRun.run_id
+    },
+    cwd: tmpDir
+  });
+  assert.equal(containerNodeTest.adapter, 'node_test');
+  assert.equal(containerNodeTest.status, 'completed');
+  assert.equal(containerNodeTest.exit_code, 0);
+  assert.match(containerNodeTest.stdout, /fake docker argv/);
+  assert.ok(containerNodeTest.stdout.includes('--network'));
+  assert.ok(containerNodeTest.stdout.includes('none'));
+  assert.ok(containerNodeTest.stdout.includes(`type=bind,source=${path.resolve(tmpDir)},target=/workspace`));
+  assert.ok(containerNodeTest.stdout.includes('node tests_execution_fixture.mjs'));
+
   const packageScriptStep = {
     step_id: 'step_package_script',
     run_id: run.run_id,
@@ -105,6 +171,22 @@ try {
   assert.equal(packageScript.exit_code, 0);
   assert.equal(packageScript.target_path, 'package.json#scripts.fixture:ok');
   assert.match(packageScript.stdout, /fixture package script ok/);
+
+  const containerPackageScript = executeStep({
+    run: containerRun,
+    cwd: tmpDir,
+    step: {
+      ...packageScriptStep,
+      step_id: 'step_container_package_script',
+      run_id: containerRun.run_id
+    }
+  });
+  assert.equal(containerPackageScript.adapter, 'package_script');
+  assert.equal(containerPackageScript.status, 'completed');
+  assert.equal(containerPackageScript.exit_code, 0);
+  assert.equal(containerPackageScript.target_path, 'package.json#scripts.fixture:ok');
+  assert.match(containerPackageScript.stdout, /fake docker argv/);
+  assert.ok(containerPackageScript.stdout.includes('node scripts/fixture-package.mjs'));
 
   const unsafePackageScript = executeStep({
     run,
@@ -136,5 +218,6 @@ try {
 
   console.log(JSON.stringify({ ok: true, test: 'execution-adapter' }));
 } finally {
+  process.env.PATH = originalPath;
   rmSync(tmpDir, { recursive: true, force: true });
 }
