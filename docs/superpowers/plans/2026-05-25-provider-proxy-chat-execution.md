@@ -158,7 +158,7 @@ test ! -e .divinity.json
 
 ### Task 4: Publish
 
-- [ ] Commit as `feat: add provider proxy chat execution`, push, open a ready PR, wait for GitHub Actions, merge if green, sync `main`, delete the branch, and rerun focused post-merge verification.
+- [x] Commit as `feat: add provider proxy chat execution`, push, open a ready PR, wait for GitHub Actions, merge if green, sync `main`, delete the branch, and rerun focused post-merge verification.
 
 ## Self-Review
 
