@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.28.0
+- Added `BugReport` schema and examples for CLI-generated, GitHub-ready bug reports with environment, git, and diagnostic evidence.
+
 ## v1.27.0
 - Added `pr_summary` as an Artifact type for PR-ready run summaries.
 

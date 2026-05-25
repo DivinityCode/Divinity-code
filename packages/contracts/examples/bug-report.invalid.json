@@ -1,0 +1,21 @@
+{
+  "format": "divinity.bug_report.v1",
+  "summary": "",
+  "created_at": "not-a-date",
+  "cwd": "",
+  "environment": {
+    "node": "v22.22.1",
+    "platform": "linux",
+    "arch": "x64"
+  },
+  "git": {
+    "branch": "main",
+    "head": "5e3d17d",
+    "status_short": ""
+  },
+  "diagnostics": {
+    "ok": true,
+    "checks": []
+  },
+  "markdown": ""
+}

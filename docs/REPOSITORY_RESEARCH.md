@@ -1,6 +1,6 @@
 # Competitive Repository Research (Claude Code, Codex, Hermes Agent, Paperclip)
 
-_Last refreshed: 2026-05-24_
+_Last refreshed: 2026-05-25_
 
 ## Scope
 This research covers the referenced GitHub repositories and public project documentation for:
@@ -14,10 +14,12 @@ The goal is to translate repo-level patterns into product and implementation dec
 ## Current Repo Signals
 | Repo | Primary language | Latest observed release | Positioning signal |
 | --- | --- | --- | --- |
-| `anthropics/claude-code` | Shell | `v2.1.150` | Terminal-native coding agent with IDE and GitHub adjacency. |
-| `openai/codex` | Rust | `rust-v0.133.0` | Lightweight local coding agent spanning CLI, IDE, app, and web surfaces. |
-| `NousResearch/hermes-agent` | Python | `v2026.5.16` | Self-improving multi-channel agent with memory, skills, schedulers, and portable runtimes. |
-| `paperclipai/paperclip` | TypeScript | `v2026.517.0` | Agent-management control plane for goals, budgets, governance, heartbeats, and audit trails. |
+| `anthropics/claude-code` | Shell | [`v2.1.150`](https://github.com/anthropics/claude-code/releases/tag/v2.1.150) | Terminal-native coding agent with IDE and GitHub adjacency. |
+| `openai/codex` | Rust | [`rust-v0.133.0`](https://github.com/openai/codex/releases/tag/rust-v0.133.0) | Lightweight local coding agent spanning CLI, IDE, app, and web surfaces. |
+| `NousResearch/hermes-agent` | Python | [`v2026.5.16`](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.5.16) | Self-improving multi-channel agent with memory, skills, schedulers, and portable runtimes. |
+| `paperclipai/paperclip` | TypeScript | [`v2026.517.0`](https://github.com/paperclipai/paperclip/releases/tag/v2026.517.0) | Agent-management control plane for goals, budgets, governance, heartbeats, and audit trails. |
+
+The 2026-05-25 refresh confirmed the latest observed releases above are still current. Notable live release signals since the prior research pass: Codex now enables durable goals by default and expands plugin/permission-profile inspection; Hermes emphasizes lighter installs, local proxy/runtime portability, per-write verification, and API approval events; Paperclip emphasizes first-class local runtimes, document locks, sandbox reliability, and faster PR verification.
 
 ## 1) Claude Code
 ### Observed strengths
@@ -32,6 +34,7 @@ The goal is to translate repo-level patterns into product and implementation dec
 2. Treat installer and environment diagnostics as MVP work, not post-MVP polish.
 3. Keep git-native outputs: run summaries, validation commands, patch artifacts, and PR-ready descriptions.
 4. Make extension points explicit early: policy presets, tool adapters, and future plugins should be discoverable.
+5. Keep bug reporting inside the builder workflow with structured diagnostics operators can paste into GitHub issues.
 
 ## 2) Codex
 ### Observed strengths
@@ -88,6 +91,7 @@ The goal is to translate repo-level patterns into product and implementation dec
 3. Add policy presets for `read_only`, `scoped_edit`, `safe_exec`, and `full_exec`.
 4. Keep smoke tests local and deterministic by using temp workspaces.
 5. Keep documentation current with observed repo signals and implementation status.
+6. Emit structured bug reports from the CLI so support evidence is generated from the same local checks operators already run.
 
 ## Build Slices Adopted From Research
 1. **Approval queue:** implemented run storage with an in-memory default, opt-in file-backed persistence, approval-required runs, and approve/reject transitions.
@@ -107,3 +111,4 @@ The goal is to translate repo-level patterns into product and implementation dec
 15. **Connector reference attachments:** implemented `divinity.connector_reference.v1` records, CLI initial references, API attach/list routes, timeline/audit evidence, and dashboard rendering for ticket, docs, and CI context.
 16. **Scope observability rollups:** implemented org/project run counts, approval backlog, and budget utilization rollups in `divinity.observability.v1`, API output, and dashboard rendering.
 17. **Runner isolation profiles:** implemented workspace snapshot and Docker container-sandbox profile discovery, run workspace isolation metadata, deterministic Docker argv planning, and Docker-backed execution for constrained shell adapters.
+18. **Structured bug reports:** implemented `divinity.bug_report.v1` and CLI `bug` output with GitHub-ready Markdown, environment details, git context, and local setup diagnostics.
