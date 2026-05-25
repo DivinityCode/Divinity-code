@@ -41,6 +41,7 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: API run state can persist to a file-backed store when `DIVINITY_RUN_STORE_PATH` is configured.
    - Bootstrap status: CLI/API capability catalogs expose current policy presets, execution adapters, runner isolation profiles, connector adapters, and starter recipes.
    - Bootstrap status: API step execution records execution locks, rejects overlapping execution attempts, and exposes stale-lock recovery.
+   - Bootstrap status: API step execution supports bounded retries for failed allowed steps and records retry attempt metadata for operator review.
    - Bootstrap status: API step execution emits post-execution verifier records into run state, events, audit export, and the operator dashboard.
    - Bootstrap status: API runs accept heartbeat records for liveness reporting and stale-run detection.
    - Bootstrap status: CLI and API runs can attach ticket, docs, and CI connector references with timeline/audit evidence.
@@ -85,5 +86,6 @@ Build a best-in-class AI engineering platform that combines:
   - **Mitigation:** Strict phased scope and feature flag rollout.
 - **Risk:** Multi-agent unreliability.
   - **Mitigation:** Verifier gate + bounded retries + mandatory human checkpoints.
+  - Bootstrap status: verifier records and bounded execution retry metadata are present; retry exhaustion returns a deterministic operator checkpoint instead of looping.
 - **Risk:** Cost unpredictability.
   - **Mitigation:** Budget caps, preflight estimates, auto-pause policies.

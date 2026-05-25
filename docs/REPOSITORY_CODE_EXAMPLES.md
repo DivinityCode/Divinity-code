@@ -67,7 +67,8 @@ The code examples reinforce the current bootstrap direction and add these concre
 3. **Policy-hook bridge:** implemented data-only policy-pack pre-execution hooks that preflight and step gates evaluate into hook outcomes, warnings, blocks, and evidence before any adapter runs.
 4. **Durable goal model:** implemented task success criteria promotion into run `goals`, budget allocation, evidence refs, dashboard visibility, and constrained completion from passed verifier evidence.
 5. **Budget incidents:** implemented soft/hard budget incident records on CLI/API run payloads and API audit exports so financial risk state is auditable before richer dashboard controls.
-6. **Worktree isolation hardening:** keep run workspace cleanup/quarantine evidence visible as runner isolation moves from local snapshots toward parallel or remote execution.
+6. **Bounded retry evidence:** implemented attempt metadata and bounded API retries for failed allowed steps so verifier failures preserve evidence without creating unbounded autonomous loops.
+7. **Worktree isolation hardening:** keep run workspace cleanup/quarantine evidence visible as runner isolation moves from local snapshots toward parallel or remote execution.
 
 ## Local Mapping
 | External pattern | Current Divinity surface |
@@ -78,6 +79,6 @@ The code examples reinforce the current bootstrap direction and add these concre
 | Budget incidents and auditability | `packages/budget-incidents`, `packages/contracts/schemas/budget-incident.v1.json`, API audit export |
 | App/server schemas | `packages/contracts/schemas`, `packages/contracts/examples`, `tests/scripts_validate_contracts.mjs` |
 | Doctor/setup diagnostics | `apps/cli/src/index.mjs`, `tests/tests_cli_doctor.mjs` |
-| Runtime adapters and execution records | `packages/runtime-adapters`, `packages/execution`, `packages/runner-isolation`, API step execution routes |
+| Runtime adapters, execution records, and bounded retries | `packages/runtime-adapters`, `packages/execution`, `packages/runner-isolation`, API step execution routes |
 | Approval lifecycle | `packages/contracts/schemas/approval.v1.json`, `packages/contracts/schemas/approval-comment.v1.json`, `packages/contracts/schemas/approval-revision.v1.json`, `packages/approval-comments`, `packages/approval-revisions`, API approval routes, CLI approval commands, dashboard approval queue, comment panel, and revision panel |
 | Heartbeats and liveness | `packages/heartbeats`, `packages/observability`, dashboard liveness card |

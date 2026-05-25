@@ -61,6 +61,7 @@
 - API run state can be backed by a file snapshot when `DIVINITY_RUN_STORE_PATH` is set; the default remains in-memory for local deterministic demos.
 - API exposes `POST /runs/:id/steps` to run policy and budget gates before a step can enter pending execution.
 - API exposes `POST /runs/:id/steps/:step_id/execute` for policy-approved step execution through constrained adapters.
+- API step execution supports bounded retries for failed allowed steps and records attempt metadata on each execution record.
 - API step execution records per-run execution locks and rejects overlapping execution attempts with the active lock payload.
 - API exposes `POST /runs/:id/execution-locks/recover` to mark expired locks stale and preserve recovery evidence.
 - API exposes `POST /runs/:id/heartbeat` to append run liveness records, update `last_heartbeat_at`, and preserve heartbeat timeline/audit evidence.

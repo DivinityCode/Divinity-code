@@ -40,6 +40,7 @@ Goal completion requires a passed verification record from the same run; `POST /
 Task creation includes deterministic planner, executor, and verifier activity records with actor, reason, evidence references, and budget estimates.
 Task creation and step gates add budget incident records when estimated cost exceeds soft or hard caps; these records are included on run payloads and audit exports.
 Step execution requires a pending step whose pre-execution check is allowed; execution lock, execution, and verifier records are written back to the run, event timeline, and audit export.
+Failed allowed steps can be retried with `{ "retry": true }` until the bounded execution attempt limit is reached; retry execution records include `attempt`, `max_attempts`, and `retry_of`.
 Execution lock conflicts return `409` with the active lock payload so clients can avoid overlapping run execution.
 Execution lock recovery marks expired active locks as `stale`, clears `active_execution_lock`, and records recovery event/audit evidence.
 Run heartbeat posts append liveness records, update `last_heartbeat_at`, emit `heartbeat_recorded` events, and add `heartbeat_record` audit entries.
