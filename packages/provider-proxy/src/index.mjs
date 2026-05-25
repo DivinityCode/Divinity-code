@@ -275,8 +275,13 @@ const SAFE_TOOL_EXECUTION_METADATA_KEYS = new Set([
   'adapter_configured',
   'bytes_read',
   'content_redacted',
+  'files_scanned',
   'line_count',
-  'output_redacted'
+  'match_count',
+  'matching_files_count',
+  'output_redacted',
+  'paths_redacted',
+  'query_redacted'
 ]);
 
 function safeToolExecutionMetadata(metadata) {
