@@ -49,7 +49,7 @@
     },
     "adapter": {
       "type": "string",
-      "enum": ["read_file", "unsupported"]
+      "enum": ["read_file", "search_files", "unsupported"]
     },
     "actor": { "type": "string", "minLength": 1 },
     "reason": { "type": "string", "minLength": 1 },

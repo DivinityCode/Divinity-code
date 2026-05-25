@@ -178,6 +178,134 @@ function readFileExecution({
   }
 }
 
+function skippedSearchDirectory(name) {
+  return ['.git', 'node_modules', 'dist'].includes(name);
+}
+
+function filesUnderScope(scope) {
+  const stat = fs.statSync(scope);
+  if (stat.isFile()) return [scope];
+  if (!stat.isDirectory()) return [];
+
+  const pending = [scope];
+  const files = [];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      if (entry.isDirectory() && skippedSearchDirectory(entry.name)) continue;
+      const next = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        pending.push(next);
+      } else if (entry.isFile()) {
+        files.push(next);
+      }
+    }
+  }
+  return files.sort();
+}
+
+function searchFilesExecution({
+  run_id,
+  approval,
+  argument_values,
+  workspace_root,
+  argument_keys,
+  actor,
+  reason,
+  started_at,
+  completed_at,
+  index
+}) {
+  const root = path.resolve(cleanString(workspace_root) || process.cwd());
+  const scope = path.resolve(root, cleanString(argument_values.path));
+  if (!isPathInside(scope, root)) {
+    return executionEnvelope({
+      run_id,
+      approval,
+      argument_keys,
+      status: 'failed',
+      adapter: 'search_files',
+      actor,
+      reason,
+      started_at,
+      completed_at,
+      output_summary: 'search_files failed; results redacted',
+      output_metadata: {
+        query_redacted: true,
+        paths_redacted: true,
+        content_redacted: true
+      },
+      error: 'search_files scope must stay inside workspace',
+      index
+    });
+  }
+
+  try {
+    const query = cleanString(argument_values.query).toLowerCase();
+    const files = filesUnderScope(scope);
+    let matchCount = 0;
+    let matchingFilesCount = 0;
+    for (const file of files) {
+      const content = fs.readFileSync(file, 'utf8');
+      const normalized = content.toLowerCase();
+      let fileMatches = 0;
+      if (query) {
+        let position = normalized.indexOf(query);
+        while (position !== -1) {
+          fileMatches += 1;
+          position = normalized.indexOf(query, position + query.length);
+        }
+      }
+      if (fileMatches > 0) {
+        matchingFilesCount += 1;
+        matchCount += fileMatches;
+      }
+    }
+
+    return executionEnvelope({
+      run_id,
+      approval,
+      argument_keys,
+      status: 'completed',
+      adapter: 'search_files',
+      actor,
+      reason,
+      started_at,
+      completed_at,
+      output_summary: 'search_files completed; results redacted',
+      output_metadata: {
+        files_scanned: files.length,
+        match_count: matchCount,
+        matching_files_count: matchingFilesCount,
+        query_redacted: true,
+        paths_redacted: true,
+        content_redacted: true
+      },
+      index
+    });
+  } catch (error) {
+    return executionEnvelope({
+      run_id,
+      approval,
+      argument_keys,
+      status: 'failed',
+      adapter: 'search_files',
+      actor,
+      reason,
+      started_at,
+      completed_at,
+      output_summary: 'search_files failed; results redacted',
+      output_metadata: {
+        query_redacted: true,
+        paths_redacted: true,
+        content_redacted: true
+      },
+      error: error?.code ? `search_files failed with ${error.code}` : 'search_files failed',
+      index
+    });
+  }
+}
+
 function unsupportedExecution({
   run_id,
   approval,
@@ -250,6 +378,14 @@ export function createProviderToolExecution(options = {}) {
 
   if (approval.name === 'read_file') {
     return readFileExecution({
+      ...common,
+      argument_values,
+      workspace_root
+    });
+  }
+
+  if (approval.name === 'search_files') {
+    return searchFilesExecution({
       ...common,
       argument_values,
       workspace_root
