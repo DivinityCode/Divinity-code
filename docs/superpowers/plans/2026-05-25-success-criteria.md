@@ -331,7 +331,7 @@ test -z "$(find . -maxdepth 1 -type f \( -name 'tests_*.mjs' -o -name 'scripts_*
 
 Expected: no conflict markers, no whitespace errors, no root test/script entrypoints.
 
-- [ ] **Step 5: Commit and open draft PR**
+- [x] **Step 5: Commit and open draft PR**
 
 Run:
 
