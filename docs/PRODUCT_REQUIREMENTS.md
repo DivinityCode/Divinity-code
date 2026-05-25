@@ -49,7 +49,7 @@ This baseline defines who Divinity Code is for, what work it must help them comp
 - **Trust-first execution:** Risk, budget, budget incident, policy, policy-hook, approval, evidence, and audit state must be visible before side effects.
 - **Goal evidence:** Success criteria should become durable run goals before completion logic or dashboard mutation controls depend on them.
 - **Deterministic verification:** Local validation and smoke paths must run without polluting the repository root.
-- **Operational dashboard:** Operator Mode must manage run status, goals, approval decisions, evidence, liveness, artifacts, and audit metadata.
+- **Operational dashboard:** Operator Mode must manage run status, goals, approval decisions, approval comments, evidence, liveness, artifacts, and audit metadata.
 - **Extensible runtime:** Runtime adapters, execution adapters, connector references, runner isolation profiles, recipes, and policy packs must be discoverable rather than hard-coded by clients.
 
 ## Non-Goals
