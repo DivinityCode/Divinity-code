@@ -42,13 +42,13 @@
 - CLI `init` supports default, flag-driven, and prompt-driven project config creation for policy preset, soft/hard budget caps, and org/project scope.
 - CLI `doctor` reports Node, optional npm, optional pnpm/Corepack fallback, aggregate package-manager readiness, optional Docker runtime readiness for container-sandbox execution, installed dependencies, AJV validator dependencies, git, package manifest, and API server source readiness for local setup diagnostics.
 - CLI `bug` emits `divinity.bug_report.v1` with a GitHub-ready Markdown body, environment details, git status, and local doctor diagnostics for in-workflow issue reporting.
-- CLI `capabilities` reports supported policy presets, execution adapters, runner isolation profiles, connector adapters, and starter recipes for extension discovery.
+- CLI `capabilities` reports supported policy presets, runtime adapters, execution adapters, runner isolation profiles, connector adapters, and starter recipes for extension discovery.
 - IDE extension scaffold contributes task run, dashboard launch, and doctor commands that delegate to the repo-local CLI.
 - API exposes `POST /preflight`; `POST /tasks` records preflight metadata and moves high-risk allowed work to `awaiting_approval`.
 - API `POST /tasks` preserves submitted task success criteria through run storage and retrieval.
 - API task creation normalizes missing org/project scope to `default-org/default-project`; configured API keys protect control-plane routes when `DIVINITY_API_KEY` or `DIVINITY_API_KEYS` is set.
 - API exposes `GET /runs`, `GET /approvals`, and `POST /runs/:id/approval` for dashboard loading and approve/reject transitions.
-- API exposes `GET /capabilities` for policy, execution adapter, runner isolation profile, connector adapter, and starter recipe discovery.
+- API exposes `GET /capabilities` for policy, runtime adapter, execution adapter, runner isolation profile, connector adapter, and starter recipe discovery.
 - API exposes `GET /runs/:id/connectors` and `POST /runs/:id/connectors` for run-level ticket/docs/CI context attachments.
 - API run state can be backed by a file snapshot when `DIVINITY_RUN_STORE_PATH` is set; the default remains in-memory for local deterministic demos.
 - API exposes `POST /runs/:id/steps` to run policy and budget gates before a step can enter pending execution.

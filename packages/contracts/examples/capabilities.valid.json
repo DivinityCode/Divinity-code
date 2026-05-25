@@ -16,6 +16,17 @@
       "shell_interpolation": false
     }
   ],
+  "runtime_adapters": [
+    {
+      "adapter": "divinity_local",
+      "kind": "local",
+      "description": "Use Divinity Code local CLI/API surfaces as the built-in runtime.",
+      "command": "divinity",
+      "capabilities": ["json_output", "preflight", "artifacts", "verification"],
+      "requires_auth": false,
+      "default_isolation_profile": "workspace_snapshot"
+    }
+  ],
   "runner_isolation_profiles": [
     {
       "profile_id": "workspace_snapshot",

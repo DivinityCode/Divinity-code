@@ -8,7 +8,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 - **Run centered:** operational state is anchored to a run so approvals, events, artifacts, executions, verification, audit, and observability can be correlated.
 - **Evidence carrying:** policy decisions, execution results, and summaries carry evidence references instead of relying on prose alone.
 - **Governance visible:** policy, budget, approval, audit, and liveness state are first-class data, not hidden runtime behavior.
-- **Extensible by catalog:** clients discover policy presets, execution adapters, runner isolation profiles, connector adapters, and recipes through capabilities.
+- **Extensible by catalog:** clients discover policy presets, runtime adapters, execution adapters, runner isolation profiles, connector adapters, and recipes through capabilities.
 
 ## Core Objects
 | Object | Contract | Owner package or surface | Role |
@@ -29,7 +29,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 | AgentActivityRecord | `packages/contracts/schemas/agent-activity.v1.json` | Agent activity package | Makes planner, executor, and verifier activity visible before or around execution. |
 | AuditExport | `packages/contracts/schemas/audit.v1.json` | Audit package and API export | Provides immutable audit records and timeframe export shape. |
 | ObservabilitySummary | `packages/contracts/schemas/observability.v1.json` | Observability package and dashboard | Aggregates run health, liveness, budget, risk, failure taxonomy, and org/project rollups. |
-| CapabilitiesCatalog | `packages/contracts/schemas/capabilities.v1.json` | Capabilities package, CLI/API discovery | Lists supported policies, adapters, isolation profiles, connectors, and recipes. |
+| CapabilitiesCatalog | `packages/contracts/schemas/capabilities.v1.json` | Capabilities package, CLI/API discovery | Lists supported policies, runtime adapters, execution adapters, isolation profiles, connectors, and recipes. |
 | BugReport | `packages/contracts/schemas/bug-report.v1.json` | CLI bug command | Captures local diagnostic evidence and GitHub-ready issue Markdown. |
 
 ## Relationships

@@ -3,7 +3,7 @@
 Divinity Code is an AI engineering platform designed to combine best-in-class coding execution, multi-agent orchestration, and a user-friendly trust-first UX.
 
 ## Current Status
-Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows with explicit task success criteria, policy and budget gates, approval transitions, execution locks, execution adapter and verifier records, observable planner/executor/verifier activity, run heartbeats, isolated local and Git URL execution workspaces with cleanup, runner isolation profiles with Docker-backed constrained command execution, patch/log/summary/PR-summary artifacts, structured bug reports, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, team policy packs, constrained package-script execution, discoverable connector adapters, run-level connector references, org/project observability rollups, a shared capabilities catalog, and opt-in file-backed API run storage.
+Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows with explicit task success criteria, policy and budget gates, approval transitions, execution locks, execution adapter and verifier records, observable planner/executor/verifier activity, run heartbeats, isolated local and Git URL execution workspaces with cleanup, runner isolation profiles with Docker-backed constrained command execution, patch/log/summary/PR-summary artifacts, structured bug reports, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, team policy packs, constrained package-script execution, discoverable runtime and connector adapters, run-level connector references, org/project observability rollups, a shared capabilities catalog, and opt-in file-backed API run storage.
 
 ## Documents
 - [Product Plan](docs/PRODUCT_PLAN.md)
@@ -30,7 +30,8 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - `apps/dashboard` - Operator Mode dashboard
 - `packages/contracts` - versioned task/run/policy/capability/verification/agent-activity/execution-lock/heartbeat/connector-reference/bug-report schemas, including task success criteria
 - `packages/agent-activity` - observable planner/executor/verifier activity records
-- `packages/capabilities` - shared policy, adapter, and recipe capability catalog
+- `packages/capabilities` - shared policy, runtime adapter, execution adapter, connector adapter, and recipe capability catalog
+- `packages/runtime-adapters` - agent runtime adapter metadata for Divinity, local CLI runtimes, and generic processes
 - `packages/connectors` - ticket, docs, and CI connector adapter metadata and run reference helpers
 - `packages/policy-engine` - trust and budget gate evaluation
 - `packages/execution` - policy-approved step execution adapters
