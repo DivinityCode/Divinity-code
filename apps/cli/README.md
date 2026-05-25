@@ -11,6 +11,7 @@ Commands: `init`, `run`, `status`, `approvals`, `approve`, `reject`, `approval-c
 - `run` emits a task payload, generated `run_id`, lifecycle status, preflight decision metadata, durable goal records, budget incident records, connector references, agent activity records, artifact metadata, and a structured event timeline; hard budget cap excess returns `paused`.
 - `run --connector ticket_reference:ticket:DIV-17:https://example.test/tickets/DIV-17 "Read the repository README"` attaches initial ticket/docs/CI context to the task and resolved run output.
 - `run --criteria "All tests pass" --success-criteria "Docs updated" "Implement policy trace"` attaches explicit success criteria to the task payload and creates matching run `goals` records with evidence and budget allocation.
+- `status <run_id> --api http://127.0.0.1:3000` fetches a stored API run and returns its lifecycle status plus the run payload; without `--api`, `status` keeps the local queued placeholder for scripts.
 - `approvals --api http://127.0.0.1:3000` lists approval-required runs from the control-plane API.
 - `approve <run_id> --api http://127.0.0.1:3000 --actor operator@example.com --reason "reviewed"` approves an API-backed run and returns the updated run payload.
 - `reject <run_id> --api http://127.0.0.1:3000 --actor operator@example.com --reason "unsafe"` rejects an API-backed run; without `--api`, `approve` and `reject` emit local structured decision payloads for scripts.

@@ -30,7 +30,7 @@ This document defines how Builder Mode and Operator Mode expose the shared Task/
 | --- | --- | --- |
 | `init` | Config path, policy, budget, scope, starter recipes | Confirm local setup and onboarding defaults |
 | `run` | Task payload, preflight, status, policy pack, orchestration, activity, memory, artifacts, events | Decide whether the run is safe to continue or needs approval |
-| `status` | Current lifecycle status placeholder | Check queued state in the bootstrap CLI |
+| `status` | Local queued placeholder or API-backed run status lookup | Check lifecycle state for a stored run |
 | `approvals` / `approve` / `reject` / `approval-comment` / `approval-comments` | API-backed approval queue, local structured approval decisions, and approval review comments | Exercise approval command surface, operator transitions, and review context |
 | `capabilities` | Policy presets, adapters, isolation profiles, connectors, recipes | Discover supported extension points |
 | `recipes` | Starter recipe summaries | Select first-run workflows |
