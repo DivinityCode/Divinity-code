@@ -12,7 +12,7 @@ Provider route planning and guarded chat execution for LLM proxy flows.
 - Fails closed for unsupported future transports until dedicated handlers are implemented.
 - Returns response metadata without echoing prompts, request bodies, credential values, raw tool arguments, or Anthropic thinking/signature content.
 - Blocks credentialed provider `base_url` overrides during execution so operator-owned API keys are not forwarded to caller-supplied endpoints.
-- Provides `createProviderLimitLedger()` and `createConfiguredProviderLimitLedger()` for storing provider retry windows without prompts, request bodies, credentials, or provider response bodies.
+- Provides `createProviderLimitLedger()` / `createConfiguredProviderLimitLedger()` for provider retry windows and `createProviderUsageLedger()` / `createConfiguredProviderUsageLedger()` for daily request/token usage totals without prompts, request bodies, credentials, or provider response bodies.
 
 ## Policy
 
@@ -40,6 +40,23 @@ Rotation is for authorized failover across operator-configured credentials. It i
 
 `createConfiguredProviderLimitLedger(process.env)` uses `DIVINITY_PROVIDER_LIMIT_LEDGER_PATH` for optional file-backed persistence. The API uses an in-process ledger by default and can persist it when the env var is set. The CLI only uses the file-backed ledger when the env var is set, so ordinary commands do not create repo-root state files.
 
+## Provider Usage Ledger
+
+`createProviderUsageLedger()` stores daily provider/model request and token totals as `format: "divinity.provider_usage_ledger.v1"`. Each day entry contains only:
+
+- provider id
+- model id
+- UTC date
+- request count
+- input token count
+- output token count
+- total token count
+- last recorded timestamp
+
+`executeProviderProxyChat()` and `executeProviderProxyChatStream()` record completed and `requires_action` calls when a usage ledger is supplied and return a redacted `usage_ledger_record`. `usage_budget` can enforce `max_daily_requests`, `max_daily_input_tokens`, `max_daily_output_tokens`, and `max_daily_total_tokens` before an upstream request is sent.
+
+`createConfiguredProviderUsageLedger(process.env)` uses `DIVINITY_PROVIDER_USAGE_LEDGER_PATH` for optional file-backed persistence. Without that env var, CLI/API calls do not create repo-root state files. Usage budgets require a ledger because they rely on durable aggregate state.
+
 ## Chat Execution
 
 `executeProviderProxyChat()` supports the non-streaming proxy execution paths:
@@ -50,6 +67,7 @@ Rotation is for authorized failover across operator-configured credentials. It i
 - Selected `toolset_resolution.tool_schemas` are projected into provider-specific `tools` request fields: Chat Completions uses nested function tools, Anthropic Messages uses `input_schema`, and OpenAI Responses uses top-level function tools with `parameters`.
 - OpenAI-compatible Chat Completions does not use deprecated `max_tokens`; OpenAI Responses uses `max_output_tokens`; Anthropic Messages uses its current `max_tokens` field.
 - A live upstream `429` returns `status: "limited"`, records a provider retry window when a ledger is supplied, and does not automatically retry through another provider in the same request.
+- Provider usage budgets block before upstream calls when daily aggregate request or token caps would be exceeded.
 - Provider-returned tool calls are detected but not executed automatically by the proxy. Chat Completions `message.tool_calls`, Anthropic Messages `tool_use` content blocks, and OpenAI Responses `function_call` output items return `status: "requires_action"`, redacted `tool_call_requests`, and a required `tool_call_review` operator control. Approved execution is handled downstream by provider tool-call approval and execution records.
 - Prompt and request-body data are sent only to the selected provider endpoint and are not included in the returned result metadata.
 - Local custom endpoints can be used without a credential for development and tests. Credentialed catalog providers execute only against their trusted catalog endpoint in this slice.

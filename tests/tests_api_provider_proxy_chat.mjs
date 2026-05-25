@@ -96,11 +96,13 @@ const secretPrompt = 'secret prompt for api proxy';
 const toolSecret = 'secret tool argument for api proxy';
 const tmpRoot = mkdtempSync(path.join(tmpdir(), 'divinity-api-provider-proxy-chat-'));
 const repoFixture = path.join(tmpRoot, 'repo');
+const usageLedgerPath = path.join(tmpRoot, 'provider-usage-ledger.json');
 mkdirSync(repoFixture);
 writeFileSync(path.join(repoFixture, 'README.md'), '# Provider Proxy API Fixture\n');
 
 process.env.DIVINITY_API_AUTOSTART = '0';
 process.env.DIVINITY_WORKSPACE_ROOT = path.join(tmpRoot, 'workspaces');
+process.env.DIVINITY_PROVIDER_USAGE_LEDGER_PATH = usageLedgerPath;
 process.env.OPENROUTER_API_KEY = apiSecret;
 process.env.CEREBRAS_API_KEY = 'cerebras-secret';
 const { server } = await import('../apps/api/src/server.mjs');
@@ -238,9 +240,33 @@ try {
   assert.equal(body.result.format, 'divinity.provider_proxy_chat_result.v1');
   assert.equal(body.result.status, 'completed');
   assert.equal(body.result.message.content, 'api mock response');
+  assert.equal(body.result.usage_ledger_record.provider_id, 'custom_openai_compatible');
+  assert.equal(body.result.usage_ledger_record.model, 'mock-model');
+  assert.equal(body.result.usage_ledger_record.request_count, 1);
+  assert.equal(body.result.usage_ledger_record.input_tokens, 4);
+  assert.equal(body.result.usage_ledger_record.output_tokens, 3);
+  assert.equal(body.result.usage_ledger_record.total_tokens, 7);
   assert.equal(mock.requests.length, 1);
   assert.equal(JSON.stringify(body).includes(secretPrompt), false);
   assert.equal(JSON.stringify(body).includes(apiSecret), false);
+
+  const { response: usageBlockedResponse, body: usageBlockedBody } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
+    method: 'POST',
+    body: JSON.stringify({
+      candidates: [{ provider_id: 'custom_openai_compatible', base_url: mock.base_url }],
+      model: 'mock-model',
+      messages: [{ role: 'user', content: secretPrompt }],
+      max_completion_tokens: 32,
+      usage_budget: { max_daily_requests: 1 }
+    })
+  });
+
+  assert.equal(usageBlockedResponse.status, 400);
+  assert.equal(usageBlockedBody.result.status, 'blocked');
+  assert.match(usageBlockedBody.result.error, /daily request budget/);
+  assert.equal(mock.requests.length, 1);
+  assert.equal(JSON.stringify(usageBlockedBody).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(usageBlockedBody).includes(apiSecret), false);
 
   const { response: toolCallResponse, body: toolCallBody } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
     method: 'POST',

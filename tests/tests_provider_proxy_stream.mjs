@@ -3,6 +3,7 @@ import http from 'http';
 
 import {
   createProviderLimitLedger,
+  createProviderUsageLedger,
   executeProviderProxyChatStream
 } from '../packages/provider-proxy/src/index.mjs';
 
@@ -69,7 +70,12 @@ const chatStreamServer = await createMockStreamServer(async ({ req, res, body })
         id: 'chatcmpl_stream',
         object: 'chat.completion.chunk',
         model: 'mock-model',
-        choices: [{ index: 0, delta: { content: 'stream' }, finish_reason: 'stop' }]
+        choices: [{ index: 0, delta: { content: 'stream' }, finish_reason: 'stop' }],
+        usage: {
+          prompt_tokens: 5,
+          completion_tokens: 4,
+          total_tokens: 9
+        }
       }
     },
     { data: '[DONE]' }
@@ -78,6 +84,9 @@ const chatStreamServer = await createMockStreamServer(async ({ req, res, body })
 
 try {
   const observedEvents = [];
+  const providerUsageLedger = createProviderUsageLedger({
+    now: () => new Date('2026-05-25T12:00:00.000Z')
+  });
   const result = await executeProviderProxyChatStream({
     candidates: [{ provider_id: 'custom_openai_compatible', base_url: chatStreamServer.base_url }],
     env: { CUSTOM_LLM_API_KEY: apiSecret },
@@ -85,6 +94,7 @@ try {
     messages: [{ role: 'user', content: secretPrompt }],
     enabled_toolsets: ['web'],
     max_completion_tokens: 16,
+    usage_ledger: providerUsageLedger,
     on_event: event => observedEvents.push(event)
   });
 
@@ -96,6 +106,12 @@ try {
   assert.equal(result.stream_events.filter(event => event.type === 'text_delta').length, 2);
   assert.equal(observedEvents.filter(event => event.type === 'text_delta').length, 2);
   assert.equal(result.event_counts.text_delta, 2);
+  assert.equal(result.usage_ledger_record.provider_id, 'custom_openai_compatible');
+  assert.equal(result.usage_ledger_record.model, 'mock-model');
+  assert.equal(result.usage_ledger_record.request_count, 1);
+  assert.equal(result.usage_ledger_record.input_tokens, 5);
+  assert.equal(result.usage_ledger_record.output_tokens, 4);
+  assert.equal(result.usage_ledger_record.total_tokens, 9);
   assert.equal(JSON.stringify(result).includes(secretPrompt), false);
   assert.equal(JSON.stringify(result).includes(apiSecret), false);
 } finally {

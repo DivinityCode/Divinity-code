@@ -8,6 +8,7 @@ import { promisify } from 'util';
 
 const tmpRoot = mkdtempSync(path.join(tmpdir(), 'divinity-cli-provider-proxy-chat-'));
 const repoFixture = path.join(tmpRoot, 'repo');
+const usageLedgerPath = path.join(tmpRoot, 'provider-usage-ledger.json');
 mkdirSync(repoFixture);
 writeFileSync(path.join(repoFixture, 'README.md'), '# Provider Proxy CLI Fixture\n');
 
@@ -210,7 +211,8 @@ try {
     '--message', secretPrompt,
     '--max-completion-tokens', '32'
   ], {
-    CUSTOM_LLM_API_KEY: apiSecret
+    CUSTOM_LLM_API_KEY: apiSecret,
+    DIVINITY_PROVIDER_USAGE_LEDGER_PATH: usageLedgerPath
   });
 
   assert.equal(completed.ok, true);
@@ -218,9 +220,35 @@ try {
   assert.equal(completed.result.format, 'divinity.provider_proxy_chat_result.v1');
   assert.equal(completed.result.status, 'completed');
   assert.equal(completed.result.message.content, 'cli mock response');
+  assert.equal(completed.result.usage_ledger_record.provider_id, 'custom_openai_compatible');
+  assert.equal(completed.result.usage_ledger_record.model, 'mock-model');
+  assert.equal(completed.result.usage_ledger_record.request_count, 1);
+  assert.equal(completed.result.usage_ledger_record.input_tokens, 4);
+  assert.equal(completed.result.usage_ledger_record.output_tokens, 3);
+  assert.equal(completed.result.usage_ledger_record.total_tokens, 7);
   assert.equal(server.requests.length, 1);
   assert.equal(JSON.stringify(completed).includes(secretPrompt), false);
   assert.equal(JSON.stringify(completed).includes(apiSecret), false);
+
+  const usageBlocked = await runCli([
+    'provider-chat',
+    '--provider', 'custom_openai_compatible',
+    '--base-url', server.base_url,
+    '--model', 'mock-model',
+    '--message', secretPrompt,
+    '--max-completion-tokens', '32',
+    '--max-daily-requests', '1'
+  ], {
+    CUSTOM_LLM_API_KEY: apiSecret,
+    DIVINITY_PROVIDER_USAGE_LEDGER_PATH: usageLedgerPath
+  });
+
+  assert.equal(usageBlocked.ok, false);
+  assert.equal(usageBlocked.result.status, 'blocked');
+  assert.match(usageBlocked.result.error, /daily request budget/);
+  assert.equal(server.requests.length, 1);
+  assert.equal(JSON.stringify(usageBlocked).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(usageBlocked).includes(apiSecret), false);
 
   const toolCall = await runCli([
     'provider-chat',

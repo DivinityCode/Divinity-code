@@ -47,11 +47,12 @@ Excluded provider sources:
 - Provider chat execution enforces selected toolset compatibility before upstream calls; chat-only free-tier candidates cannot be used for toolsets that require provider `tool_calls` support.
 - Credentialed provider endpoint overrides fail closed during execution so operator-owned secrets are never forwarded to caller-supplied URLs.
 - Provider retry windows can now be tracked in a provider limit ledger. API chat execution uses an in-process ledger by default and optional `DIVINITY_PROVIDER_LIMIT_LEDGER_PATH` persistence; CLI route/chat commands use that file-backed ledger only when configured.
-- A future live proxy should extend this with fuller request/token budget ledgers, hosted secret integration, and additional approved tool adapters while preserving fail-closed behavior.
+- Provider request/token usage can now be tracked in a provider usage ledger when `DIVINITY_PROVIDER_USAGE_LEDGER_PATH` is configured. The ledger stores daily provider/model request and token totals only; `usage_budget` can enforce daily request/input/output/total token caps before upstream calls.
+- A future live proxy should extend this with hosted secret integration and additional approved tool adapters while preserving fail-closed behavior.
 - Rotation is acceptable for reliability and cost policy across operator-owned credentials; it is not acceptable for evading limits.
 
 ## Next Safe Slice
 Extend controlled execution toward production operations:
-- persist fuller per-provider request and token budgets in a managed store;
 - integrate an approved secret store while keeping environment variables as the local development path;
+- add more approved tool adapters and model-result continuation after operator-reviewed execution records;
 - keep returning clear `429` or policy errors when limits are reached instead of bypassing them.
