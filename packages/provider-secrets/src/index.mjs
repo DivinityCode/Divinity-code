@@ -8,6 +8,7 @@ export const PROVIDER_SECRET_STORE_FORMAT = 'divinity.provider_secret_store.v1';
 export const PROVIDER_SECRET_REFS_PATH_ENV = 'DIVINITY_PROVIDER_SECRET_REFS_PATH';
 export const PROVIDER_SECRET_STORE_PATH_ENV = 'DIVINITY_PROVIDER_SECRET_STORE_PATH';
 export const PROVIDER_SECRET_STORE_KEY_ENV = 'DIVINITY_PROVIDER_SECRET_STORE_KEY';
+export const PROVIDER_SECRET_STORE_BACKEND_ENV = 'DIVINITY_PROVIDER_SECRET_STORE_BACKEND';
 
 const RAW_CREDENTIAL_FIELD_NAMES = new Set([
   'api_key',
@@ -54,6 +55,10 @@ function storePathFrom({ storePath = '', env = process.env } = {}) {
 
 function storeKeyFrom({ storeKey = '', env = process.env } = {}) {
   return cleanString(storeKey || env[PROVIDER_SECRET_STORE_KEY_ENV]);
+}
+
+function storeBackendFrom({ env = process.env, storeBackend = '' } = {}) {
+  return cleanString(storeBackend || env[PROVIDER_SECRET_STORE_BACKEND_ENV] || 'local_file');
 }
 
 function assertNoRawCredentialFields(value, path = 'provider secret refs manifest') {
@@ -291,12 +296,14 @@ function decryptSecret(record, key) {
   ]).toString('utf8');
 }
 
-function publicStoreRecord(record) {
+function publicStoreRecord(record, adapter) {
   return {
     format: 'divinity.provider_secret_store_record.v1',
     provider_id: record.provider_id,
     secret_ref: record.secret_ref,
     credential_env_var: record.credential_env_var,
+    store_backend_id: adapter.backend_id,
+    store_backend_kind: adapter.backend_kind,
     encrypted: true,
     algorithm: record.algorithm,
     updated_at: record.updated_at,
@@ -312,6 +319,105 @@ function writeSecretStore(storePath, store) {
   renameSync(tmpPath, storePath);
 }
 
+export function createLocalProviderSecretStoreAdapter({ env = process.env } = {}) {
+  const adapter = {
+    backend_id: 'local_file',
+    backend_kind: 'local_file',
+    storeConfigured() {
+      return Boolean(storePathFrom({ env }) && storeKeyFrom({ env }));
+    },
+    configuredSecretRefs() {
+      if (!adapter.storeConfigured()) return new Set();
+      return new Set(loadProviderSecretStore({ env }).secrets.map(secret => secret.secret_ref));
+    },
+    resolveSecret(secretRef) {
+      if (!adapter.storeConfigured()) return '';
+      const configuredStorePath = storePathFrom({ env });
+      const configuredStoreKey = storeKeyFrom({ env });
+      const store = loadProviderSecretStore({ env, storePath: configuredStorePath });
+      const record = store.secrets.find(secret => secret.secret_ref === secretRef);
+      if (!record) return '';
+      return decryptSecret(record, derivedStoreKey({ env, storeKey: configuredStoreKey }));
+    },
+    storeSecret({
+      provider,
+      secret_value,
+      actor,
+      reason,
+      updated_at
+    }) {
+      const configuredStorePath = storePathFrom({ env });
+      if (!configuredStorePath) throw new Error('provider secret store path is required');
+      const key = derivedStoreKey({ env });
+      const encrypted = encryptSecret(secret_value, key);
+      const record = {
+        ...provider,
+        ...encrypted,
+        updated_at,
+        updated_by: actor,
+        reason
+      };
+      const store = loadProviderSecretStore({ env, storePath: configuredStorePath });
+      const nextSecrets = store.secrets.filter(secret => secret.secret_ref !== provider.secret_ref);
+      nextSecrets.push(record);
+      nextSecrets.sort((left, right) => left.secret_ref.localeCompare(right.secret_ref));
+      writeSecretStore(configuredStorePath, {
+        format: PROVIDER_SECRET_STORE_FORMAT,
+        secrets: nextSecrets
+      });
+      return publicStoreRecord(record, adapter);
+    }
+  };
+  return adapter;
+}
+
+export function createHostedProviderSecretStoreAdapter({ backend_id = 'hosted_memory' } = {}) {
+  const secrets = new Map();
+  const backendId = cleanString(backend_id) || 'hosted_memory';
+
+  return {
+    backend_id: backendId,
+    backend_kind: 'hosted_operator',
+    storeConfigured() {
+      return true;
+    },
+    configuredSecretRefs() {
+      return new Set(secrets.keys());
+    },
+    resolveSecret(secretRef) {
+      return cleanString(secrets.get(secretRef));
+    },
+    storeSecret({
+      provider,
+      secret_value,
+      actor,
+      reason,
+      updated_at
+    }) {
+      secrets.set(provider.secret_ref, secret_value);
+      const record = {
+        ...provider,
+        algorithm: 'managed-by-hosted-store',
+        updated_at,
+        updated_by: actor,
+        reason
+      };
+      return publicStoreRecord(record, this);
+    }
+  };
+}
+
+export function createConfiguredProviderSecretStoreAdapter({ env = process.env } = {}) {
+  const backend = storeBackendFrom({ env });
+  if (backend === 'local_file') {
+    return createLocalProviderSecretStoreAdapter({ env });
+  }
+  if (backend === 'hosted_memory') {
+    return createHostedProviderSecretStoreAdapter({ backend_id: backend });
+  }
+  throw new Error(`unsupported provider secret store backend: ${backend}`);
+}
+
 export function storeProviderSecret({
   env = process.env,
   storePath = '',
@@ -322,11 +428,9 @@ export function storeProviderSecret({
   secret_value = '',
   actor = '',
   reason = '',
-  updated_at = new Date().toISOString()
+  updated_at = new Date().toISOString(),
+  secret_store_adapter = null
 } = {}) {
-  const configuredStorePath = storePathFrom({ storePath, env });
-  if (!configuredStorePath) throw new Error('provider secret store path is required');
-  const key = derivedStoreKey({ env, storeKey });
   const provider = providerEntryFromFields({ provider_id, secret_ref, credential_env_var });
   const secretValue = cleanString(secret_value);
   const updatedBy = cleanString(actor);
@@ -336,33 +440,32 @@ export function storeProviderSecret({
   if (!cleanReason) throw new Error('reason is required');
   assertNoDangerousText(cleanReason, `provider secret store reason for ${provider.provider_id}`);
 
-  const store = loadProviderSecretStore({ env, storePath: configuredStorePath });
-  const encrypted = encryptSecret(secretValue, key);
-  const record = {
-    ...provider,
-    ...encrypted,
-    updated_at,
-    updated_by: updatedBy,
-    reason: cleanReason
-  };
-  const nextSecrets = store.secrets.filter(secret => secret.secret_ref !== provider.secret_ref);
-  nextSecrets.push(record);
-  nextSecrets.sort((left, right) => left.secret_ref.localeCompare(right.secret_ref));
-  writeSecretStore(configuredStorePath, {
-    format: PROVIDER_SECRET_STORE_FORMAT,
-    secrets: nextSecrets
+  const adapter = secret_store_adapter || createConfiguredProviderSecretStoreAdapter({
+    env: {
+      ...env,
+      ...(storePath ? { [PROVIDER_SECRET_STORE_PATH_ENV]: storePath } : {}),
+      ...(storeKey ? { [PROVIDER_SECRET_STORE_KEY_ENV]: storeKey } : {})
+    }
   });
-  return publicStoreRecord(record);
+  return adapter.storeSecret({
+    provider,
+    secret_value: secretValue,
+    actor: updatedBy,
+    reason: cleanReason,
+    updated_at,
+  });
 }
 
-function secretStoreRefs({ env = process.env } = {}) {
-  const configuredStorePath = storePathFrom({ env });
-  const configuredStoreKey = storeKeyFrom({ env });
-  if (!configuredStorePath || !configuredStoreKey) return new Set();
-  return new Set(loadProviderSecretStore({ env, storePath: configuredStorePath }).secrets.map(secret => secret.secret_ref));
+function secretStoreRefs({ env = process.env, secret_store_adapter = null } = {}) {
+  const adapter = secret_store_adapter || createConfiguredProviderSecretStoreAdapter({ env });
+  if (!adapter.storeConfigured()) return new Set();
+  return adapter.configuredSecretRefs();
 }
 
-function storedCredentialFor(secretRef, { env = process.env } = {}) {
+function storedCredentialFor(secretRef, { env = process.env, secret_store_adapter = null } = {}) {
+  if (secret_store_adapter) {
+    return secret_store_adapter.resolveSecret(secretRef);
+  }
   const configuredStorePath = storePathFrom({ env });
   const configuredStoreKey = storeKeyFrom({ env });
   if (!configuredStorePath || !configuredStoreKey) return '';
@@ -372,11 +475,17 @@ function storedCredentialFor(secretRef, { env = process.env } = {}) {
   return decryptSecret(record, derivedStoreKey({ env, storeKey: configuredStoreKey }));
 }
 
-export function providerSecretReadiness({ env = process.env, path = '', secretRefsPath = '' } = {}) {
+export function providerSecretReadiness({
+  env = process.env,
+  path = '',
+  secretRefsPath = '',
+  secret_store_adapter = null
+} = {}) {
   const configuredPath = pathFrom({ path: secretRefsPath || path, env });
   const manifest = loadProviderSecretRefs({ path: configuredPath, env });
-  const storeConfigured = Boolean(storePathFrom({ env }) && storeKeyFrom({ env }));
-  const storeRefs = storeConfigured ? secretStoreRefs({ env }) : new Set();
+  const adapter = secret_store_adapter || createConfiguredProviderSecretStoreAdapter({ env });
+  const storeConfigured = adapter.storeConfigured();
+  const storeRefs = storeConfigured ? secretStoreRefs({ env, secret_store_adapter: adapter }) : new Set();
   const providers = manifest.providers.map(provider => ({
     provider_id: provider.provider_id,
     secret_ref: provider.secret_ref,
@@ -393,14 +502,22 @@ export function providerSecretReadiness({ env = process.env, path = '', secretRe
     format: PROVIDER_SECRET_READINESS_FORMAT,
     manifest_configured: Boolean(configuredPath),
     store_configured: storeConfigured,
+    store_backend_id: adapter.backend_id,
+    store_backend_kind: adapter.backend_kind,
     any_configured: providers.some(provider => provider.credential_configured),
     providers
   };
 }
 
-export function createProviderCredentialResolver({ env = process.env, path = '', secretRefsPath = '' } = {}) {
+export function createProviderCredentialResolver({
+  env = process.env,
+  path = '',
+  secretRefsPath = '',
+  secret_store_adapter = null
+} = {}) {
   const manifest = loadProviderSecretRefs({ path: secretRefsPath || path, env });
   const providersById = new Map(manifest.providers.map(provider => [provider.provider_id, provider]));
+  const adapter = secret_store_adapter || createConfiguredProviderSecretStoreAdapter({ env });
 
   function entryFor(runtime) {
     return providersById.get(cleanString(runtime?.provider_id)) || null;
@@ -408,7 +525,7 @@ export function createProviderCredentialResolver({ env = process.env, path = '',
 
   function credentialFor(entry) {
     if (!entry) return '';
-    return storedCredentialFor(entry.secret_ref, { env }) || cleanString(env[entry.credential_env_var]);
+    return storedCredentialFor(entry.secret_ref, { env, secret_store_adapter: adapter }) || cleanString(env[entry.credential_env_var]);
   }
 
   return {

@@ -31,6 +31,7 @@ import {
   planProviderProxyRoute
 } from '../../../packages/provider-proxy/src/index.mjs';
 import {
+  createConfiguredProviderSecretStoreAdapter,
   createProviderCredentialResolver,
   providerSecretReadiness,
   storeProviderSecret
@@ -47,7 +48,11 @@ const runStore = createConfiguredRunStore();
 const { runs, artifacts, auditRecords } = runStore;
 const providerLimitLedger = createConfiguredProviderLimitLedger(process.env, { memoryFallback: true });
 const providerUsageLedger = createConfiguredProviderUsageLedger(process.env);
-const providerCredentialResolver = createProviderCredentialResolver({ env: process.env });
+const providerSecretStoreAdapter = createConfiguredProviderSecretStoreAdapter({ env: process.env });
+const providerCredentialResolver = createProviderCredentialResolver({
+  env: process.env,
+  secret_store_adapter: providerSecretStoreAdapter
+});
 const runSubscribers = new Map();
 const DEFAULT_SCOPE = { org_id: 'default-org', project_id: 'default-project' };
 const CONTROL_PLANE_AUDIT_RUN_ID = 'control_plane';
@@ -195,6 +200,8 @@ function redactedProviderSecretReadinessAuditPayload(readiness) {
     format: 'divinity.provider_secret_readiness_audit.v1',
     manifest_configured: readiness.manifest_configured,
     any_configured: readiness.any_configured,
+    store_backend_id: readiness.store_backend_id,
+    store_backend_kind: readiness.store_backend_kind,
     providers: readiness.providers.map(provider => ({
       provider_id: provider.provider_id,
       secret_ref: provider.secret_ref,
@@ -221,6 +228,8 @@ function recordProviderSecretWriteAudit(secret) {
       provider_id: secret.provider_id,
       secret_ref: secret.secret_ref,
       credential_env_var: secret.credential_env_var,
+      store_backend_id: secret.store_backend_id,
+      store_backend_kind: secret.store_backend_kind,
       encrypted: secret.encrypted,
       algorithm: secret.algorithm,
       updated_at: secret.updated_at,
@@ -456,7 +465,10 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'GET' && req.url === '/provider-secrets/readiness') {
     try {
-      const readiness = providerSecretReadiness({ env: process.env });
+      const readiness = providerSecretReadiness({
+        env: process.env,
+        secret_store_adapter: providerSecretStoreAdapter
+      });
       recordProviderSecretReadinessAudit(readiness);
       sendJson(res, 200, { readiness });
     } catch (error) {
@@ -475,7 +487,8 @@ const server = http.createServer((req, res) => {
           credential_env_var: body.credential_env_var,
           secret_value: body.secret_value,
           actor: body.actor,
-          reason: body.reason
+          reason: body.reason,
+          secret_store_adapter: providerSecretStoreAdapter
         });
         recordProviderSecretWriteAudit(secret);
         sendJson(res, 201, { secret });

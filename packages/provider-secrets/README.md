@@ -6,6 +6,7 @@ Provider secret-reference manifest loader and credential resolver factory for ho
 - Reads an optional `DIVINITY_PROVIDER_SECRET_REFS_PATH` manifest.
 - Stores provider ids, redacted secret reference ids, and environment variable names only.
 - Resolves real credential values from the encrypted local store first, then from the runtime environment when a matching provider is selected.
+- Resolves real credential values from an injected hosted operator secret-store adapter before falling back to environment variables.
 - Writes encrypted local store records when `DIVINITY_PROVIDER_SECRET_STORE_PATH` and `DIVINITY_PROVIDER_SECRET_STORE_KEY` are configured.
 - Returns `configured_secret_refs` only when the referenced store record or environment variable is configured.
 - Builds `divinity.provider_secret_readiness.v1` metadata for operator checks without exposing secret values.
@@ -33,6 +34,14 @@ The manifest is not a secret store. It must not contain credential values, beare
 `DIVINITY_PROVIDER_SECRET_STORE_PATH` and `DIVINITY_PROVIDER_SECRET_STORE_KEY` enable a local encrypted store bootstrap for API-hosted evaluation. Records are encrypted with AES-256-GCM using a key derived from the configured store key. Public store responses expose only provider id, secret ref, credential env var name, algorithm, timestamp, actor, and reason. The store file must not contain plaintext provider credentials.
 
 The API write path requires an `actor` and `reason` so operator-owned credential changes have identity-aware metadata before a managed hosted secret store exists.
+
+## Store Adapters
+
+Secret storage uses an adapter boundary. The default adapter is `local_file`, backed by `DIVINITY_PROVIDER_SECRET_STORE_PATH` and `DIVINITY_PROVIDER_SECRET_STORE_KEY`. Hosted deployments can inject a hosted operator adapter into `storeProviderSecret()`, `providerSecretReadiness()`, and `createProviderCredentialResolver()` while preserving the same redacted response and audit shapes.
+
+`DIVINITY_PROVIDER_SECRET_STORE_BACKEND=hosted_memory` selects an in-memory hosted-style adapter for tests and local runtime harnesses. It is not a production secret manager. Production deployments should inject an approved managed secret-store adapter and keep the manifest as an allowlist of provider ids, secret refs, and credential environment variable names.
+
+Readiness and write responses include `store_backend_id` and `store_backend_kind` so operators can tell which backend is active. They never include the resolved credential value.
 
 ## API Runtime Wiring
 
