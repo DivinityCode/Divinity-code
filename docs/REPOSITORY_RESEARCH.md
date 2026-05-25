@@ -120,3 +120,4 @@ The 2026-05-25 refresh confirmed the latest observed releases above are still cu
 19. **Task success criteria:** implemented optional Task `success_criteria` arrays plus CLI criteria flags and API persistence to make acceptance signals explicit alongside objectives.
 20. **Approval command family:** implemented CLI `approvals`, API-backed `approve`, API-backed `reject`, and local structured approval/rejection payloads so operator approval workflows are scriptable outside the dashboard.
 21. **Runtime adapter registry:** implemented runtime adapter metadata for Divinity local, Claude local, Codex local, and generic process runtimes in the shared capabilities catalog.
+22. **Policy-hook bridge:** implemented policy-pack pre-execution hooks so CLI/API preflight and API step gates can block or warn from deterministic hook metadata before execution adapters run.

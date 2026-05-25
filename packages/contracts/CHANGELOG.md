@@ -1,5 +1,9 @@
 # Contracts Changelog
 
+## v1.30.0
+- Added `policy_hooks` to PreflightDecision so policy-pack pre-execution hook outcomes are contract-visible.
+- Updated preflight examples and validation coverage for policy hook evidence.
+
 ## v1.29.0
 - Added optional Task `success_criteria` arrays for explicit run acceptance signals.
 

@@ -30,6 +30,13 @@ try {
   assert.equal(result.task.repo, tmpDir);
   assert.deepEqual(result.task.scope, { org_id: 'default-org', project_id: 'default-project' });
 
+  const blockedByHook = runCli(tmpDir, 'run', 'Run shell command rm -rf build output');
+  assert.equal(blockedByHook.status, 'failed');
+  assert.equal(blockedByHook.preflight.decision, 'block');
+  assert.ok(blockedByHook.preflight.blocked_reasons.includes('policy_hook:block_destructive_shell'));
+  assert.ok(blockedByHook.preflight.policy_hooks.some(hook => hook.hook_id === 'block_destructive_shell' && hook.outcome === 'blocked'));
+  assert.ok(blockedByHook.preflight.evidence_refs.some(evidence => evidence.source === 'policy_pack.pre_execution_hooks.block_destructive_shell'));
+
   runCli(tmpDir, 'init', '--soft-limit', '0.1', '--hard-limit', '0.1', '--org', 'acme', '--project', 'billing');
   const paused = runCli(tmpDir, 'run', 'Update source files');
   assert.deepEqual(paused.task.scope, { org_id: 'acme', project_id: 'billing' });

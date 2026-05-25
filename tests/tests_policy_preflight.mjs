@@ -1,5 +1,6 @@
 import assert from 'assert/strict';
 
+import { resolvePolicyPackForTask } from '../packages/policy-packs/src/index.mjs';
 import { evaluatePreflight, POLICY_PRESETS } from '../packages/policy-engine/src/index.mjs';
 
 const baseTask = {
@@ -104,6 +105,52 @@ function assertEvidenceRefs(decision) {
   assert.equal(decision.decision, 'block');
   assert.ok(decision.blocked_reasons.includes('permission_denied:file_write'));
   assertEvidenceRefs(decision);
+}
+
+{
+  const task = {
+    ...baseTask,
+    objective: 'Run shell command rm -rf build output'
+  };
+  const decision = evaluatePreflight({
+    task,
+    policy: POLICY_PRESETS.safe_exec,
+    policyPack: resolvePolicyPackForTask(task)
+  });
+
+  assert.equal(decision.decision, 'block');
+  assert.equal(decision.run_status, 'failed');
+  assert.ok(decision.blocked_reasons.includes('policy_hook:block_destructive_shell'));
+  assert.ok(decision.policy_hooks.some(hook => (
+    hook.hook_id === 'block_destructive_shell'
+    && hook.matched === true
+    && hook.outcome === 'blocked'
+  )));
+  assert.ok(decision.evidence_refs.some(evidence => (
+    evidence.source === 'policy_pack.pre_execution_hooks.block_destructive_shell'
+    && evidence.claim_type === 'observed'
+  )));
+}
+
+{
+  const task = {
+    ...baseTask,
+    scope: { org_id: 'regulated-org', project_id: 'platform' },
+    objective: 'Update source files'
+  };
+  const decision = evaluatePreflight({
+    task,
+    policy: POLICY_PRESETS.scoped_edit,
+    policyPack: resolvePolicyPackForTask(task)
+  });
+
+  assert.equal(decision.decision, 'allow');
+  assert.ok(decision.warnings.includes('policy_hook:warn_regulated_write_scope'));
+  assert.ok(decision.policy_hooks.some(hook => (
+    hook.hook_id === 'warn_regulated_write_scope'
+    && hook.matched === true
+    && hook.outcome === 'warned'
+  )));
 }
 
 console.log(JSON.stringify({ ok: true, test: 'policy-preflight' }));

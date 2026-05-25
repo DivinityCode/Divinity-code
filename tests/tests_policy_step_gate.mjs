@@ -1,5 +1,6 @@
 import assert from 'assert/strict';
 
+import { resolvePolicyPackForTask } from '../packages/policy-packs/src/index.mjs';
 import { evaluateStepGate, POLICY_PRESETS } from '../packages/policy-engine/src/index.mjs';
 
 const run = {
@@ -8,11 +9,14 @@ const run = {
     task_id: 'task_step_gate',
     objective: 'Review the README',
     repo: 'github.com/org/repo',
+    scope: { org_id: 'default-org', project_id: 'platform' },
     policy_id: 'safe_exec',
     budget: { soft_limit_usd: 2.5, hard_limit_usd: 5 },
     created_at: '2026-05-24T00:00:00Z'
-  }
+  },
+  policy_pack: null
 };
+run.policy_pack = resolvePolicyPackForTask(run.task);
 
 function assertEvidenceRefs(decision) {
   assert.ok(Array.isArray(decision.evidence_refs));
@@ -60,6 +64,20 @@ function assertEvidenceRefs(decision) {
   assert.equal(gate.status, 'blocked');
   assert.ok(gate.blocked_reasons.includes('permission_denied:git_push'));
   assertEvidenceRefs(gate);
+}
+
+{
+  const gate = evaluateStepGate({
+    run,
+    step: { step_id: 'step_destructive_shell', action: 'Run shell command rm -rf build output' },
+    policy: POLICY_PRESETS.safe_exec
+  });
+
+  assert.equal(gate.decision, 'block');
+  assert.equal(gate.status, 'blocked');
+  assert.ok(gate.blocked_reasons.includes('policy_hook:block_destructive_shell'));
+  assert.ok(gate.policy_hooks.some(hook => hook.hook_id === 'block_destructive_shell' && hook.outcome === 'blocked'));
+  assert.ok(gate.evidence_refs.some(evidence => evidence.source === 'policy_pack.pre_execution_hooks.block_destructive_shell'));
 }
 
 console.log(JSON.stringify({ ok: true, test: 'policy-step-gate' }));

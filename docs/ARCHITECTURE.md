@@ -77,9 +77,10 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 - Preflight runs before task execution in CLI and API flows.
 - Tasks carry `scope.org_id` and `scope.project_id`; CLI config writes defaults and API task creation normalizes missing scope before storing runs.
 - The policy engine infers predicted action classes from the task objective, maps each action to a risk level and required permission, estimates cost, and compares the result with the selected policy preset and task budget.
+- Team policy packs can add data-only pre-execution hook checks. The policy engine evaluates matching hooks into `policy_hooks`, warnings, blocks, and observed evidence before any execution adapter runs.
 - Decisions are `allow`, `requires_approval`, or `block`, with a derived run status for lifecycle handling.
 - High-risk actions under `safe_exec` enter `awaiting_approval`; missing permissions fail the run before execution; hard budget overruns pause the run.
-- Decision payloads include evidence references for the objective or step action, policy permissions, and budget limits that supported the outcome. Objective and step-action classifications are labeled `inferred`; policy and budget inputs are labeled `observed`.
+- Decision payloads include evidence references for the objective or step action, policy permissions, policy hooks, and budget limits that supported the outcome. Objective and step-action classifications are labeled `inferred`; policy, hook, and budget inputs are labeled `observed`.
 
 ## Orchestration Trace
 - CLI and API run payloads include a planner/executor/verifier trace.

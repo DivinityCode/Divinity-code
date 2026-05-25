@@ -287,7 +287,9 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'POST' && req.url === '/preflight') {
     readJson(req, (task) => {
-      sendJson(res, 200, evaluatePreflight({ task: taskWithScope(task) }));
+      const scopedTask = taskWithScope(task);
+      const policyPack = resolvePolicyPackForTask(scopedTask);
+      sendJson(res, 200, evaluatePreflight({ task: scopedTask, policyPack }));
     });
     return;
   }
@@ -295,7 +297,8 @@ const server = http.createServer((req, res) => {
   if (req.method === 'POST' && req.url === '/tasks') {
     readJson(req, (task) => {
       const scopedTask = taskWithScope(task);
-      const preflight = evaluatePreflight({ task: scopedTask });
+      const policyPack = resolvePolicyPackForTask(scopedTask);
+      const preflight = evaluatePreflight({ task: scopedTask, policyPack });
       const runId = `run_${Date.now()}`;
       const status = preflight.run_status;
       const runArtifacts = createRunArtifacts({ run_id: runId, task: scopedTask, status, preflight });
@@ -321,7 +324,7 @@ const server = http.createServer((req, res) => {
         status,
         risk_level: preflight.risk_level,
         preflight,
-        policy_pack: resolvePolicyPackForTask(scopedTask),
+        policy_pack: policyPack,
         orchestration: createOrchestrationTrace({ run_id: runId, task: scopedTask, status, preflight }),
         agent_activity: createAgentActivityRecords({
           run_id: runId,

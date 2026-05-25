@@ -10,6 +10,7 @@
     "policy_id",
     "predicted_actions",
     "budget",
+    "policy_hooks",
     "warnings",
     "blocked_reasons",
     "evidence_refs"
@@ -66,6 +67,32 @@
         "hard_cap_exceeded": { "type": "boolean" }
       },
       "additionalProperties": false
+    },
+    "policy_hooks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["hook_id", "source", "stage", "effect", "matched", "outcome", "reason"],
+        "properties": {
+          "hook_id": { "type": "string" },
+          "source": { "type": "string" },
+          "stage": {
+            "type": "string",
+            "enum": ["pre_execution"]
+          },
+          "effect": {
+            "type": "string",
+            "enum": ["block", "warn", "observe"]
+          },
+          "matched": { "type": "boolean" },
+          "outcome": {
+            "type": "string",
+            "enum": ["passed", "blocked", "warned", "observed"]
+          },
+          "reason": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
     },
     "blocked_reasons": {
       "type": "array",

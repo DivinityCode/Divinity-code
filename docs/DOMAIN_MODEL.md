@@ -15,7 +15,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 | --- | --- | --- | --- |
 | Task | `packages/contracts/schemas/task.v1.json` | CLI/API request surfaces | Captures objective, success criteria, repo context, scope, policy, budget, connector requests, and creation time. |
 | Run | `packages/contracts/schemas/run.v1.json` | API run store, CLI run output | Tracks one execution attempt for a task, including lifecycle status and risk level. |
-| PreflightDecision | `packages/contracts/schemas/preflight.v1.json` | Policy engine | Explains risk, predicted actions, budget estimate, warnings, blocked reasons, approval requirement, and run status before execution. |
+| PreflightDecision | `packages/contracts/schemas/preflight.v1.json` | Policy engine | Explains risk, predicted actions, budget estimate, policy hook outcomes, warnings, blocked reasons, approval requirement, and run status before execution. |
 | Policy | `packages/contracts/schemas/policy.v1.json` | Policy engine and policy packs | Defines permissions and approval threshold used to gate work. |
 | Step | `packages/contracts/schemas/step.v1.json` | API step routes, execution package | Represents a proposed atomic action and its pre-execution gate result. |
 | Artifact | `packages/contracts/schemas/artifact.v1.json` | Artifacts package and API artifact routes | Describes patch, log, summary, PR-summary, and evidence payloads generated from run context. |
@@ -50,7 +50,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 
 ## Lifecycle
 1. **Task creation:** Builder or API client submits objective, success criteria, repo, scope, policy, budget, and optional connector references.
-2. **Preflight:** Policy engine infers actions, estimates risk/cost, checks policy permissions and budget caps, and returns decision plus evidence.
+2. **Preflight:** Policy engine infers actions, estimates risk/cost, checks policy permissions, policy-pack hooks, and budget caps, and returns decision plus evidence.
 3. **Run assembly:** API/CLI resolves policy pack, orchestration trace, agent activity, memory provenance, connector references, artifacts, and initial events.
 4. **Approval gate:** High-risk allowed work enters `awaiting_approval`; blocked work fails or pauses before execution.
 5. **Step gate:** API step creation evaluates action-level policy and budget constraints.
