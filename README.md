@@ -40,6 +40,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - `packages/capabilities` - shared policy, runtime adapter, execution adapter, connector adapter, LLM provider, toolset, and recipe capability catalog
 - `packages/runtime-adapters` - agent runtime adapter metadata for Divinity, local CLI runtimes, and generic processes
 - `packages/provider-runtime` - data-backed LLM provider catalog and side-effect-free credential readiness helpers
+- `packages/provider-secrets` - redacted provider secret-reference manifests and API credential resolver wiring
 - `packages/provider-proxy` - safe LLM provider route planning and guarded Chat Completions, Anthropic Messages, and OpenAI Responses execution with shared-key and limit-bypass blocks
 - `packages/toolsets` - toolset catalog, default resolution, policy permission, provider capability, and operator-control metadata helpers
 - `packages/connectors` - ticket, docs, and CI connector adapter metadata and run reference helpers

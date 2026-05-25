@@ -45,7 +45,7 @@ const credential_resolver = {
 };
 ```
 
-Route metadata may include `configured_secret_refs`, but the resolver's secret value is used only to construct upstream provider transport headers during execution. CLI/API commands do not expose a resolver interface in this bootstrap; hosted deployments must inject the resolver inside the runtime process.
+Route metadata may include `configured_secret_refs`, but the resolver's secret value is used only to construct upstream provider transport headers during execution. The API runtime wires this boundary through `packages/provider-secrets` and `DIVINITY_PROVIDER_SECRET_REFS_PATH`; CLI commands continue to use environment variables directly unless a caller embeds the package helpers.
 
 ## Provider Limit Ledger
 

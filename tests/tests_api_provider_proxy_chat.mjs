@@ -99,16 +99,40 @@ const continuationSecretOutput = 'secret api continuation file contents';
 const tmpRoot = mkdtempSync(path.join(tmpdir(), 'divinity-api-provider-proxy-chat-'));
 const repoFixture = path.join(tmpRoot, 'repo');
 const usageLedgerPath = path.join(tmpRoot, 'provider-usage-ledger.json');
+const providerCatalogPath = path.join(tmpRoot, 'provider-catalog.json');
+const secretRefsPath = path.join(tmpRoot, 'provider-secret-refs.json');
+const apiResolverChatSecret = 'api-chat-resolver-secret';
+const apiResolverStreamSecret = 'api-stream-resolver-secret';
+const apiResolverChatSecretRef = 'secret://divinity/providers/api-secret-ref-chat-mock/api-key';
+const apiResolverStreamSecretRef = 'secret://divinity/providers/api-secret-ref-stream-mock/api-key';
 mkdirSync(repoFixture);
 mkdirSync(path.join(repoFixture, 'api-search-scope'));
 mkdirSync(path.join(repoFixture, 'api-list-scope', 'api-list-nested'), { recursive: true });
 writeFileSync(path.join(repoFixture, 'README.md'), '# Provider Proxy API Fixture\n');
 writeFileSync(path.join(repoFixture, 'api-search-scope', 'search-target.md'), 'api secret search needle\n');
 writeFileSync(path.join(repoFixture, 'api-list-scope', 'api-list-nested', 'list-target.md'), 'api secret list file contents\n');
+writeFileSync(secretRefsPath, JSON.stringify({
+  format: 'divinity.provider_secret_refs.v1',
+  providers: [
+    {
+      provider_id: 'api_secret_ref_chat_mock',
+      secret_ref: apiResolverChatSecretRef,
+      credential_env_var: 'API_PROVIDER_SECRET_REF_CHAT_KEY'
+    },
+    {
+      provider_id: 'api_secret_ref_stream_mock',
+      secret_ref: apiResolverStreamSecretRef,
+      credential_env_var: 'API_PROVIDER_SECRET_REF_STREAM_KEY'
+    }
+  ]
+}, null, 2));
 
 process.env.DIVINITY_API_AUTOSTART = '0';
 process.env.DIVINITY_WORKSPACE_ROOT = path.join(tmpRoot, 'workspaces');
 process.env.DIVINITY_PROVIDER_USAGE_LEDGER_PATH = usageLedgerPath;
+process.env.DIVINITY_PROVIDER_SECRET_REFS_PATH = secretRefsPath;
+process.env.API_PROVIDER_SECRET_REF_CHAT_KEY = apiResolverChatSecret;
+process.env.API_PROVIDER_SECRET_REF_STREAM_KEY = apiResolverStreamSecret;
 process.env.OPENROUTER_API_KEY = apiSecret;
 process.env.CEREBRAS_API_KEY = 'cerebras-secret';
 const { server } = await import('../apps/api/src/server.mjs');
@@ -251,6 +275,85 @@ const streamMock = await createMockChatServer(({ req, res, body }) => {
     { data: '[DONE]' }
   ]);
 });
+const secretRefChatMock = await createMockChatServer(({ req, res, body }) => {
+  assert.equal(req.url, '/chat/completions');
+  assert.equal(req.headers.authorization, `Bearer ${apiResolverChatSecret}`);
+  assert.equal(body.model, 'api-secret-ref-chat-model');
+  res.statusCode = 200;
+  res.setHeader('content-type', 'application/json');
+  res.end(JSON.stringify({
+    id: 'chatcmpl_api_secret_ref_mock',
+    object: 'chat.completion',
+    model: body.model,
+    choices: [
+      {
+        index: 0,
+        message: { role: 'assistant', content: 'api secret ref response' },
+        finish_reason: 'stop'
+      }
+    ],
+    usage: {
+      prompt_tokens: 4,
+      completion_tokens: 3,
+      total_tokens: 7
+    }
+  }));
+});
+const secretRefStreamMock = await createMockChatServer(({ req, res, body }) => {
+  assert.equal(req.url, '/chat/completions');
+  assert.equal(req.headers.authorization, `Bearer ${apiResolverStreamSecret}`);
+  assert.equal(body.stream, true);
+  assert.equal(body.model, 'api-secret-ref-stream-model');
+  writeSse(res, [
+    {
+      data: {
+        id: 'chatcmpl_api_secret_ref_stream',
+        object: 'chat.completion.chunk',
+        model: body.model,
+        choices: [{ index: 0, delta: { content: 'secret ref ' }, finish_reason: null }]
+      }
+    },
+    {
+      data: {
+        id: 'chatcmpl_api_secret_ref_stream',
+        object: 'chat.completion.chunk',
+        model: body.model,
+        choices: [{ index: 0, delta: { content: 'stream' }, finish_reason: 'stop' }]
+      }
+    },
+    { data: '[DONE]' }
+  ]);
+});
+writeFileSync(providerCatalogPath, JSON.stringify({
+  format: 'divinity.llm_provider_catalog.v1',
+  providers: [
+    {
+      provider_id: 'api_secret_ref_chat_mock',
+      display_name: 'API Secret Ref Chat Mock',
+      transport: 'chat_completions',
+      base_url: secretRefChatMock.base_url,
+      auth_modes: ['api_key'],
+      credential_env_vars: ['UNSET_API_PROVIDER_SECRET_REF_CHAT_KEY'],
+      supports_custom_base_url: false,
+      default_model: 'api-secret-ref-chat-model',
+      capabilities: ['chat', 'tool_calls', 'openai_compatible'],
+      source: 'operator_config'
+    },
+    {
+      provider_id: 'api_secret_ref_stream_mock',
+      display_name: 'API Secret Ref Stream Mock',
+      transport: 'chat_completions',
+      base_url: secretRefStreamMock.base_url,
+      auth_modes: ['api_key'],
+      credential_env_vars: ['UNSET_API_PROVIDER_SECRET_REF_STREAM_KEY'],
+      supports_custom_base_url: false,
+      default_model: 'api-secret-ref-stream-model',
+      capabilities: ['chat', 'tool_calls', 'openai_compatible'],
+      source: 'operator_config'
+    }
+  ]
+}, null, 2));
+process.env.DIVINITY_PROVIDER_CATALOG_PATH = providerCatalogPath;
 
 try {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -291,6 +394,29 @@ try {
   assert.equal(mock.requests.length, 1);
   assert.equal(JSON.stringify(body).includes(secretPrompt), false);
   assert.equal(JSON.stringify(body).includes(apiSecret), false);
+
+  const { response: secretRefResponse, body: secretRefBody } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
+    method: 'POST',
+    body: JSON.stringify({
+      candidates: ['api_secret_ref_chat_mock'],
+      model: 'api-secret-ref-chat-model',
+      messages: [{ role: 'user', content: secretPrompt }],
+      max_completion_tokens: 32
+    })
+  });
+
+  assert.equal(secretRefResponse.status, 200);
+  assert.equal(secretRefBody.result.status, 'completed');
+  assert.equal(secretRefBody.result.provider_id, 'api_secret_ref_chat_mock');
+  assert.equal(secretRefBody.result.message.content, 'api secret ref response');
+  assert.deepEqual(secretRefBody.result.route.selected_provider_runtime.auth.configured_env_vars, []);
+  assert.deepEqual(
+    secretRefBody.result.route.selected_provider_runtime.auth.configured_secret_refs,
+    [apiResolverChatSecretRef]
+  );
+  assert.equal(secretRefChatMock.requests.length, 1);
+  assert.equal(JSON.stringify(secretRefBody).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(secretRefBody).includes(apiResolverChatSecret), false);
 
   const { response: usageBlockedResponse, body: usageBlockedBody } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
     method: 'POST',
@@ -644,6 +770,34 @@ try {
   assert.equal(streamBody.includes(secretPrompt), false);
   assert.equal(streamBody.includes(apiSecret), false);
 
+  const { response: secretRefStreamResponse, body: secretRefStreamBody } = await requestText(`${baseUrl}/provider-proxy/chat/stream`, {
+    method: 'POST',
+    body: JSON.stringify({
+      candidates: ['api_secret_ref_stream_mock'],
+      model: 'api-secret-ref-stream-model',
+      messages: [{ role: 'user', content: secretPrompt }],
+      max_completion_tokens: 16
+    })
+  });
+
+  assert.equal(secretRefStreamResponse.status, 200);
+  assert.match(secretRefStreamResponse.headers.get('content-type'), /^text\/event-stream/);
+  const secretRefStreamEvents = parseSseEvents(secretRefStreamBody);
+  assert.equal(secretRefStreamEvents.some(item => item.event === 'provider_stream_event'), true);
+  assert.equal(secretRefStreamEvents.some(item => item.event === 'provider_stream_completed'), true);
+  const secretRefStreamCompleted = secretRefStreamEvents.find(item => item.event === 'provider_stream_completed').data;
+  assert.equal(secretRefStreamCompleted.result.format, 'divinity.provider_proxy_stream_result.v1');
+  assert.equal(secretRefStreamCompleted.result.provider_id, 'api_secret_ref_stream_mock');
+  assert.equal(secretRefStreamCompleted.result.output_text, 'secret ref stream');
+  assert.deepEqual(secretRefStreamCompleted.result.route.selected_provider_runtime.auth.configured_env_vars, []);
+  assert.deepEqual(
+    secretRefStreamCompleted.result.route.selected_provider_runtime.auth.configured_secret_refs,
+    [apiResolverStreamSecretRef]
+  );
+  assert.equal(secretRefStreamMock.requests.length, 1);
+  assert.equal(secretRefStreamBody.includes(secretPrompt), false);
+  assert.equal(secretRefStreamBody.includes(apiResolverStreamSecret), false);
+
   const { response: limitedLedgerResponse, body: limitedLedgerBody } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
     method: 'POST',
     body: JSON.stringify({
@@ -704,6 +858,8 @@ try {
   await continuationMock.close();
   await anthropicMock.close();
   await streamMock.close();
+  await secretRefChatMock.close();
+  await secretRefStreamMock.close();
   if (server.listening) {
     await new Promise((resolve, reject) => {
       server.close(error => error ? reject(error) : resolve());

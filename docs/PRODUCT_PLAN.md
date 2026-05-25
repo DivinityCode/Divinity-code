@@ -91,7 +91,8 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: provider limit ledgers can be in-process for API runtime or file-backed through `DIVINITY_PROVIDER_LIMIT_LEDGER_PATH`, storing provider ids and retry timestamps without prompts, request bodies, credentials, or repo-root state pollution.
    - Bootstrap status: provider usage ledgers can be file-backed through `DIVINITY_PROVIDER_USAGE_LEDGER_PATH`, storing daily provider/model request and token totals without prompts, request bodies, credentials, response text, raw tool arguments, or repo-root state pollution. `usage_budget` can enforce daily request/input/output/total token caps before upstream calls.
    - Bootstrap status: provider proxy route/chat helpers accept an injected `credential_resolver` for hosted runtimes, exposing only configured secret reference ids in route metadata while using resolver-returned secret values only for upstream transport headers.
-   - Next production slice: wire the hosted secret resolver boundary to an approved operator secret store and continue adding approved tool execution adapters behind the same route policy.
+   - Bootstrap status: API route, chat, and stream execution create that resolver from `DIVINITY_PROVIDER_SECRET_REFS_PATH`, whose `divinity.provider_secret_refs.v1` manifest stores provider ids, `secret://` references, and environment variable names only.
+   - Next production slice: replace the API env-backed secret-reference manifest with an approved operator secret store, identity, and audit surface while preserving the same redacted route metadata.
 2. Toolset governance.
    - Bootstrap status: public toolset metadata and default resolution are exposed through capabilities, CLI `toolsets`, API `/toolsets`, and `doctor`.
    - Bootstrap status: CLI/API task assembly carries toolset resolution metadata on task/run payloads.
