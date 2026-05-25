@@ -41,6 +41,8 @@ assertIncludes(install, 'Node.js 22', 'install guide');
 assertIncludes(install, 'Corepack pnpm', 'install guide');
 assertIncludes(install, 'pnpm install', 'install guide');
 assertIncludes(install, 'pnpm run validate:contracts', 'install guide');
+assertIncludes(install, 'pnpm run release:artifacts', 'install guide');
+assertIncludes(install, 'pnpm run test:release-artifacts', 'install guide');
 assertIncludes(install, 'pnpm test', 'install guide');
 assertIncludes(install, 'npm is optional', 'install guide');
 assertIncludes(install, 'doctor --profile source', 'install guide');
@@ -78,6 +80,8 @@ for (const item of [
   'git status --short --branch',
   'node apps/cli/src/index.mjs doctor',
   'node apps/cli/src/index.mjs doctor --profile source',
+  'pnpm run release:artifacts',
+  'pnpm run test:release-artifacts',
   'pnpm run validate:contracts',
   'pnpm test',
   'pnpm run test:smoke',

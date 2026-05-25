@@ -107,7 +107,8 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: public install, quickstart, upgrade, and release checklist docs are linked from the README and guarded by `test:public-docs`.
    - Bootstrap status: package metadata declares the `divinity` CLI bin target, Node engine, pnpm package manager, repository, files allowlist, and package-lock root metadata, guarded by `test:package`.
    - Bootstrap status: `divinity doctor` now defaults to a runtime-safe profile for installed or linked package use outside the repo root, while `doctor --profile source` preserves contributor diagnostics for repo internals.
-   - Next production slice: add generated release artifacts and published package/binary installation paths.
+   - Bootstrap status: `release:artifacts` generates `dist/release-artifacts.json` with source checkout, local pnpm-link, package-registry, and binary-download install paths plus release gates, guarded by `test:release-artifacts`.
+   - Next production slice: add actual published package and signed binary artifacts after the production warning and `private: true` release gates are cleared.
 4. Hosted/identity/billing boundary.
    - Non-goal for the current bootstrap: hosted identity, billing, and managed secrets are not implemented until local provider/tool/runtime behavior is stable.
 

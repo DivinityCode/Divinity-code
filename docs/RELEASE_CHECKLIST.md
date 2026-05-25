@@ -30,6 +30,7 @@ root_files=$(find . -maxdepth 1 -type f \( -name 'tests_*.mjs' -o -name 'scripts
 test ! -e .divinity.json
 test ! -e .divinity-provider-limits.json
 test ! -e .divinity-provider-usage.json
+git check-ignore -q dist/release-artifacts.json
 ```
 
 ## Required Local Verification
@@ -51,6 +52,13 @@ pnpm run validate:contracts
 
 ```bash
 pnpm run test:package
+```
+
+- [ ] Release artifact manifest:
+
+```bash
+pnpm run release:artifacts
+pnpm run test:release-artifacts
 ```
 
 - [ ] Provider proxy and tool governance checks:
