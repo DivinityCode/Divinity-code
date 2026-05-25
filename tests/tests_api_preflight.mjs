@@ -32,6 +32,21 @@ try {
   assert.ok(preflight.evidence_refs.some(evidence => evidence.claim_type === 'inferred'));
   assert.ok(preflight.evidence_refs.some(evidence => evidence.claim_type === 'observed'));
 
+  const hookPreflightRes = await fetch(`${baseUrl}/preflight`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      ...task,
+      objective: 'Run shell command rm -rf build output',
+      scope: { org_id: 'default-org', project_id: 'platform' }
+    })
+  });
+  assert.equal(hookPreflightRes.status, 200);
+  const hookPreflight = await hookPreflightRes.json();
+  assert.equal(hookPreflight.decision, 'block');
+  assert.ok(hookPreflight.blocked_reasons.includes('policy_hook:block_destructive_shell'));
+  assert.ok(hookPreflight.policy_hooks.some(hook => hook.hook_id === 'block_destructive_shell' && hook.outcome === 'blocked'));
+
   const createTaskRes = await fetch(`${baseUrl}/tasks`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

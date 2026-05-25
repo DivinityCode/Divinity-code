@@ -485,7 +485,8 @@ function run() {
     connector_references: parsedArgs.connector_references,
     created_at: new Date().toISOString()
   };
-  const preflight = evaluatePreflight({ task: payload });
+  const policy_pack = resolvePolicyPackForTask(payload);
+  const preflight = evaluatePreflight({ task: payload, policyPack: policy_pack });
   const run_id = `run_${Date.now()}`;
   const status = preflight.run_status;
   const connector_references = createConnectorReferences({
@@ -508,7 +509,7 @@ function run() {
     run_id,
     status,
     preflight,
-    policy_pack: resolvePolicyPackForTask(payload),
+    policy_pack,
     orchestration: createOrchestrationTrace({ run_id, task: payload, status, preflight }),
     connector_references,
     agent_activity,

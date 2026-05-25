@@ -86,8 +86,15 @@ function estimateCost(actions) {
   ), 0).toFixed(2));
 }
 
-function createEvidenceRefs({ task, predicted_actions, resolvedPolicy, budget, objectiveSource = 'task.objective' }) {
-  return [
+function createEvidenceRefs({
+  task,
+  predicted_actions,
+  resolvedPolicy,
+  budget,
+  policyHookResults = [],
+  objectiveSource = 'task.objective'
+}) {
+  const refs = [
     {
       evidence_id: objectiveSource === 'step.action' ? 'evidence_step_action' : 'evidence_task_objective',
       source: objectiveSource,
@@ -110,6 +117,18 @@ function createEvidenceRefs({ task, predicted_actions, resolvedPolicy, budget, o
       supports: ['budget', 'warnings', 'run_status']
     }
   ];
+
+  for (const hook of policyHookResults) {
+    refs.push({
+      evidence_id: `evidence_policy_hook_${hook.hook_id}`,
+      source: `policy_pack.pre_execution_hooks.${hook.hook_id}`,
+      claim_type: 'observed',
+      summary: `Policy hook ${hook.hook_id} ${hook.outcome}`,
+      supports: ['policy_hooks', 'blocked_reasons', 'warnings', 'decision']
+    });
+  }
+
+  return refs;
 }
 
 export function runStatusForDecision(decision) {
@@ -125,7 +144,37 @@ export function resolvePolicy(policyOrId) {
   return policyOrId;
 }
 
-export function evaluatePreflight({ task, policy, objectiveSource }) {
+function hookMatches({ hook, task, predicted_actions }) {
+  const actionTypes = hook.action_types || [];
+  const matchesActionType = actionTypes.length === 0
+    || predicted_actions.some(action => actionTypes.includes(action.type));
+  if (!matchesActionType) return false;
+
+  if (hook.pattern == null || hook.pattern === '') return true;
+  return new RegExp(hook.pattern, 'i').test(task?.objective || '');
+}
+
+function evaluatePolicyHooks({ task, predicted_actions, policyPack }) {
+  return (policyPack?.pre_execution_hooks || []).map(hook => {
+    const matched = hookMatches({ hook, task, predicted_actions });
+    let outcome = 'passed';
+    if (matched && hook.effect === 'block') outcome = 'blocked';
+    if (matched && hook.effect === 'warn') outcome = 'warned';
+    if (matched && hook.effect === 'observe') outcome = 'observed';
+
+    return {
+      hook_id: hook.hook_id,
+      source: policyPack.pack_id || 'policy_pack',
+      stage: hook.stage || 'pre_execution',
+      effect: hook.effect || 'observe',
+      matched,
+      outcome,
+      reason: hook.reason || hook.hook_id
+    };
+  });
+}
+
+export function evaluatePreflight({ task, policy, policyPack, objectiveSource }) {
   const resolvedPolicy = resolvePolicy(policy || task?.policy_id);
   const predicted_actions = inferActions(task?.objective);
   const risk_level = maxRisk(predicted_actions);
@@ -145,6 +194,7 @@ export function evaluatePreflight({ task, policy, objectiveSource }) {
   const permissions = new Set(resolvedPolicy.permissions || []);
   const blocked_reasons = [];
   const warnings = [];
+  const policy_hooks = evaluatePolicyHooks({ task, predicted_actions, policyPack });
 
   for (const action of predicted_actions) {
     if (!permissions.has(action.permission)) {
@@ -158,6 +208,12 @@ export function evaluatePreflight({ task, policy, objectiveSource }) {
 
   if (budget.soft_cap_exceeded) {
     warnings.push('estimated_cost_exceeds_soft_limit');
+  }
+
+  for (const hook of policy_hooks) {
+    if (!hook.matched) continue;
+    if (hook.outcome === 'blocked') blocked_reasons.push(`policy_hook:${hook.hook_id}`);
+    if (hook.outcome === 'warned') warnings.push(`policy_hook:${hook.hook_id}`);
   }
 
   const approval_required = !blocked_reasons.length
@@ -175,6 +231,7 @@ export function evaluatePreflight({ task, policy, objectiveSource }) {
     policy_id: resolvedPolicy.policy_id,
     predicted_actions,
     budget,
+    policy_hooks,
     warnings,
     blocked_reasons,
     evidence_refs: createEvidenceRefs({
@@ -182,6 +239,7 @@ export function evaluatePreflight({ task, policy, objectiveSource }) {
       predicted_actions,
       resolvedPolicy,
       budget,
+      policyHookResults: policy_hooks,
       objectiveSource
     })
   };
@@ -191,7 +249,7 @@ export function evaluatePreflight({ task, policy, objectiveSource }) {
   };
 }
 
-export function evaluateStepGate({ run, step, policy }) {
+export function evaluateStepGate({ run, step, policy, policyPack }) {
   const decision = evaluatePreflight({
     task: {
       ...(run?.task || {}),
@@ -200,6 +258,7 @@ export function evaluateStepGate({ run, step, policy }) {
       created_at: new Date().toISOString()
     },
     policy: policy || run?.task?.policy_id,
+    policyPack: policyPack || run?.policy_pack,
     objectiveSource: 'step.action'
   });
 

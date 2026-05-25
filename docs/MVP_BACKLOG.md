@@ -47,6 +47,7 @@
 - API exposes `POST /preflight`; `POST /tasks` records preflight metadata and moves high-risk allowed work to `awaiting_approval`.
 - API `POST /tasks` preserves submitted task success criteria through run storage and retrieval.
 - API task creation normalizes missing org/project scope to `default-org/default-project`; configured API keys protect control-plane routes when `DIVINITY_API_KEY` or `DIVINITY_API_KEYS` is set.
+- Preflight and step-gate decisions evaluate policy-pack pre-execution hooks into deterministic hook outcomes, warnings, blocks, and observed evidence before execution adapters run.
 - API exposes `GET /runs`, `GET /approvals`, and `POST /runs/:id/approval` for dashboard loading and approve/reject transitions.
 - API exposes `GET /capabilities` for policy, runtime adapter, execution adapter, runner isolation profile, connector adapter, and starter recipe discovery.
 - API exposes `GET /runs/:id/connectors` and `POST /runs/:id/connectors` for run-level ticket/docs/CI context attachments.
@@ -74,7 +75,7 @@
 - Dashboard shell exists at `apps/dashboard` with contract-shaped local sample data plus opt-in API loading through `?api=<base-url>` for task filtering, run timeline, approval decisions, cost/risk badges, observability, scope rollups, liveness summaries, agent activity, execution and verification evidence, artifacts, audit metadata, and live updates.
 - Dashboard run detail renders connector references for attached ticket, docs, and CI context.
 - Missing permissions still produce blocked preflight decisions; soft caps emit `estimated_cost_exceeds_soft_limit` warnings.
-- Preflight and step-gate decision payloads include evidence references for the objective/action, policy permissions, and budget limits.
+- Preflight and step-gate decision payloads include evidence references for the objective/action, policy permissions, policy hooks, and budget limits.
 - Summary artifacts include decision traces with chosen path, rejected alternative, rationale, and evidence references.
 - Dashboard run detail renders decision traces with chosen path, rejected alternative, rationale, and supporting evidence.
 - Evidence references label objective/action classifications as `inferred` and policy/budget values as `observed`; dashboard timeline events render observed/inferred chips.

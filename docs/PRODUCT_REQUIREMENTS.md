@@ -46,7 +46,7 @@ This baseline defines who Divinity Code is for, what work it must help them comp
 
 ## MVP Requirements
 - **Contract-first surfaces:** CLI, API, dashboard, and IDE commands must share Task, Run, Preflight, Event, Artifact, Policy, and capability vocabulary.
-- **Trust-first execution:** Risk, budget, policy, approval, evidence, and audit state must be visible before side effects.
+- **Trust-first execution:** Risk, budget, policy, policy-hook, approval, evidence, and audit state must be visible before side effects.
 - **Deterministic verification:** Local validation and smoke paths must run without polluting the repository root.
 - **Operational dashboard:** Operator Mode must manage run status, approval decisions, evidence, liveness, artifacts, and audit metadata.
 - **Extensible runtime:** Runtime adapters, execution adapters, connector references, runner isolation profiles, recipes, and policy packs must be discoverable rather than hard-coded by clients.

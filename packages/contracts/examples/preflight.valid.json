@@ -18,6 +18,17 @@
     "soft_cap_exceeded": false,
     "hard_cap_exceeded": false
   },
+  "policy_hooks": [
+    {
+      "hook_id": "block_destructive_shell",
+      "source": "team_policy_starter",
+      "stage": "pre_execution",
+      "effect": "block",
+      "matched": false,
+      "outcome": "passed",
+      "reason": "destructive_shell_command"
+    }
+  ],
   "warnings": [],
   "blocked_reasons": [],
   "evidence_refs": [
@@ -27,6 +38,13 @@
       "claim_type": "inferred",
       "summary": "Objective indicates shell execution.",
       "supports": ["predicted_actions", "risk_level", "decision"]
+    },
+    {
+      "evidence_id": "evidence_policy_hook_block_destructive_shell",
+      "source": "policy_pack.pre_execution_hooks.block_destructive_shell",
+      "claim_type": "observed",
+      "summary": "Policy hook block_destructive_shell passed.",
+      "supports": ["policy_hooks", "blocked_reasons", "warnings", "decision"]
     }
   ]
 }

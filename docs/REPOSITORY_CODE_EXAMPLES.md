@@ -64,7 +64,7 @@ The code examples reinforce the current bootstrap direction and add these concre
 
 1. **Approval command family:** implemented the first expansion with `approvals`, API-backed `approve`, API-backed `reject`, and local structured decision payloads. Future slices can add get/revision/comment subcommands once approval records need richer review workflows.
 2. **Runtime adapter registry:** implemented a first catalog pass for Divinity, Claude, Codex, and generic process runtimes so CLI/API/dashboard expose the same adapter identity before runtime execution is wired in.
-3. **Policy-hook bridge:** model hook-like pre-execution checks as policy-pack extensions, preserving deterministic preflight output before any adapter runs.
+3. **Policy-hook bridge:** implemented data-only policy-pack pre-execution hooks that preflight and step gates evaluate into hook outcomes, warnings, blocks, and evidence before any adapter runs.
 4. **Durable goal model:** promote task success criteria into optional durable goal state only after budget accounting, continuation behavior, and completion evidence are represented in contracts.
 5. **Budget incidents:** add soft/hard budget incident records before adding richer dashboard controls so financial risk state remains auditable.
 6. **Worktree isolation hardening:** keep run workspace cleanup/quarantine evidence visible as runner isolation moves from local snapshots toward parallel or remote execution.

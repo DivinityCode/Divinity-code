@@ -35,6 +35,9 @@ function assertPolicyPack(pack) {
   assert.equal(typeof pack.approval_threshold, 'string');
   assert.equal(typeof pack.budget_defaults.soft_limit_usd, 'number');
   assert.equal(typeof pack.budget_defaults.hard_limit_usd, 'number');
+  assert.ok(Array.isArray(pack.pre_execution_hooks));
+  assert.ok(pack.pre_execution_hooks.every(hook => hook.stage === 'pre_execution'));
+  assert.ok(pack.pre_execution_hooks.every(hook => ['block', 'warn', 'observe'].includes(hook.effect)));
 }
 
 assert.ok(TEAM_POLICY_PACKS.length >= 2);
@@ -43,6 +46,8 @@ for (const pack of TEAM_POLICY_PACKS) assertPolicyPack(pack);
 assert.equal(resolvePolicyPackForTask({ scope: { org_id: 'default-org' } }).pack_id, 'team_policy_starter');
 assert.equal(resolvePolicyPackForTask({ scope: { org_id: 'regulated-org' } }).pack_id, 'team_policy_regulated');
 assert.equal(resolvePolicyPackForTask({ scope: { org_id: 'unknown-org' } }).pack_id, 'team_policy_starter');
+assert.ok(resolvePolicyPackForTask({ scope: { org_id: 'default-org' } }).pre_execution_hooks.some(hook => hook.hook_id === 'block_destructive_shell'));
+assert.ok(resolvePolicyPackForTask({ scope: { org_id: 'regulated-org' } }).pre_execution_hooks.some(hook => hook.hook_id === 'warn_regulated_write_scope'));
 
 const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-policy-packs-test-'));
 try {
