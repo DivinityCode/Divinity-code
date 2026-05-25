@@ -230,6 +230,7 @@ function parseConnectorReferenceFlag(value) {
 function parseRunArgs(values) {
   const objectiveParts = [];
   const connectorReferences = [];
+  const successCriteria = [];
 
   for (let index = 0; index < values.length; index += 1) {
     const value = values[index];
@@ -238,6 +239,13 @@ function parseRunArgs(values) {
       index += 1;
     } else if (value.startsWith('--connector=')) {
       connectorReferences.push(parseConnectorReferenceFlag(value.slice('--connector='.length)));
+    } else if (value === '--criteria' || value === '--success-criteria') {
+      successCriteria.push(String(values[index + 1] || '').trim());
+      index += 1;
+    } else if (value.startsWith('--criteria=')) {
+      successCriteria.push(value.slice('--criteria='.length).trim());
+    } else if (value.startsWith('--success-criteria=')) {
+      successCriteria.push(value.slice('--success-criteria='.length).trim());
     } else {
       objectiveParts.push(value);
     }
@@ -245,7 +253,8 @@ function parseRunArgs(values) {
 
   return {
     objective: objectiveParts.join(' ').trim() || 'No objective provided',
-    connector_references: connectorReferences
+    connector_references: connectorReferences,
+    success_criteria: successCriteria.filter(Boolean)
   };
 }
 
@@ -350,6 +359,7 @@ function run() {
   const payload = {
     task_id: `task_${Date.now()}`,
     objective: parsedArgs.objective,
+    success_criteria: parsedArgs.success_criteria,
     repo: cwd,
     scope: config.scope || DEFAULT_CONFIG.scope,
     policy_id: config.policy_id,

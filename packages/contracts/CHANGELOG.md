@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.29.0
+- Added optional Task `success_criteria` arrays for explicit run acceptance signals.
+
 ## v1.28.0
 - Added `BugReport` schema and examples for CLI-generated, GitHub-ready bug reports with environment, git, and diagnostic evidence.
 

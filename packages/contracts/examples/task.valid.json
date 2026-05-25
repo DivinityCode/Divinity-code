@@ -1,1 +1,1 @@
-{"task_id":"task_123","objective":"Refactor auth module","repo":"github.com/org/repo","scope":{"org_id":"acme","project_id":"platform"},"policy_id":"default_safe","budget":{"soft_limit_usd":2.5,"hard_limit_usd":5.0},"created_at":"2026-05-24T00:00:00Z"}
+{"task_id":"task_123","objective":"Refactor auth module","success_criteria":["Auth tests pass","Public API remains compatible"],"repo":"github.com/org/repo","scope":{"org_id":"acme","project_id":"platform"},"policy_id":"default_safe","budget":{"soft_limit_usd":2.5,"hard_limit_usd":5.0},"created_at":"2026-05-24T00:00:00Z"}
