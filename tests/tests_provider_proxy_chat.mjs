@@ -37,6 +37,9 @@ const completedServer = await createMockChatServer(async ({ req, res, body }) =>
   assert.equal(body.model, 'mock-model');
   assert.equal(body.max_completion_tokens, 32);
   assert.deepEqual(body.messages, [{ role: 'user', content: secretPrompt }]);
+  assert.deepEqual(body.tools.map(tool => tool.function.name), ['web_extract', 'web_search']);
+  assert.equal(body.tools[0].type, 'function');
+  assert.equal(body.tools[1].function.parameters.properties.query.type, 'string');
 
   res.statusCode = 200;
   res.setHeader('content-type', 'application/json');
@@ -65,6 +68,7 @@ try {
     env: { CUSTOM_LLM_API_KEY: apiSecret },
     requested_model: 'mock-model',
     messages: [{ role: 'user', content: secretPrompt }],
+    enabled_toolsets: ['web'],
     max_completion_tokens: 32
   });
 
@@ -340,6 +344,8 @@ const anthropicServer = await createMockChatServer(async ({ req, res, body }) =>
   assert.equal(body.max_tokens, 64);
   assert.equal('max_completion_tokens' in body, false);
   assert.deepEqual(body.messages, [{ role: 'user', content: secretPrompt }]);
+  assert.deepEqual(body.tools.map(tool => tool.name), ['web_extract', 'web_search']);
+  assert.equal(body.tools[1].input_schema.properties.query.type, 'string');
 
   res.statusCode = 200;
   res.setHeader('content-type', 'application/json');
@@ -367,6 +373,7 @@ try {
       { role: 'system', content: 'system safety prompt' },
       { role: 'user', content: secretPrompt }
     ],
+    enabled_toolsets: ['web'],
     max_completion_tokens: 64
   });
 
@@ -440,6 +447,9 @@ const responsesServer = await createMockChatServer(async ({ req, res, body }) =>
   assert.equal('max_completion_tokens' in body, false);
   assert.equal('max_tokens' in body, false);
   assert.deepEqual(body.input, [{ role: 'user', content: secretPrompt }]);
+  assert.deepEqual(body.tools.map(tool => tool.name), ['web_extract', 'web_search']);
+  assert.equal(body.tools[0].type, 'function');
+  assert.equal(body.tools[1].parameters.properties.query.type, 'string');
 
   res.statusCode = 200;
   res.setHeader('content-type', 'application/json');
@@ -476,6 +486,7 @@ try {
       { role: 'system', content: 'responses system prompt' },
       { role: 'user', content: secretPrompt }
     ],
+    enabled_toolsets: ['web'],
     max_output_tokens: 48
   });
 

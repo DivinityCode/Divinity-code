@@ -95,6 +95,7 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: CLI/API task assembly carries toolset resolution metadata on task/run payloads.
    - Bootstrap status: toolset resolution now carries policy permission unions, risk summaries, provider `tool_calls` capability checks, and operator-control recommendations/requirements on task/run payloads.
    - Bootstrap status: provider chat execution enforces selected toolset compatibility before upstream calls and returns `toolset_resolution` metadata on completed or blocked proxy results.
+   - Bootstrap status: selected tool schemas are projected into Chat Completions, Anthropic Messages, and OpenAI Responses request bodies so providers can request tool calls while execution remains operator-gated.
    - Bootstrap status: provider-returned tool calls are detected across Chat Completions, Anthropic Messages, and OpenAI Responses, then returned as `requires_action` with redacted `tool_call_requests` and required `tool_call_review` operator controls instead of being executed automatically.
    - Bootstrap status: per-tool-call approve/reject decisions are represented as `divinity.provider_tool_call_approval.v1` records through CLI `provider-tool-approval` and API `GET`/`POST /runs/:id/provider-tool-call-approvals`, with raw arguments still redacted and no automatic execution.
    - Bootstrap status: dashboard run detail and approval cards render provider/toolset operator controls from `task.toolset_resolution`.

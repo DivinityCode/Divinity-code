@@ -51,6 +51,44 @@
       }
     ],
     "tools": ["web_extract", "web_search"],
+    "tool_schemas": [
+      {
+        "name": "web_extract",
+        "description": "Extract readable public web page content from a URL and return source metadata for operator review.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "Public URL to fetch and summarize."
+            }
+          },
+          "required": ["url"],
+          "additionalProperties": false
+        },
+        "toolsets": ["web"],
+        "risk_level": "low",
+        "policy_permissions": ["network:read"]
+      },
+      {
+        "name": "web_search",
+        "description": "Search public web results for a concise query and return source metadata for operator review.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Search query to run against public web results."
+            }
+          },
+          "required": ["query"],
+          "additionalProperties": false
+        },
+        "toolsets": ["web"],
+        "risk_level": "low",
+        "policy_permissions": ["network:read"]
+      }
+    ],
     "policy_permissions": ["network:read"],
     "risk_summary": {
       "highest_risk_level": "low",
