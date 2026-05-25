@@ -75,7 +75,7 @@ The code examples reinforce the current bootstrap direction and add these concre
 6. **Bounded retry evidence:** implemented attempt metadata and bounded API retries for failed allowed steps so verifier failures preserve evidence without creating unbounded autonomous loops.
 7. **Worktree isolation hardening:** keep run workspace cleanup/quarantine evidence visible as runner isolation moves from local snapshots toward parallel or remote execution.
 8. **Provider/tool runtime foundation:** implemented public LLM provider and toolset catalogs first; live provider invocation preserves the same separation between provider identity, transport resolution, auth readiness, toolset resolution, and execution.
-9. **Provider proxy chat execution:** implemented the first safe invocation path for OpenAI-compatible `chat_completions` transports behind route policy, with local mock-server tests, no returned prompt/request-body/secret metadata, blocked credentialed endpoint overrides, and explicit future boundaries for Anthropic Messages, OpenAI Responses, streaming, and managed secret stores.
+9. **Provider proxy chat execution:** implemented safe non-streaming invocation paths for OpenAI-compatible Chat Completions, Anthropic Messages, and OpenAI Responses transports behind route policy, with local mock-server tests, no returned prompt/request-body/secret metadata, blocked credentialed endpoint overrides, and explicit future boundaries for streaming, managed rate-limit storage, hosted secret stores, and live tool-call governance.
 
 ## Local Mapping
 | External pattern | Current Divinity surface |

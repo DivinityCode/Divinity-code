@@ -38,15 +38,14 @@ Excluded provider sources:
 - The provider catalog includes authorized free-tier candidates from the research, such as Groq, Cerebras, Mistral, and GitHub Models, but it stores only endpoint metadata and credential environment variable names.
 - `packages/provider-proxy` now plans safe provider routes from the trusted catalog and blocks public shared-key sources, missing credentials, unknown providers, and explicit limit-bypass intent.
 - CLI `provider-route` and API `POST /provider-proxy/route` expose route-plan metadata only. They do not send prompts, call providers, store credentials, or print secret values.
-- `executeProviderProxyChat()`, CLI `provider-chat`, and API `POST /provider-proxy/chat` now support non-streaming OpenAI-compatible `chat_completions` execution behind the same route policy. Tests use local mock servers, not external provider calls.
+- `executeProviderProxyChat()`, CLI `provider-chat`, and API `POST /provider-proxy/chat` now support non-streaming OpenAI-compatible Chat Completions, Anthropic Messages, and OpenAI Responses execution behind the same route policy. Tests use local mock servers, not external provider calls.
 - Provider chat results include upstream status, selected provider/model, assistant message, finish reason, and usage metadata while omitting prompts, request bodies, and credential values.
 - Credentialed provider endpoint overrides fail closed during execution so operator-owned secrets are never forwarded to caller-supplied URLs.
-- A future live proxy should extend this with managed rate-limit stores, additional transport handlers, streaming, and hosted secret integration while preserving fail-closed behavior.
+- A future live proxy should extend this with managed rate-limit stores, streaming, hosted secret integration, and live tool-call governance while preserving fail-closed behavior.
 - Rotation is acceptable for reliability and cost policy across operator-owned credentials; it is not acceptable for evading limits.
 
 ## Next Safe Slice
 Extend controlled execution toward production operations:
-- add explicit transport handlers for Anthropic Messages and OpenAI Responses rather than overloading chat-completions;
 - persist per-provider request and token budgets in a managed store;
 - add streaming response support with redacted audit metadata;
 - integrate an approved secret store while keeping environment variables as the local development path;

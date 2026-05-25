@@ -107,16 +107,6 @@ try {
   await limitedServer.close();
 }
 
-const unsupported = await executeProviderProxyChat({
-  candidates: ['anthropic'],
-  env: { ANTHROPIC_API_KEY: 'anthropic-secret' },
-  messages: [{ role: 'user', content: secretPrompt }]
-});
-
-assert.equal(unsupported.status, 'blocked');
-assert.match(unsupported.error, /unsupported transport/);
-assert.equal(JSON.stringify(unsupported).includes('anthropic-secret'), false);
-
 const exfilServer = await createMockChatServer(async ({ res }) => {
   res.statusCode = 500;
   res.end(JSON.stringify({ error: 'should not be called' }));
@@ -137,6 +127,166 @@ try {
   assert.equal(JSON.stringify(exfilBlocked).includes(apiSecret), false);
 } finally {
   await exfilServer.close();
+}
+
+const anthropicExfilServer = await createMockChatServer(async ({ res }) => {
+  res.statusCode = 500;
+  res.end(JSON.stringify({ error: 'should not be called' }));
+});
+
+try {
+  const exfilBlocked = await executeProviderProxyChat({
+    candidates: [{ provider_id: 'anthropic', base_url: anthropicExfilServer.base_url }],
+    env: { ANTHROPIC_API_KEY: 'anthropic-secret' },
+    requested_model: 'claude-mock',
+    messages: [{ role: 'user', content: secretPrompt }],
+    max_completion_tokens: 32
+  });
+
+  assert.equal(exfilBlocked.status, 'blocked');
+  assert.match(exfilBlocked.error, /base_url overrides/);
+  assert.equal(anthropicExfilServer.requests.length, 0);
+  assert.equal(JSON.stringify(exfilBlocked).includes('anthropic-secret'), false);
+} finally {
+  await anthropicExfilServer.close();
+}
+
+const responsesExfilServer = await createMockChatServer(async ({ res }) => {
+  res.statusCode = 500;
+  res.end(JSON.stringify({ error: 'should not be called' }));
+});
+
+try {
+  const exfilBlocked = await executeProviderProxyChat({
+    candidates: [{ provider_id: 'openai_api', base_url: responsesExfilServer.base_url }],
+    env: { OPENAI_API_KEY: 'openai-secret' },
+    requested_model: 'gpt-mock',
+    messages: [{ role: 'user', content: secretPrompt }],
+    max_completion_tokens: 32
+  });
+
+  assert.equal(exfilBlocked.status, 'blocked');
+  assert.match(exfilBlocked.error, /base_url overrides/);
+  assert.equal(responsesExfilServer.requests.length, 0);
+  assert.equal(JSON.stringify(exfilBlocked).includes('openai-secret'), false);
+} finally {
+  await responsesExfilServer.close();
+}
+
+const anthropicServer = await createMockChatServer(async ({ req, res, body }) => {
+  assert.equal(req.method, 'POST');
+  assert.equal(req.url, '/v1/messages');
+  assert.equal(req.headers.authorization, undefined);
+  assert.equal(req.headers['x-api-key'], undefined);
+  assert.equal(req.headers['anthropic-version'], '2023-06-01');
+  assert.equal(body.model, 'claude-mock');
+  assert.equal(body.system, 'system safety prompt');
+  assert.equal(body.max_tokens, 64);
+  assert.equal('max_completion_tokens' in body, false);
+  assert.deepEqual(body.messages, [{ role: 'user', content: secretPrompt }]);
+
+  res.statusCode = 200;
+  res.setHeader('content-type', 'application/json');
+  res.end(JSON.stringify({
+    id: 'msg_mock',
+    type: 'message',
+    role: 'assistant',
+    model: 'claude-mock',
+    content: [{ type: 'text', text: 'anthropic mock response' }],
+    stop_reason: 'end_turn',
+    stop_sequence: null,
+    usage: {
+      input_tokens: 5,
+      output_tokens: 4
+    }
+  }));
+});
+
+try {
+  const completed = await executeProviderProxyChat({
+    candidates: [{ provider_id: 'custom_anthropic_compatible', base_url: anthropicServer.base_url }],
+    env: { CUSTOM_ANTHROPIC_API_KEY: apiSecret },
+    requested_model: 'claude-mock',
+    messages: [
+      { role: 'system', content: 'system safety prompt' },
+      { role: 'user', content: secretPrompt }
+    ],
+    max_completion_tokens: 64
+  });
+
+  assert.equal(completed.status, 'completed');
+  assert.equal(completed.provider_id, 'custom_anthropic_compatible');
+  assert.equal(completed.transport, 'anthropic_messages');
+  assert.equal(completed.message.content[0].text, 'anthropic mock response');
+  assert.equal(completed.output_text, 'anthropic mock response');
+  assert.equal(completed.finish_reason, 'end_turn');
+  assert.equal(completed.usage.input_tokens, 5);
+  assert.equal(JSON.stringify(completed).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(completed).includes(apiSecret), false);
+} finally {
+  await anthropicServer.close();
+}
+
+const responsesServer = await createMockChatServer(async ({ req, res, body }) => {
+  assert.equal(req.method, 'POST');
+  assert.equal(req.url, '/responses');
+  assert.equal(req.headers.authorization, undefined);
+  assert.equal(body.model, 'gpt-mock');
+  assert.equal(body.instructions, 'responses system prompt');
+  assert.equal(body.max_output_tokens, 48);
+  assert.equal('max_completion_tokens' in body, false);
+  assert.equal('max_tokens' in body, false);
+  assert.deepEqual(body.input, [{ role: 'user', content: secretPrompt }]);
+
+  res.statusCode = 200;
+  res.setHeader('content-type', 'application/json');
+  res.end(JSON.stringify({
+    id: 'resp_mock',
+    object: 'response',
+    status: 'completed',
+    model: 'gpt-mock',
+    output: [
+      {
+        type: 'message',
+        id: 'msg_resp_mock',
+        status: 'completed',
+        role: 'assistant',
+        content: [
+          { type: 'output_text', text: 'responses mock response', annotations: [] }
+        ]
+      }
+    ],
+    usage: {
+      input_tokens: 6,
+      output_tokens: 5,
+      total_tokens: 11
+    }
+  }));
+});
+
+try {
+  const completed = await executeProviderProxyChat({
+    candidates: [{ provider_id: 'custom_openai_responses', base_url: responsesServer.base_url }],
+    env: { CUSTOM_RESPONSES_API_KEY: apiSecret },
+    requested_model: 'gpt-mock',
+    messages: [
+      { role: 'system', content: 'responses system prompt' },
+      { role: 'user', content: secretPrompt }
+    ],
+    max_output_tokens: 48
+  });
+
+  assert.equal(completed.status, 'completed');
+  assert.equal(completed.provider_id, 'custom_openai_responses');
+  assert.equal(completed.transport, 'codex_responses');
+  assert.equal(completed.message.content[0].text, 'responses mock response');
+  assert.equal(completed.output_text, 'responses mock response');
+  assert.equal(completed.finish_reason, 'completed');
+  assert.equal(completed.usage.total_tokens, 11);
+  assert.equal(JSON.stringify(completed).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(completed).includes(apiSecret), false);
+} finally {
+  await responsesServer.close();
 }
 
 const budgetServer = await createMockChatServer(async ({ res }) => {

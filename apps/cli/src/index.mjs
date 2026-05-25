@@ -506,6 +506,7 @@ function parseProviderChatArgs(values) {
     messages: [],
     requested_model: '',
     max_completion_tokens: 0,
+    max_output_tokens: 0,
     request_budget: {}
   };
 
@@ -538,6 +539,11 @@ function parseProviderChatArgs(values) {
       index += 1;
     } else if (value.startsWith('--max-completion-tokens=')) {
       options.max_completion_tokens = value.slice('--max-completion-tokens='.length);
+    } else if (value === '--max-output-tokens') {
+      options.max_output_tokens = next;
+      index += 1;
+    } else if (value.startsWith('--max-output-tokens=')) {
+      options.max_output_tokens = value.slice('--max-output-tokens='.length);
     } else if (value === '--max-prompt-chars') {
       options.request_budget.max_prompt_chars = next;
       index += 1;
@@ -559,6 +565,7 @@ function parseProviderChatArgs(values) {
     .filter(message => message.content);
   options.requested_model = String(options.requested_model || '').trim();
   options.max_completion_tokens = Number(options.max_completion_tokens || 0);
+  options.max_output_tokens = Number(options.max_output_tokens || 0);
   options.request_budget.max_prompt_chars = Number(options.request_budget.max_prompt_chars || 0);
   return options;
 }
