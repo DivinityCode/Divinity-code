@@ -58,6 +58,7 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 
 ## Provider And Toolset Catalogs
 - `packages/provider-runtime` loads side-effect-free LLM provider metadata from `providers.v1.json` for OpenRouter, Anthropic, OpenAI API, Google Gemini, Groq, Cerebras, Mistral, GitHub Models, and custom OpenAI-compatible endpoints.
+- Operators can add or replace reviewed provider metadata with `DIVINITY_PROVIDER_CATALOG_PATH`; overlays store only metadata and credential environment variable names, never secret values.
 - Provider metadata separates public provider identity from runtime resolution details such as transport, base URL, supported auth modes, credential environment variable names, default model, and capability labels.
 - `packages/toolsets` defines public toolset metadata and a deterministic default resolver for web, file, terminal, code execution, browser, memory, delegation, connectors, and approvals.
 - CLI `providers` and `toolsets`, API `GET /providers` and `GET /toolsets`, and the shared capabilities catalog expose the same metadata shape.
@@ -66,7 +67,7 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 - Toolset resolution now exposes policy permission unions, risk summaries, provider `tool_calls` capability checks, and operator controls such as approval recommendations or provider capability review requirements.
 - The operator dashboard preserves `task.toolset_resolution` from API-loaded runs and renders operator controls in run detail and approval cards before approve/reject actions.
 - This mirrors Hermes Agent's separation between provider identity, runtime credential/transport resolution, transport implementations, and toolset configuration. This slice intentionally does not make live LLM calls or persist credentials.
-- Public free-provider lists are research inputs only. Shared public API keys, no-registration credential reuse, quota bypass, and rotation to evade provider limits are excluded from the architecture.
+- Public free-provider lists are research inputs only. Shared public API keys, no-registration credential reuse, quota bypass, and rotation to evade provider limits are excluded from the architecture, and provider catalog overlays reject shared-key or bypass/evasion source labels.
 
 ## Provider Proxy Route Planning
 - `packages/provider-proxy` exposes a pure `planProviderProxyRoute()` helper that accepts candidate provider ids, optional per-provider limit state, rotation intent, and requested model.

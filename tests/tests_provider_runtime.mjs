@@ -1,4 +1,7 @@
 import assert from 'assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import os from 'os';
+import path from 'path';
 
 import {
   loadProviderCatalog,
@@ -110,5 +113,96 @@ assert.ok(readiness.providers.find(provider => provider.provider_id === 'groq').
 assert.equal(readiness.providers.find(provider => provider.provider_id === 'custom_openai_compatible').credential_required, false);
 assert.equal(readiness.providers.find(provider => provider.provider_id === 'custom_anthropic_compatible').credential_required, false);
 assert.equal(readiness.providers.find(provider => provider.provider_id === 'custom_openai_responses').credential_required, false);
+
+const tmpDir = mkdtempSync(path.join(os.tmpdir(), 'divinity-provider-catalog-'));
+
+try {
+  const overlayPath = path.join(tmpDir, 'providers-overlay.json');
+  writeFileSync(overlayPath, JSON.stringify({
+    format: 'divinity.llm_provider_catalog.v1',
+    providers: [
+      {
+        provider_id: 'operator_free_tier_mock',
+        display_name: 'Operator Free-Tier Mock',
+        transport: 'chat_completions',
+        base_url: 'https://example.test/v1',
+        auth_modes: ['api_key'],
+        credential_env_vars: ['OPERATOR_FREE_TIER_API_KEY'],
+        supports_custom_base_url: false,
+        default_model: 'operator/free-tier-mock',
+        capabilities: ['chat', 'openai_compatible', 'free_tier_models'],
+        source: 'operator_config'
+      },
+      {
+        provider_id: 'groq',
+        display_name: 'Operator Groq Override',
+        transport: 'chat_completions',
+        base_url: 'https://operator-groq.example.test/v1',
+        auth_modes: ['api_key'],
+        credential_env_vars: ['OPERATOR_GROQ_API_KEY'],
+        supports_custom_base_url: false,
+        default_model: 'operator/groq-override',
+        capabilities: ['chat', 'tool_calls', 'openai_compatible', 'free_tier_models'],
+        source: 'operator_config'
+      }
+    ]
+  }, null, 2));
+
+  const overlayEnv = {
+    DIVINITY_PROVIDER_CATALOG_PATH: overlayPath,
+    OPERATOR_FREE_TIER_API_KEY: 'operator-secret',
+    OPERATOR_GROQ_API_KEY: 'operator-groq-secret'
+  };
+  const overlayProviders = publicLlmProviders({ env: overlayEnv });
+  assert.ok(overlayProviders.some(provider => provider.provider_id === 'operator_free_tier_mock'));
+  assert.equal(overlayProviders.filter(provider => provider.provider_id === 'groq').length, 1);
+  assert.equal(providerById('operator_free_tier_mock', { env: overlayEnv }).base_url, 'https://example.test/v1');
+  assert.equal(providerById('groq', { env: overlayEnv }).base_url, 'https://operator-groq.example.test/v1');
+
+  const overlayRuntime = resolveProviderRuntime({
+    provider_id: 'operator_free_tier_mock',
+    env: overlayEnv
+  });
+  assert.equal(overlayRuntime.provider_id, 'operator_free_tier_mock');
+  assert.equal(overlayRuntime.base_url, 'https://example.test/v1');
+  assert.equal(overlayRuntime.auth.credential_configured, true);
+  assert.deepEqual(overlayRuntime.auth.configured_env_vars, ['OPERATOR_FREE_TIER_API_KEY']);
+  assert.equal(JSON.stringify(overlayRuntime).includes('operator-secret'), false);
+
+  const groqOverrideRuntime = resolveProviderRuntime({
+    provider_id: 'groq',
+    env: overlayEnv
+  });
+  assert.equal(groqOverrideRuntime.base_url, 'https://operator-groq.example.test/v1');
+  assert.equal(groqOverrideRuntime.model, 'operator/groq-override');
+  assert.deepEqual(groqOverrideRuntime.auth.configured_env_vars, ['OPERATOR_GROQ_API_KEY']);
+  assert.equal(JSON.stringify(groqOverrideRuntime).includes('operator-groq-secret'), false);
+
+  const badOverlayPath = path.join(tmpDir, 'providers-bad-overlay.json');
+  writeFileSync(badOverlayPath, JSON.stringify({
+    format: 'divinity.llm_provider_catalog.v1',
+    providers: [
+      {
+        provider_id: 'shared_key_pool',
+        display_name: 'Shared Key Pool',
+        transport: 'chat_completions',
+        base_url: 'https://example.test/v1',
+        auth_modes: ['api_key'],
+        credential_env_vars: ['SHARED_KEY_POOL_API_KEY'],
+        supports_custom_base_url: false,
+        default_model: 'shared/key-pool',
+        capabilities: ['chat'],
+        source: 'public_shared_key_pool'
+      }
+    ]
+  }, null, 2));
+
+  assert.throws(
+    () => loadProviderCatalog({ overlayPath: badOverlayPath }),
+    /public shared keys/
+  );
+} finally {
+  rmSync(tmpDir, { recursive: true, force: true });
+}
 
 console.log(JSON.stringify({ ok: true, test: 'provider-runtime' }));

@@ -84,6 +84,7 @@ Build a best-in-class AI engineering platform that combines:
 ### Deliverables
 1. LLM provider runtime configuration.
    - Bootstrap status: LLM provider metadata and side-effect-free credential readiness are exposed through capabilities, CLI `providers`, API `/providers`, and `doctor`.
+   - Bootstrap status: operator-controlled provider catalog overlays can be supplied through `DIVINITY_PROVIDER_CATALOG_PATH` so legitimate free-tier, trial, or local providers can be tested without editing source code or storing secrets in manifests.
    - Bootstrap status: CLI/API task assembly resolves provider runtime metadata from config or request input without printing or storing secret values.
    - Bootstrap status: provider route planning is exposed through CLI `provider-route`, API `POST /provider-proxy/route`, and `packages/provider-proxy`, with explicit blocks for public shared keys and limit-bypass intent.
    - Bootstrap status: non-streaming OpenAI-compatible Chat Completions, Anthropic Messages, and OpenAI Responses execution is exposed through CLI `provider-chat`, API `POST /provider-proxy/chat`, and `executeProviderProxyChat()`, with prompt/secret redaction, raw tool-argument redaction, credentialed endpoint-override blocking, transport-specific token fields, fail-closed `429` handling, and managed provider retry-window tracking.
