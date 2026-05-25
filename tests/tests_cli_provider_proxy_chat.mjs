@@ -11,8 +11,10 @@ const repoFixture = path.join(tmpRoot, 'repo');
 const usageLedgerPath = path.join(tmpRoot, 'provider-usage-ledger.json');
 mkdirSync(repoFixture);
 mkdirSync(path.join(repoFixture, 'cli-search-scope'));
+mkdirSync(path.join(repoFixture, 'cli-list-scope', 'cli-list-nested'), { recursive: true });
 writeFileSync(path.join(repoFixture, 'README.md'), '# Provider Proxy CLI Fixture\n');
 writeFileSync(path.join(repoFixture, 'cli-search-scope', 'search-target.md'), 'cli secret search needle\n');
+writeFileSync(path.join(repoFixture, 'cli-list-scope', 'cli-list-nested', 'list-target.md'), 'cli secret list file contents\n');
 
 process.env.DIVINITY_API_AUTOSTART = '0';
 process.env.DIVINITY_WORKSPACE_ROOT = path.join(tmpRoot, 'workspaces');
@@ -555,6 +557,39 @@ try {
   assert.equal(JSON.stringify(localSearchExecution).includes('cli-search-scope'), false);
   assert.equal(JSON.stringify(localSearchExecution).includes('search-target.md'), false);
   assert.equal(JSON.stringify(localSearchExecution).includes('cli secret search needle'), false);
+
+  const localListExecution = await runCli([
+    'provider-tool-execute',
+    'run_cli_tool_execution',
+    '--approval-id', 'provider_tool_call_approval_run_cli_tool_execution_call_cli_list_files_003',
+    '--tool-call-id', 'call_cli_list_files',
+    '--provider', 'custom_openai_compatible',
+    '--transport', 'chat_completions',
+    '--name', 'list_files',
+    '--argument-key', 'path',
+    '--argument-key', 'max_depth',
+    '--argument', 'path=cli-list-scope',
+    '--argument', 'max_depth=3',
+    '--workspace', repoFixture,
+    '--actor', 'cli@example.com',
+    '--reason', 'Execute approved redacted repository listing.',
+    '--operator-summary', 'Operator reviewed the CLI listing result.'
+  ]);
+
+  assert.equal(localListExecution.ok, true);
+  assert.equal(localListExecution.command, 'provider-tool-execute');
+  assert.equal(localListExecution.execution.status, 'completed');
+  assert.equal(localListExecution.execution.adapter, 'list_files');
+  assert.equal(localListExecution.execution.operator_summary, 'Operator reviewed the CLI listing result.');
+  assert.equal(localListExecution.execution.operator_summary_source, 'operator');
+  assert.equal(localListExecution.execution.output_metadata.files_listed, 1);
+  assert.equal(localListExecution.execution.output_metadata.directories_scanned, 2);
+  assert.equal(localListExecution.execution.output_metadata.max_depth, 3);
+  assert.equal(localListExecution.execution.output_metadata.paths_redacted, true);
+  assert.equal(localListExecution.execution.output_metadata.content_redacted, true);
+  assert.equal(JSON.stringify(localListExecution).includes('cli-list-scope'), false);
+  assert.equal(JSON.stringify(localListExecution).includes('list-target.md'), false);
+  assert.equal(JSON.stringify(localListExecution).includes('cli secret list file contents'), false);
 
   const apiToolApproval = await runCli([
     'provider-tool-approval',

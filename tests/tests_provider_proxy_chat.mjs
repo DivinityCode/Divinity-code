@@ -119,6 +119,7 @@ try {
 const toolSecret = 'secret tool argument value';
 const continuationSecretPath = 'secret-continuation-file.md';
 const continuationSecretOutput = 'secret continuation file contents';
+const continuationSecretListPath = 'secret-continuation-list-scope';
 const toolCallServer = await createMockChatServer(async ({ res }) => {
   res.statusCode = 200;
   res.setHeader('content-type', 'application/json');
@@ -195,10 +196,16 @@ const continuationServer = await createMockChatServer(async ({ req, res, body })
   assert.match(continuation.content, /match_count/);
   assert.match(continuation.content, /matching_files_count/);
   assert.match(continuation.content, /files_scanned/);
+  assert.match(continuation.content, /list_files/);
+  assert.match(continuation.content, /files_listed/);
+  assert.match(continuation.content, /directories_scanned/);
+  assert.match(continuation.content, /max_depth/);
   assert.equal(continuation.content.includes(continuationSecretPath), false);
   assert.equal(continuation.content.includes(continuationSecretOutput), false);
   assert.equal(continuation.content.includes('secret continuation search query'), false);
   assert.equal(continuation.content.includes('secret-continuation-search-result.md'), false);
+  assert.equal(continuation.content.includes(continuationSecretListPath), false);
+  assert.equal(continuation.content.includes('secret-continuation-list-target.md'), false);
 
   res.statusCode = 200;
   res.setHeader('content-type', 'application/json');
@@ -290,6 +297,37 @@ try {
           query: 'secret continuation search query',
           matched_path: 'secret-continuation-search-result.md'
         }
+      },
+      {
+        format: 'divinity.provider_tool_execution.v1',
+        execution_id: 'provider_tool_execution_run_context_call_list_context_003',
+        run_id: 'run_context',
+        approval_id: 'provider_tool_call_approval_run_context_call_list_context_003',
+        tool_call_id: 'call_list_context',
+        provider_id: 'custom_openai_compatible',
+        transport: 'chat_completions',
+        name: 'list_files',
+        argument_keys: ['path', 'max_depth'],
+        arguments_redacted: true,
+        argument_values: { path: continuationSecretListPath, max_depth: 2 },
+        status: 'completed',
+        adapter: 'list_files',
+        actor: 'operator@example.com',
+        reason: 'Approved redacted listing continuation context.',
+        operator_summary: 'Operator reviewed the listing result: repository shape context is available.',
+        started_at: '2026-05-25T12:10:04Z',
+        completed_at: '2026-05-25T12:10:05Z',
+        output_summary: 'list_files completed; paths redacted',
+        output_redacted: true,
+        output_metadata: {
+          files_listed: 4,
+          directories_scanned: 3,
+          max_depth: 2,
+          paths_redacted: true,
+          content_redacted: true,
+          path: continuationSecretListPath,
+          filename: 'secret-continuation-list-target.md'
+        }
       }
     ]
   });
@@ -299,6 +337,7 @@ try {
   assert.equal(continuationServer.requests.length, 1);
   assert.equal(JSON.stringify(continued).includes(continuationSecretPath), false);
   assert.equal(JSON.stringify(continued).includes(continuationSecretOutput), false);
+  assert.equal(JSON.stringify(continued).includes(continuationSecretListPath), false);
   assert.equal(JSON.stringify(continued).includes(secretPrompt), false);
   assert.equal(JSON.stringify(continued).includes(apiSecret), false);
 } finally {

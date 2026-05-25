@@ -10,7 +10,7 @@ export const TOOLSETS = [
   {
     toolset_id: 'file',
     description: 'Repository file read, write, patch, and search tools.',
-    tools: ['patch_file', 'read_file', 'search_files', 'write_file'],
+    tools: ['list_files', 'patch_file', 'read_file', 'search_files', 'write_file'],
     default_enabled: true,
     risk_level: 'medium',
     policy_permissions: ['file:read', 'file:write']
@@ -105,6 +105,18 @@ const TOOL_SCHEMAS = {
         patch: { type: 'string', description: 'Unified patch text to apply.' }
       },
       required: ['path', 'patch'],
+      additionalProperties: false
+    }
+  },
+  list_files: {
+    description: 'List repository files under a directory and return redacted shape metadata.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Repository-relative directory or file scope to list.' },
+        max_depth: { type: 'integer', minimum: 0, maximum: 20, description: 'Optional maximum directory depth to inspect.' }
+      },
+      required: ['path'],
       additionalProperties: false
     }
   },

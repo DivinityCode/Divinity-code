@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.42.0
+- Expanded `ProviderToolExecution` and embedded Run execution adapter enums with `list_files` for redacted file-tree shape metadata.
+
 ## v1.41.0
 - Added `ProviderUsageLedger` schema and examples for redacted provider/model request and token usage aggregates.
 

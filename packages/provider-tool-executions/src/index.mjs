@@ -333,6 +333,144 @@ function searchFilesExecution({
   }
 }
 
+function normalizedMaxDepth(value) {
+  if (value === undefined || value === null || cleanString(value) === '') return 20;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) return 20;
+  return Math.min(Math.floor(numeric), 20);
+}
+
+function listFilesExecution({
+  run_id,
+  approval,
+  argument_values,
+  workspace_root,
+  argument_keys,
+  actor,
+  reason,
+  operator_summary,
+  started_at,
+  completed_at,
+  index
+}) {
+  const root = path.resolve(cleanString(workspace_root) || process.cwd());
+  const scopeInput = cleanString(argument_values.path);
+  const scope = path.resolve(root, scopeInput);
+  const maxDepth = normalizedMaxDepth(argument_values.max_depth);
+  if (!scopeInput || !isPathInside(scope, root)) {
+    return executionEnvelope({
+      run_id,
+      approval,
+      argument_keys,
+      status: 'failed',
+      adapter: 'list_files',
+      actor,
+      reason,
+      started_at,
+      completed_at,
+      output_summary: 'list_files failed; paths redacted',
+      output_metadata: {
+        max_depth: maxDepth,
+        paths_redacted: true,
+        content_redacted: true
+      },
+      operator_summary,
+      error: 'list_files scope must stay inside workspace',
+      index
+    });
+  }
+
+  try {
+    const stat = fs.statSync(scope);
+    let filesListed = 0;
+    let directoriesScanned = 0;
+    if (stat.isFile()) {
+      filesListed = 1;
+    } else if (stat.isDirectory()) {
+      const pending = [{ directory: scope, depth: 0 }];
+      while (pending.length > 0) {
+        const current = pending.pop();
+        directoriesScanned += 1;
+        for (const entry of fs.readdirSync(current.directory, { withFileTypes: true })) {
+          if (entry.isDirectory() && skippedSearchDirectory(entry.name)) continue;
+          if (entry.isFile()) {
+            filesListed += 1;
+          } else if (entry.isDirectory() && current.depth < maxDepth) {
+            pending.push({
+              directory: path.join(current.directory, entry.name),
+              depth: current.depth + 1
+            });
+          }
+        }
+      }
+    } else {
+      return executionEnvelope({
+        run_id,
+        approval,
+        argument_keys,
+        status: 'failed',
+        adapter: 'list_files',
+        actor,
+        reason,
+        started_at,
+        completed_at,
+        output_summary: 'list_files failed; paths redacted',
+        output_metadata: {
+          max_depth: maxDepth,
+          paths_redacted: true,
+          content_redacted: true
+        },
+        operator_summary,
+        error: 'list_files scope must be a file or directory',
+        index
+      });
+    }
+
+    return executionEnvelope({
+      run_id,
+      approval,
+      argument_keys,
+      status: 'completed',
+      adapter: 'list_files',
+      actor,
+      reason,
+      started_at,
+      completed_at,
+      output_summary: 'list_files completed; paths redacted',
+      output_metadata: {
+        files_listed: filesListed,
+        directories_scanned: directoriesScanned,
+        max_depth: maxDepth,
+        paths_redacted: true,
+        content_redacted: true
+      },
+      operator_summary,
+      index
+    });
+  } catch (error) {
+    return executionEnvelope({
+      run_id,
+      approval,
+      argument_keys,
+      status: 'failed',
+      adapter: 'list_files',
+      actor,
+      reason,
+      started_at,
+      completed_at,
+      output_summary: 'list_files failed; paths redacted',
+      output_metadata: {
+        max_depth: maxDepth,
+        paths_redacted: true,
+        content_redacted: true
+      },
+      operator_summary,
+      error: error?.code ? `list_files failed with ${error.code}` : 'list_files failed',
+      index
+    });
+  }
+}
+
 function unsupportedExecution({
   run_id,
   approval,
@@ -421,6 +559,14 @@ export function createProviderToolExecution(options = {}) {
 
   if (approval.name === 'search_files') {
     return searchFilesExecution({
+      ...common,
+      argument_values,
+      workspace_root
+    });
+  }
+
+  if (approval.name === 'list_files') {
+    return listFilesExecution({
       ...common,
       argument_values,
       workspace_root
