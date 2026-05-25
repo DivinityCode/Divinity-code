@@ -31,7 +31,7 @@ This document defines how Builder Mode and Operator Mode expose the shared Task/
 | `init` | Config path, policy, budget, scope, starter recipes | Confirm local setup and onboarding defaults |
 | `run` | Task payload, preflight, status, policy pack, orchestration, activity, memory, artifacts, events | Decide whether the run is safe to continue or needs approval |
 | `status` | Current lifecycle status placeholder | Check queued state in the bootstrap CLI |
-| `approvals` / `approve` / `reject` | API-backed approval queue and local structured approval decisions | Exercise approval command surface and operator transitions |
+| `approvals` / `approve` / `reject` / `approval-comment` / `approval-comments` | API-backed approval queue, local structured approval decisions, and approval review comments | Exercise approval command surface, operator transitions, and review context |
 | `capabilities` | Policy presets, adapters, isolation profiles, connectors, recipes | Discover supported extension points |
 | `recipes` | Starter recipe summaries | Select first-run workflows |
 | `doctor` | Local readiness checks | Diagnose setup before deeper work |
@@ -48,7 +48,7 @@ This document defines how Builder Mode and Operator Mode expose the shared Task/
 ### Primary Regions
 1. **Run Queue:** status filters, approval backlog, risk, budget, and scope summary.
 2. **Run Detail:** selected task, goal records, preflight decision, timeline, evidence, connector references, agent activity, execution records, verification records, artifacts, audit metadata, and workspace state.
-3. **Approvals:** approve/reject actions with actor and reason, visible only for approval-required runs.
+3. **Approvals:** approve/reject actions with actor and reason, plus review comments for approval context, visible only for approval-required runs.
 4. **Observability:** liveness, stale-run indicators, budget utilization, risk mix, failure taxonomy, and org/project rollups.
 5. **Artifacts:** patch, log, summary, and PR-summary metadata with retrievable payload routes.
 
@@ -73,7 +73,7 @@ This document defines how Builder Mode and Operator Mode expose the shared Task/
 | Preflight | `run` output | `/preflight`, stored run preflight | decision panel and timeline |
 | Events | `run` output | `/runs/:id/events`, stream | timeline |
 | Artifacts | metadata in `run` output | `/runs/:id/artifacts`, `/artifacts/:id` | artifact panel |
-| Approvals | `approvals`, `approve`, and `reject` CLI commands | `/approvals`, `/runs/:id/approval` | approval queue and action panel |
+| Approvals | `approvals`, `approve`, `reject`, `approval-comment`, and `approval-comments` CLI commands | `/approvals`, `/runs/:id/approval`, `/runs/:id/approval/comments` | approval queue and action panel |
 | Observability | not primary | `/observability` | observability region |
 | Audit | not primary | `/audit` | audit metadata and export affordance |
 
@@ -83,7 +83,7 @@ This document defines how Builder Mode and Operator Mode expose the shared Task/
 3. Builder runs `divinity run --criteria "..." "objective"`.
 4. CLI returns run id, preflight status, risk, budget, and artifacts.
 5. If approval is required, Operator opens dashboard and filters approval queue.
-6. Operator inspects evidence, approves or rejects, and can export audit history.
+6. Operator inspects evidence, comments when review context is needed, approves or rejects, and can export audit history.
 
 ## IA Acceptance Criteria
 - README links the IA beside product plan, requirements, architecture, backlog, research, and execution plan.

@@ -12,5 +12,14 @@
       "source": "task.success_criteria",
       "title": "Operator resolves budget pause"
     }
+  ],
+  "approval_comments": [
+    {
+      "comment_id": "approval_comment_run_1_001",
+      "run_id": "run_1",
+      "actor": "operator@example.com",
+      "body": "Need rollback evidence before approval.",
+      "created_at": "2026-05-25T00:00:01Z"
+    }
   ]
 }

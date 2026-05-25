@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ApprovalComment",
+  "type": "object",
+  "required": ["comment_id", "run_id", "actor", "body", "created_at"],
+  "properties": {
+    "comment_id": { "type": "string" },
+    "run_id": { "type": "string" },
+    "actor": { "type": "string", "minLength": 1 },
+    "body": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

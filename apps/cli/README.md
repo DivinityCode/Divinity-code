@@ -1,7 +1,7 @@
 # CLI App
 Owner: Builder Experience
 
-Commands: `init`, `run`, `status`, `approvals`, `approve`, `reject`, `capabilities`, `recipes`, `doctor`, `bug`.
+Commands: `init`, `run`, `status`, `approvals`, `approve`, `reject`, `approval-comment`, `approval-comments`, `capabilities`, `recipes`, `doctor`, `bug`.
 
 ## Current Behavior
 - `init` writes `.divinity.json` with the default `safe_exec` policy, budget caps, and org/project scope.
@@ -14,6 +14,8 @@ Commands: `init`, `run`, `status`, `approvals`, `approve`, `reject`, `capabiliti
 - `approvals --api http://127.0.0.1:3000` lists approval-required runs from the control-plane API.
 - `approve <run_id> --api http://127.0.0.1:3000 --actor operator@example.com --reason "reviewed"` approves an API-backed run and returns the updated run payload.
 - `reject <run_id> --api http://127.0.0.1:3000 --actor operator@example.com --reason "unsafe"` rejects an API-backed run; without `--api`, `approve` and `reject` emit local structured decision payloads for scripts.
+- `approval-comment <run_id> --api http://127.0.0.1:3000 --actor operator@example.com --body "needs verifier output"` attaches an API-backed approval review comment; without `--api`, it emits a local structured comment payload for scripts.
+- `approval-comments <run_id> --api http://127.0.0.1:3000` lists approval comments for an API-backed run.
 - `capabilities` lists supported policy presets, execution adapters, runner isolation profiles, connector adapters, and starter recipe summaries as `divinity.capabilities.v1`.
 - `recipes` lists the built-in guided starter recipes.
 - `doctor` reports Node, optional npm, optional pnpm/Corepack fallback, aggregate package-manager readiness, optional Docker runtime readiness for container-sandbox execution, installed dependencies, AJV validator dependencies, git, package manifest, and API server source readiness as structured JSON.
