@@ -66,7 +66,7 @@ The code examples reinforce the current bootstrap direction and add these concre
 2. **Runtime adapter registry:** implemented a first catalog pass for Divinity, Claude, Codex, and generic process runtimes so CLI/API/dashboard expose the same adapter identity before runtime execution is wired in.
 3. **Policy-hook bridge:** implemented data-only policy-pack pre-execution hooks that preflight and step gates evaluate into hook outcomes, warnings, blocks, and evidence before any adapter runs.
 4. **Durable goal model:** promote task success criteria into optional durable goal state only after budget accounting, continuation behavior, and completion evidence are represented in contracts.
-5. **Budget incidents:** add soft/hard budget incident records before adding richer dashboard controls so financial risk state remains auditable.
+5. **Budget incidents:** implemented soft/hard budget incident records on CLI/API run payloads and API audit exports so financial risk state is auditable before richer dashboard controls.
 6. **Worktree isolation hardening:** keep run workspace cleanup/quarantine evidence visible as runner isolation moves from local snapshots toward parallel or remote execution.
 
 ## Local Mapping
@@ -75,6 +75,7 @@ The code examples reinforce the current bootstrap direction and add these concre
 | Plugin/skill/adapter catalogs | `packages/capabilities`, `packages/runtime-adapters`, `packages/connectors`, `packages/policy-packs` |
 | Preflight and hook-style checks | `packages/policy-engine`, `packages/execution`, API preflight and step gates |
 | Durable task/goal semantics | `packages/contracts/schemas/task.v1.json`, CLI criteria flags, API task persistence |
+| Budget incidents and auditability | `packages/budget-incidents`, `packages/contracts/schemas/budget-incident.v1.json`, API audit export |
 | App/server schemas | `packages/contracts/schemas`, `packages/contracts/examples`, `tests/scripts_validate_contracts.mjs` |
 | Doctor/setup diagnostics | `apps/cli/src/index.mjs`, `tests/tests_cli_doctor.mjs` |
 | Runtime adapters and execution records | `packages/runtime-adapters`, `packages/execution`, `packages/runner-isolation`, API step execution routes |

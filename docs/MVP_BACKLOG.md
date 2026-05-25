@@ -48,6 +48,7 @@
 - API `POST /tasks` preserves submitted task success criteria through run storage and retrieval.
 - API task creation normalizes missing org/project scope to `default-org/default-project`; configured API keys protect control-plane routes when `DIVINITY_API_KEY` or `DIVINITY_API_KEYS` is set.
 - Preflight and step-gate decisions evaluate policy-pack pre-execution hooks into deterministic hook outcomes, warnings, blocks, and observed evidence before execution adapters run.
+- CLI/API run payloads include budget incident records when soft or hard budget caps are exceeded, and API audit export records those incidents as immutable evidence.
 - API exposes `GET /runs`, `GET /approvals`, and `POST /runs/:id/approval` for dashboard loading and approve/reject transitions.
 - API exposes `GET /capabilities` for policy, runtime adapter, execution adapter, runner isolation profile, connector adapter, and starter recipe discovery.
 - API exposes `GET /runs/:id/connectors` and `POST /runs/:id/connectors` for run-level ticket/docs/CI context attachments.
@@ -63,6 +64,7 @@
 - API exposes `POST /runs/:id/workspace/cleanup` to remove managed workspaces and record `workspace_cleaned` events.
 - Execution adapters currently cover workspace `README.md` reads, `git status --short`, whitelisted Node test scripts, and constrained Node-based package scripts for approved command steps. Shell-backed adapters use Docker when the run workspace selects `container_sandbox`; missing Docker produces a failed execution record instead of falling back silently to host execution.
 - Hard budget cap excess now maps to `paused` for CLI/API runs and pauses an API run when a proposed step exceeds the hard cap.
+- Soft and hard budget cap excess creates `divinity.budget_incident.v1` records with scope, threshold, cost, limit, status, and evidence refs.
 - CLI and API expose structured run events; dashboard can subscribe to live selected-run updates through API server-sent events.
 - API step execution records `execution_lock_acquired`/`execution_lock_recovered`/`execution_lock_released`/`step_executed`/`step_verified` events and `execution_lock_record`/`execution_record`/`verification_record` audit entries.
 - CLI and API expose patch/log/summary/PR-summary artifact metadata; patch artifacts include deterministic unified-diff payloads and PR summary artifacts include GitHub-ready Markdown generated from run context.

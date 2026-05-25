@@ -1,7 +1,7 @@
 # API App
 Owner: Control Plane
 
-Control-plane endpoints for task creation, run retrieval, preflight checks, approvals, step execution locks, verification, agent activity, run heartbeats, connector references, artifacts, capabilities, observability, and audit export.
+Control-plane endpoints for task creation, run retrieval, preflight checks, approvals, step execution locks, verification, budget incidents, agent activity, run heartbeats, connector references, artifacts, capabilities, observability, and audit export.
 
 ## Authentication
 Control-plane routes are public in local development when no API key is configured.
@@ -30,6 +30,7 @@ Set `DIVINITY_API_KEY` or comma-separated `DIVINITY_API_KEYS` to require `Author
 
 Task creation normalizes missing scope to `default-org/default-project`; callers can pass `scope.org_id` and `scope.project_id` to associate a run with an org and project.
 Task creation includes deterministic planner, executor, and verifier activity records with actor, reason, evidence references, and budget estimates.
+Task creation and step gates add budget incident records when estimated cost exceeds soft or hard caps; these records are included on run payloads and audit exports.
 Step execution requires a pending step whose pre-execution check is allowed; execution lock, execution, and verifier records are written back to the run, event timeline, and audit export.
 Execution lock conflicts return `409` with the active lock payload so clients can avoid overlapping run execution.
 Execution lock recovery marks expired active locks as `stale`, clears `active_execution_lock`, and records recovery event/audit evidence.

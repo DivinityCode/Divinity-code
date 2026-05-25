@@ -1,0 +1,19 @@
+{
+  "incident_id": "budget_incident_run_123_preflight_soft_limit",
+  "run_id": "run_123",
+  "task_id": "task_123",
+  "step_id": null,
+  "scope": {
+    "org_id": "acme",
+    "project_id": "platform"
+  },
+  "source": "preflight",
+  "severity": "minor",
+  "threshold": "monthly_limit",
+  "status": "open",
+  "reason": "estimated_cost_exceeds_soft_limit",
+  "estimated_cost_usd": -1,
+  "limit_usd": 0.1,
+  "evidence_refs": [],
+  "created_at": "not-a-date"
+}

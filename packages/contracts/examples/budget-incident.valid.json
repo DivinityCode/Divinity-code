@@ -1,0 +1,27 @@
+{
+  "incident_id": "budget_incident_run_123_preflight_soft_limit",
+  "run_id": "run_123",
+  "task_id": "task_123",
+  "step_id": null,
+  "scope": {
+    "org_id": "acme",
+    "project_id": "platform"
+  },
+  "source": "preflight",
+  "severity": "warning",
+  "threshold": "soft_limit",
+  "status": "open",
+  "reason": "estimated_cost_exceeds_soft_limit",
+  "estimated_cost_usd": 0.75,
+  "limit_usd": 0.1,
+  "evidence_refs": [
+    {
+      "evidence_id": "evidence_task_budget",
+      "source": "task.budget",
+      "claim_type": "observed",
+      "summary": "Estimated $0.75 against soft $0.1 and hard $5 limits",
+      "supports": ["budget", "warnings", "run_status"]
+    }
+  ],
+  "created_at": "2026-05-24T00:00:01.000Z"
+}

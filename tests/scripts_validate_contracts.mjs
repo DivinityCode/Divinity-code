@@ -18,6 +18,8 @@ const checks = [
   ['packages/contracts/schemas/artifact.v1.json','packages/contracts/examples/artifact.invalid.json',false],
   ['packages/contracts/schemas/bug-report.v1.json','packages/contracts/examples/bug-report.valid.json',true],
   ['packages/contracts/schemas/bug-report.v1.json','packages/contracts/examples/bug-report.invalid.json',false],
+  ['packages/contracts/schemas/budget-incident.v1.json','packages/contracts/examples/budget-incident.valid.json',true],
+  ['packages/contracts/schemas/budget-incident.v1.json','packages/contracts/examples/budget-incident.invalid.json',false],
   ['packages/contracts/schemas/execution.v1.json','packages/contracts/examples/execution.valid.json',true],
   ['packages/contracts/schemas/execution.v1.json','packages/contracts/examples/execution.invalid.json',false],
   ['packages/contracts/schemas/execution-lock.v1.json','packages/contracts/examples/execution-lock.valid.json',true],
