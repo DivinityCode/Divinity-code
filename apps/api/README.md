@@ -37,6 +37,7 @@ Set `DIVINITY_API_KEY` or comma-separated `DIVINITY_API_KEYS` to require `Author
 - `POST /runs/:id/approval/resubmit`
 
 Task creation normalizes missing scope to `default-org/default-project`; callers can pass `scope.org_id` and `scope.project_id` to associate a run with an org and project.
+Task creation and preflight resolve optional `llm_provider` and `toolsets` input into `provider_runtime` and `toolset_resolution` metadata without calling live providers or returning secret values.
 Task creation converts submitted `success_criteria` into durable run `goals` records with initial status, evidence references, and budget estimate allocation.
 Goal completion requires a passed verification record from the same run; `POST /runs/:id/goals/:goal_id/complete` appends completion evidence, emits `goal_completed`, and writes a `goal_record` audit entry.
 Task creation includes deterministic planner, executor, and verifier activity records with actor, reason, evidence references, and budget estimates.

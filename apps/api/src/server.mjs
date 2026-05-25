@@ -26,13 +26,24 @@ import { evaluatePreflight, evaluateStepGate } from '../../../packages/policy-en
 import { createConfiguredRunStore } from '../../../packages/run-store/src/index.mjs';
 import { createExecutionVerification } from '../../../packages/verification/src/index.mjs';
 import { cleanupRunWorkspace, createRunWorkspace, executionCwdForRun } from '../../../packages/workspaces/src/index.mjs';
-import { publicLlmProviders } from '../../../packages/provider-runtime/src/index.mjs';
+import { publicLlmProviders, resolveProviderRuntime } from '../../../packages/provider-runtime/src/index.mjs';
 import { publicToolsets, resolveToolsets } from '../../../packages/toolsets/src/index.mjs';
 
 const runStore = createConfiguredRunStore();
 const { runs, artifacts, auditRecords } = runStore;
 const runSubscribers = new Map();
 const DEFAULT_SCOPE = { org_id: 'default-org', project_id: 'default-project' };
+const DEFAULT_ENABLED_TOOLSETS = resolveToolsets().toolsets.map(toolset => toolset.toolset_id);
+const DEFAULT_RUNTIME_CONFIG = {
+  llm_provider: {
+    provider_id: 'openrouter',
+    model: 'openai/gpt-4o-mini'
+  },
+  toolsets: {
+    enabled: DEFAULT_ENABLED_TOOLSETS,
+    disabled: []
+  }
+};
 
 function configuredApiKeys() {
   const rawKeys = [
@@ -75,6 +86,53 @@ function taskWithScope(task) {
       org_id: task?.scope?.org_id || DEFAULT_SCOPE.org_id,
       project_id: task?.scope?.project_id || DEFAULT_SCOPE.project_id
     }
+  };
+}
+
+function normalizedRuntimeProvider(source = {}) {
+  const provider = {
+    ...DEFAULT_RUNTIME_CONFIG.llm_provider,
+    ...source
+  };
+  const normalized = {
+    provider_id: String(provider.provider_id || '').trim(),
+    model: String(provider.model || '').trim()
+  };
+  const baseUrl = String(provider.base_url || '').trim();
+  if (baseUrl) normalized.base_url = baseUrl;
+  return normalized;
+}
+
+function normalizedToolsets(source = {}) {
+  return {
+    enabled: Array.isArray(source.enabled)
+      ? source.enabled.map(value => String(value || '').trim()).filter(Boolean)
+      : [...DEFAULT_RUNTIME_CONFIG.toolsets.enabled],
+    disabled: Array.isArray(source.disabled)
+      ? source.disabled.map(value => String(value || '').trim()).filter(Boolean)
+      : [...DEFAULT_RUNTIME_CONFIG.toolsets.disabled]
+  };
+}
+
+function taskWithRuntimeConfig(task, config = DEFAULT_RUNTIME_CONFIG) {
+  const llmProvider = normalizedRuntimeProvider(task.llm_provider || config.llm_provider);
+  const toolsets = normalizedToolsets(task.toolsets || config.toolsets);
+  const providerRuntime = resolveProviderRuntime({
+    provider_id: llmProvider.provider_id,
+    model: llmProvider.model,
+    base_url: llmProvider.base_url
+  });
+  const toolsetResolution = resolveToolsets({
+    enabled_toolsets: toolsets.enabled,
+    disabled_toolsets: toolsets.disabled
+  });
+
+  return {
+    ...task,
+    llm_provider: llmProvider,
+    toolsets,
+    provider_runtime: providerRuntime,
+    toolset_resolution: toolsetResolution
   };
 }
 
@@ -337,16 +395,26 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'POST' && req.url === '/preflight') {
     readJson(req, (task) => {
-      const scopedTask = taskWithScope(task);
-      const policyPack = resolvePolicyPackForTask(scopedTask);
-      sendJson(res, 200, evaluatePreflight({ task: scopedTask, policyPack }));
+      try {
+        const scopedTask = taskWithRuntimeConfig(taskWithScope(task));
+        const policyPack = resolvePolicyPackForTask(scopedTask);
+        sendJson(res, 200, evaluatePreflight({ task: scopedTask, policyPack }));
+      } catch (error) {
+        sendJson(res, 400, { error: error.message });
+      }
     });
     return;
   }
 
   if (req.method === 'POST' && req.url === '/tasks') {
     readJson(req, (task) => {
-      const scopedTask = taskWithScope(task);
+      let scopedTask;
+      try {
+        scopedTask = taskWithRuntimeConfig(taskWithScope(task));
+      } catch (error) {
+        sendJson(res, 400, { error: error.message });
+        return;
+      }
       const policyPack = resolvePolicyPackForTask(scopedTask);
       const preflight = evaluatePreflight({ task: scopedTask, policyPack });
       const runId = `run_${Date.now()}`;

@@ -87,5 +87,6 @@ The code examples reinforce the current bootstrap direction and add these concre
 | Doctor/setup diagnostics | `apps/cli/src/index.mjs`, `tests/tests_cli_doctor.mjs` |
 | Runtime adapters, execution records, and bounded retries | `packages/runtime-adapters`, `packages/execution`, `packages/runner-isolation`, API step execution routes |
 | LLM provider and toolset discovery | `packages/provider-runtime`, `packages/toolsets`, CLI `providers`, CLI `toolsets`, API `/providers`, API `/toolsets`, `divinity.capabilities.v1` |
+| Free-provider research policy | `docs/FREE_LLM_PROVIDER_RESEARCH.md`, `packages/provider-runtime/providers.v1.json`, Task `provider_runtime`, Task `toolset_resolution` |
 | Approval lifecycle | `packages/contracts/schemas/approval.v1.json`, `packages/contracts/schemas/approval-comment.v1.json`, `packages/contracts/schemas/approval-revision.v1.json`, `packages/approval-comments`, `packages/approval-revisions`, API approval routes, CLI approval commands, dashboard approval queue, comment panel, and revision panel |
 | Heartbeats and liveness | `packages/heartbeats`, `packages/observability`, dashboard liveness card |

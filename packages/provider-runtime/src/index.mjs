@@ -1,71 +1,44 @@
+import { readFileSync } from 'fs';
+
 export const PROVIDER_TRANSPORTS = [
   'chat_completions',
   'anthropic_messages',
   'codex_responses'
 ];
 
-export const LLM_PROVIDERS = [
-  {
-    provider_id: 'openrouter',
-    display_name: 'OpenRouter',
-    transport: 'chat_completions',
-    base_url: 'https://openrouter.ai/api/v1',
-    auth_modes: ['api_key'],
-    credential_env_vars: ['OPENROUTER_API_KEY'],
-    supports_custom_base_url: true,
-    default_model: 'openai/gpt-4o-mini',
-    capabilities: ['chat', 'tool_calls', 'model_catalog', 'aggregator'],
-    source: 'hermes_runtime_provider_reference'
-  },
-  {
-    provider_id: 'anthropic',
-    display_name: 'Anthropic',
-    transport: 'anthropic_messages',
-    base_url: 'https://api.anthropic.com',
-    auth_modes: ['api_key', 'oauth_token'],
-    credential_env_vars: ['ANTHROPIC_API_KEY', 'ANTHROPIC_TOKEN', 'CLAUDE_CODE_OAUTH_TOKEN'],
-    supports_custom_base_url: true,
-    default_model: 'claude-sonnet-4.5',
-    capabilities: ['chat', 'tool_calls', 'prompt_cache'],
-    source: 'hermes_runtime_provider_reference'
-  },
-  {
-    provider_id: 'openai_api',
-    display_name: 'OpenAI API',
-    transport: 'codex_responses',
-    base_url: 'https://api.openai.com/v1',
-    auth_modes: ['api_key'],
-    credential_env_vars: ['OPENAI_API_KEY'],
-    supports_custom_base_url: true,
-    default_model: 'gpt-5.1',
-    capabilities: ['chat', 'tool_calls', 'responses_api'],
-    source: 'hermes_runtime_provider_reference'
-  },
-  {
-    provider_id: 'google_gemini',
-    display_name: 'Google Gemini',
-    transport: 'chat_completions',
-    base_url: 'https://generativelanguage.googleapis.com/v1beta/openai',
-    auth_modes: ['api_key'],
-    credential_env_vars: ['GOOGLE_API_KEY', 'GEMINI_API_KEY'],
-    supports_custom_base_url: false,
-    default_model: 'google/gemini-2.5-flash',
-    capabilities: ['chat', 'tool_calls', 'vision'],
-    source: 'hermes_runtime_provider_reference'
-  },
-  {
-    provider_id: 'custom_openai_compatible',
-    display_name: 'Custom OpenAI-Compatible Endpoint',
-    transport: 'chat_completions',
-    base_url: '',
-    auth_modes: ['api_key', 'none'],
-    credential_env_vars: ['CUSTOM_LLM_API_KEY'],
-    supports_custom_base_url: true,
-    default_model: '',
-    capabilities: ['chat', 'tool_calls', 'local_endpoint'],
-    source: 'user_config'
+const PROVIDER_CATALOG_URL = new URL('../providers.v1.json', import.meta.url);
+
+function assertProvider(provider) {
+  const requiredFields = [
+    'provider_id',
+    'display_name',
+    'transport',
+    'base_url',
+    'auth_modes',
+    'credential_env_vars',
+    'supports_custom_base_url',
+    'default_model',
+    'capabilities',
+    'source'
+  ];
+  for (const field of requiredFields) {
+    if (!(field in provider)) {
+      throw new Error(`provider catalog entry missing ${field}`);
+    }
   }
-];
+  if (!PROVIDER_TRANSPORTS.includes(provider.transport)) {
+    throw new Error(`provider catalog entry has unsupported transport: ${provider.transport}`);
+  }
+}
+
+export function loadProviderCatalog({ catalogUrl = PROVIDER_CATALOG_URL } = {}) {
+  const catalog = JSON.parse(readFileSync(catalogUrl, 'utf8'));
+  const providers = Array.isArray(catalog.providers) ? catalog.providers : [];
+  for (const provider of providers) assertProvider(provider);
+  return providers;
+}
+
+export const LLM_PROVIDERS = loadProviderCatalog();
 
 function cloneProvider(provider) {
   return {

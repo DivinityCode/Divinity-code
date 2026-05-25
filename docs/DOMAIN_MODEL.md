@@ -36,6 +36,8 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 | CapabilitiesCatalog | `packages/contracts/schemas/capabilities.v1.json` | Capabilities package, CLI/API discovery | Lists supported policies, runtime adapters, execution adapters, isolation profiles, connectors, and recipes. |
 | LlmProvider | `packages/contracts/schemas/capabilities.v1.json` | Provider runtime package, CLI/API discovery | Describes public LLM provider identity, transport, base URL, auth modes, credential env var names, default model, and capability labels without secret values. |
 | Toolset | `packages/contracts/schemas/capabilities.v1.json` | Toolsets package, CLI/API discovery | Describes tool groups, default enablement, risk level, and required policy permissions for provider-aware runtime setup. |
+| ProviderRuntime | `packages/contracts/schemas/task.v1.json` | Provider runtime package, CLI/API task assembly | Captures resolved provider transport, base URL, model, credential env var names, and configured env var names without secret values. |
+| ToolsetResolution | `packages/contracts/schemas/task.v1.json` | Toolsets package, CLI/API task assembly | Captures resolved toolsets and tool ids for the run before execution. |
 | BugReport | `packages/contracts/schemas/bug-report.v1.json` | CLI bug command | Captures local diagnostic evidence and GitHub-ready issue Markdown. |
 
 ## Relationships

@@ -57,12 +57,14 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 - Capability discovery keeps extension points explicit so clients do not hard-code supported policies, runtime adapters, execution adapters, connector adapters, providers, or toolsets.
 
 ## Provider And Toolset Catalogs
-- `packages/provider-runtime` defines side-effect-free LLM provider metadata for OpenRouter, Anthropic, OpenAI API, Google Gemini, and custom OpenAI-compatible endpoints.
+- `packages/provider-runtime` loads side-effect-free LLM provider metadata from `providers.v1.json` for OpenRouter, Anthropic, OpenAI API, Google Gemini, Groq, Cerebras, Mistral, GitHub Models, and custom OpenAI-compatible endpoints.
 - Provider metadata separates public provider identity from runtime resolution details such as transport, base URL, supported auth modes, credential environment variable names, default model, and capability labels.
 - `packages/toolsets` defines public toolset metadata and a deterministic default resolver for web, file, terminal, code execution, browser, memory, delegation, connectors, and approvals.
 - CLI `providers` and `toolsets`, API `GET /providers` and `GET /toolsets`, and the shared capabilities catalog expose the same metadata shape.
 - CLI `doctor` reports provider catalog readiness, toolset catalog readiness, and optional LLM credential readiness without printing or storing secret values.
+- CLI/API task assembly resolves optional `llm_provider` and `toolsets` input into `provider_runtime` and `toolset_resolution` metadata so run records show which provider/tool policy would be used before execution.
 - This mirrors Hermes Agent's separation between provider identity, runtime credential/transport resolution, transport implementations, and toolset configuration. This slice intentionally does not make live LLM calls or persist credentials.
+- Public free-provider lists are research inputs only. Shared public API keys, no-registration credential reuse, quota bypass, and rotation to evade provider limits are excluded from the architecture.
 
 ## Connector References
 - CLI `run --connector adapter:resource_type:resource_id[:url]` can attach initial ticket, docs, or CI context to a task and resolved run output.

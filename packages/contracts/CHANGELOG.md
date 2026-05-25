@@ -1,5 +1,9 @@
 # Contracts Changelog
 
+## v1.38.0
+- Added optional Task provider runtime and toolset resolution metadata for provider-aware run setup.
+- Expanded provider ids in capability/task metadata to include authorized free-tier provider candidates from public research lists.
+
 ## v1.37.0
 - Added LLM provider and toolset metadata to `CapabilitiesCatalog`.
 - Updated capabilities examples so provider and toolset catalog discovery is contract-visible.
