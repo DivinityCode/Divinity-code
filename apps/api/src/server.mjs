@@ -403,6 +403,7 @@ const server = http.createServer((req, res) => {
           max_output_tokens: body.max_output_tokens,
           request_budget: body.request_budget,
           usage_budget: body.usage_budget,
+          provider_tool_executions: body.provider_tool_executions,
           toolsets: body.toolsets,
           enabled_toolsets: body.enabled_toolsets,
           disabled_toolsets: body.disabled_toolsets,

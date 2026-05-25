@@ -44,6 +44,7 @@ Excluded provider sources:
 - Provider-returned tool calls from Chat Completions, Anthropic Messages, and OpenAI Responses are detected but not executed automatically. They return `status: "requires_action"`, redacted `tool_call_requests`, and a required `tool_call_review` operator control.
 - Provider tool-call approval records now capture per-call approve/reject decisions as `divinity.provider_tool_call_approval.v1` without storing raw tool arguments.
 - Provider tool execution records now consume approved calls as `divinity.provider_tool_execution.v1`. Execution requires fresh operator-supplied argument values, currently supports only the read-only `read_file` adapter, stores no raw arguments or file contents, and records unsupported tools as blocked.
+- Provider chat continuation can now accept approved provider tool execution records as redacted continuation context. The next provider call receives only execution ids, tool call ids, tool names, statuses, adapters, output summaries, and safe output metadata; raw arguments, file paths, file contents, raw outputs, prompts, and credentials are not forwarded.
 - Provider chat execution enforces selected toolset compatibility before upstream calls; chat-only free-tier candidates cannot be used for toolsets that require provider `tool_calls` support.
 - Credentialed provider endpoint overrides fail closed during execution so operator-owned secrets are never forwarded to caller-supplied URLs.
 - Provider retry windows can now be tracked in a provider limit ledger. API chat execution uses an in-process ledger by default and optional `DIVINITY_PROVIDER_LIMIT_LEDGER_PATH` persistence; CLI route/chat commands use that file-backed ledger only when configured.
@@ -54,5 +55,5 @@ Excluded provider sources:
 ## Next Safe Slice
 Extend controlled execution toward production operations:
 - integrate an approved secret store while keeping environment variables as the local development path;
-- add more approved tool adapters and model-result continuation after operator-reviewed execution records;
+- add more approved tool adapters and richer operator-reviewed result handoff without weakening redaction guarantees;
 - keep returning clear `429` or policy errors when limits are reached instead of bypassing them.

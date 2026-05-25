@@ -117,6 +117,8 @@ try {
 }
 
 const toolSecret = 'secret tool argument value';
+const continuationSecretPath = 'secret-continuation-file.md';
+const continuationSecretOutput = 'secret continuation file contents';
 const toolCallServer = await createMockChatServer(async ({ res }) => {
   res.statusCode = 200;
   res.setHeader('content-type', 'application/json');
@@ -171,6 +173,154 @@ try {
   assert.equal(JSON.stringify(toolCallResult).includes(apiSecret), false);
 } finally {
   await toolCallServer.close();
+}
+
+const continuationServer = await createMockChatServer(async ({ req, res, body }) => {
+  assert.equal(req.method, 'POST');
+  assert.equal(req.url, '/chat/completions');
+  assert.equal(body.model, 'mock-model');
+  assert.equal(body.messages.length, 2);
+  assert.deepEqual(body.messages[0], { role: 'user', content: secretPrompt });
+  const continuation = body.messages[1];
+  assert.equal(continuation.role, 'user');
+  assert.match(continuation.content, /Approved provider tool execution summaries/);
+  assert.match(continuation.content, /provider_tool_execution_run_context_call_read_context_001/);
+  assert.match(continuation.content, /call_read_context/);
+  assert.match(continuation.content, /read_file/);
+  assert.match(continuation.content, /completed/);
+  assert.match(continuation.content, /bytes_read/);
+  assert.match(continuation.content, /line_count/);
+  assert.equal(continuation.content.includes(continuationSecretPath), false);
+  assert.equal(continuation.content.includes(continuationSecretOutput), false);
+
+  res.statusCode = 200;
+  res.setHeader('content-type', 'application/json');
+  res.end(JSON.stringify({
+    id: 'chatcmpl_continuation_mock',
+    object: 'chat.completion',
+    model: 'mock-model',
+    choices: [
+      {
+        index: 0,
+        message: { role: 'assistant', content: 'continuation response' },
+        finish_reason: 'stop'
+      }
+    ],
+    usage: {
+      prompt_tokens: 12,
+      completion_tokens: 3,
+      total_tokens: 15
+    }
+  }));
+});
+
+try {
+  const continued = await executeProviderProxyChat({
+    candidates: [{ provider_id: 'custom_openai_compatible', base_url: continuationServer.base_url }],
+    env: { CUSTOM_LLM_API_KEY: apiSecret },
+    requested_model: 'mock-model',
+    messages: [{ role: 'user', content: secretPrompt }],
+    max_completion_tokens: 32,
+    provider_tool_executions: [
+      {
+        format: 'divinity.provider_tool_execution.v1',
+        execution_id: 'provider_tool_execution_run_context_call_read_context_001',
+        run_id: 'run_context',
+        approval_id: 'provider_tool_call_approval_run_context_call_read_context_001',
+        tool_call_id: 'call_read_context',
+        provider_id: 'custom_openai_compatible',
+        transport: 'chat_completions',
+        name: 'read_file',
+        argument_keys: ['path'],
+        arguments_redacted: true,
+        argument_values: { path: continuationSecretPath },
+        status: 'completed',
+        adapter: 'read_file',
+        actor: 'operator@example.com',
+        reason: 'Approved read-only continuation context.',
+        started_at: '2026-05-25T12:10:00Z',
+        completed_at: '2026-05-25T12:10:01Z',
+        output_summary: 'read_file completed; content redacted',
+        output_redacted: true,
+        output_metadata: {
+          bytes_read: 1024,
+          line_count: 12,
+          content_redacted: true,
+          path: continuationSecretPath,
+          raw_output: continuationSecretOutput
+        },
+        output: continuationSecretOutput
+      }
+    ]
+  });
+
+  assert.equal(continued.status, 'completed');
+  assert.equal(continued.output_text, 'continuation response');
+  assert.equal(continuationServer.requests.length, 1);
+  assert.equal(JSON.stringify(continued).includes(continuationSecretPath), false);
+  assert.equal(JSON.stringify(continued).includes(continuationSecretOutput), false);
+  assert.equal(JSON.stringify(continued).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(continued).includes(apiSecret), false);
+} finally {
+  await continuationServer.close();
+}
+
+const promptBudgetContinuationServer = await createMockChatServer(async ({ res }) => {
+  res.statusCode = 200;
+  res.setHeader('content-type', 'application/json');
+  res.end(JSON.stringify({
+    id: 'chatcmpl_prompt_budget_continuation',
+    object: 'chat.completion',
+    model: 'mock-model',
+    choices: [
+      {
+        index: 0,
+        message: { role: 'assistant', content: 'should be blocked before upstream' },
+        finish_reason: 'stop'
+      }
+    ]
+  }));
+});
+
+try {
+  const blockedByContinuationBudget = await executeProviderProxyChat({
+    candidates: [{ provider_id: 'custom_openai_compatible', base_url: promptBudgetContinuationServer.base_url }],
+    env: { CUSTOM_LLM_API_KEY: apiSecret },
+    requested_model: 'mock-model',
+    messages: [{ role: 'user', content: 'hi' }],
+    provider_tool_executions: [
+      {
+        format: 'divinity.provider_tool_execution.v1',
+        execution_id: 'provider_tool_execution_run_context_call_long_context_001',
+        run_id: 'run_context',
+        approval_id: 'provider_tool_call_approval_run_context_call_long_context_001',
+        tool_call_id: 'call_long_context',
+        provider_id: 'custom_openai_compatible',
+        transport: 'chat_completions',
+        name: 'read_file',
+        argument_keys: ['path'],
+        arguments_redacted: true,
+        status: 'completed',
+        adapter: 'read_file',
+        actor: 'operator@example.com',
+        reason: 'Approved long context.',
+        started_at: '2026-05-25T12:10:00Z',
+        completed_at: '2026-05-25T12:10:01Z',
+        output_summary: 'read_file completed; content redacted with a long safe summary for budget accounting',
+        output_redacted: true,
+        output_metadata: { bytes_read: 4096, line_count: 80, content_redacted: true }
+      }
+    ],
+    request_budget: { max_prompt_chars: 5 },
+    max_completion_tokens: 32
+  });
+
+  assert.equal(blockedByContinuationBudget.status, 'blocked');
+  assert.match(blockedByContinuationBudget.error, /prompt budget/);
+  assert.equal(promptBudgetContinuationServer.requests.length, 0);
+  assert.equal(JSON.stringify(blockedByContinuationBudget).includes(continuationSecretOutput), false);
+} finally {
+  await promptBudgetContinuationServer.close();
 }
 
 const limitedServer = await createMockChatServer(async ({ res }) => {

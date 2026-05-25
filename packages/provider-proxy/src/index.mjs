@@ -140,6 +140,16 @@ function positiveInteger(value) {
   return Math.floor(parsed);
 }
 
+function cleanString(value) {
+  return String(value || '').trim();
+}
+
+function isPlainObject(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
 function hasUsageBudget(usageBudget = {}) {
   return [
     'max_daily_requests',
@@ -259,6 +269,69 @@ function toolCallReviewControl(toolCallRequests) {
     tool_call_ids: toolCallRequests.map(item => item.tool_call_id).filter(Boolean),
     tools: [...new Set(toolCallRequests.map(item => item.name).filter(Boolean))].sort()
   };
+}
+
+const SAFE_TOOL_EXECUTION_METADATA_KEYS = new Set([
+  'adapter_configured',
+  'bytes_read',
+  'content_redacted',
+  'line_count',
+  'output_redacted'
+]);
+
+function safeToolExecutionMetadata(metadata) {
+  if (!isPlainObject(metadata)) return {};
+  const safe = {};
+  for (const [key, value] of Object.entries(metadata)) {
+    const cleanKey = cleanString(key);
+    if (!SAFE_TOOL_EXECUTION_METADATA_KEYS.has(cleanKey)) continue;
+    if (['boolean', 'number'].includes(typeof value)) safe[cleanKey] = value;
+  }
+  return safe;
+}
+
+function sanitizedProviderToolExecution(execution) {
+  if (!isPlainObject(execution)) return null;
+  if (execution.format && execution.format !== 'divinity.provider_tool_execution.v1') return null;
+  const status = cleanString(execution.status);
+  if (!['completed', 'failed', 'blocked'].includes(status)) return null;
+  const sanitized = {
+    execution_id: cleanString(execution.execution_id),
+    tool_call_id: cleanString(execution.tool_call_id),
+    name: cleanString(execution.name),
+    status,
+    adapter: cleanString(execution.adapter),
+    output_summary: cleanString(execution.output_summary),
+    output_metadata: safeToolExecutionMetadata(execution.output_metadata)
+  };
+  if (!sanitized.execution_id && !sanitized.tool_call_id) return null;
+  return sanitized;
+}
+
+function providerToolContinuationMessages(providerToolExecutions = []) {
+  const source = Array.isArray(providerToolExecutions)
+    ? providerToolExecutions
+    : [providerToolExecutions];
+  const executions = source
+    .map(sanitizedProviderToolExecution)
+    .filter(Boolean);
+  if (executions.length === 0) return [];
+
+  return [{
+    role: 'user',
+    content: [
+      'Approved provider tool execution summaries (redacted).',
+      'Use these summaries as post-approval context. Raw tool arguments and raw outputs are intentionally unavailable.',
+      JSON.stringify({ provider_tool_executions: executions }, null, 2)
+    ].join('\n')
+  }];
+}
+
+function messagesWithProviderToolContinuations(messages, providerToolExecutions = []) {
+  return [
+    ...messages,
+    ...providerToolContinuationMessages(providerToolExecutions)
+  ];
 }
 
 function withToolCallGovernance(result, toolCallRequests) {
@@ -1091,6 +1164,7 @@ function prepareProviderProxyChat({
   request_budget = {},
   usage_budget = {},
   usage_ledger = null,
+  provider_tool_executions = [],
   toolsets = null,
   enabled_toolsets = null,
   disabled_toolsets = [],
@@ -1150,8 +1224,9 @@ function prepareProviderProxyChat({
     };
   }
 
+  const effectiveMessages = messagesWithProviderToolContinuations(messages, provider_tool_executions);
   const maxPromptChars = positiveInteger(request_budget.max_prompt_chars);
-  if (maxPromptChars && promptCharacterCount(messages) > maxPromptChars) {
+  if (maxPromptChars && promptCharacterCount(effectiveMessages) > maxPromptChars) {
     return {
       ok: false,
       result: blockedChat(route, 'prompt budget exceeded', toolsetResolution, resultFormat)
@@ -1180,7 +1255,7 @@ function prepareProviderProxyChat({
     request = buildTransportRequest({
       runtime,
       requestedModel: requested_model,
-      messages,
+      messages: effectiveMessages,
       outputTokens: requestedOutputTokens || budgetOutputTokens || 0,
       temperature,
       toolsetResolution,

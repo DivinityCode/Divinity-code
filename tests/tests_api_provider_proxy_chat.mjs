@@ -94,6 +94,8 @@ function parseSseEvents(body) {
 const apiSecret = 'openrouter-secret-value';
 const secretPrompt = 'secret prompt for api proxy';
 const toolSecret = 'secret tool argument for api proxy';
+const continuationSecretPath = 'secret-api-continuation-file.md';
+const continuationSecretOutput = 'secret api continuation file contents';
 const tmpRoot = mkdtempSync(path.join(tmpdir(), 'divinity-api-provider-proxy-chat-'));
 const repoFixture = path.join(tmpRoot, 'repo');
 const usageLedgerPath = path.join(tmpRoot, 'provider-usage-ledger.json');
@@ -162,6 +164,42 @@ const toolCallMock = await createMockChatServer(({ res }) => {
       prompt_tokens: 4,
       completion_tokens: 3,
       total_tokens: 7
+    }
+  }));
+});
+const continuationMock = await createMockChatServer(({ req, res, body }) => {
+  assert.equal(req.url, '/chat/completions');
+  assert.equal(body.model, 'mock-model');
+  assert.equal(body.messages.length, 2);
+  assert.deepEqual(body.messages[0], { role: 'user', content: secretPrompt });
+  const continuation = body.messages[1];
+  assert.equal(continuation.role, 'user');
+  assert.match(continuation.content, /Approved provider tool execution summaries/);
+  assert.match(continuation.content, /provider_tool_execution_api_run_context_call_read_context_001/);
+  assert.match(continuation.content, /call_api_read_context/);
+  assert.match(continuation.content, /read_file/);
+  assert.match(continuation.content, /bytes_read/);
+  assert.match(continuation.content, /line_count/);
+  assert.equal(continuation.content.includes(continuationSecretPath), false);
+  assert.equal(continuation.content.includes(continuationSecretOutput), false);
+
+  res.statusCode = 200;
+  res.setHeader('content-type', 'application/json');
+  res.end(JSON.stringify({
+    id: 'chatcmpl_api_continuation_mock',
+    object: 'chat.completion',
+    model: body.model,
+    choices: [
+      {
+        index: 0,
+        message: { role: 'assistant', content: 'api continuation response' },
+        finish_reason: 'stop'
+      }
+    ],
+    usage: {
+      prompt_tokens: 12,
+      completion_tokens: 3,
+      total_tokens: 15
     }
   }));
 });
@@ -267,6 +305,56 @@ try {
   assert.equal(mock.requests.length, 1);
   assert.equal(JSON.stringify(usageBlockedBody).includes(secretPrompt), false);
   assert.equal(JSON.stringify(usageBlockedBody).includes(apiSecret), false);
+
+  const { response: continuationResponse, body: continuationBody } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
+    method: 'POST',
+    body: JSON.stringify({
+      candidates: [{ provider_id: 'custom_openai_compatible', base_url: continuationMock.base_url }],
+      model: 'mock-model',
+      messages: [{ role: 'user', content: secretPrompt }],
+      max_completion_tokens: 32,
+      provider_tool_executions: [
+        {
+          format: 'divinity.provider_tool_execution.v1',
+          execution_id: 'provider_tool_execution_api_run_context_call_read_context_001',
+          run_id: 'api_run_context',
+          approval_id: 'provider_tool_call_approval_api_run_context_call_read_context_001',
+          tool_call_id: 'call_api_read_context',
+          provider_id: 'custom_openai_compatible',
+          transport: 'chat_completions',
+          name: 'read_file',
+          argument_keys: ['path'],
+          arguments_redacted: true,
+          argument_values: { path: continuationSecretPath },
+          status: 'completed',
+          adapter: 'read_file',
+          actor: 'operator@example.com',
+          reason: 'Approved API read-only continuation context.',
+          started_at: '2026-05-25T12:10:00Z',
+          completed_at: '2026-05-25T12:10:01Z',
+          output_summary: 'read_file completed; content redacted',
+          output_redacted: true,
+          output_metadata: {
+            bytes_read: 2048,
+            line_count: 20,
+            content_redacted: true,
+            path: continuationSecretPath,
+            raw_output: continuationSecretOutput
+          },
+          output: continuationSecretOutput
+        }
+      ]
+    })
+  });
+
+  assert.equal(continuationResponse.status, 200);
+  assert.equal(continuationBody.result.status, 'completed');
+  assert.equal(continuationBody.result.output_text, 'api continuation response');
+  assert.equal(continuationMock.requests.length, 1);
+  assert.equal(JSON.stringify(continuationBody).includes(continuationSecretPath), false);
+  assert.equal(JSON.stringify(continuationBody).includes(continuationSecretOutput), false);
+  assert.equal(JSON.stringify(continuationBody).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(continuationBody).includes(apiSecret), false);
 
   const { response: toolCallResponse, body: toolCallBody } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
     method: 'POST',
@@ -513,6 +601,7 @@ try {
   await ledgerLimitedMock.close();
   await ledgerBackupMock.close();
   await toolCallMock.close();
+  await continuationMock.close();
   await anthropicMock.close();
   await streamMock.close();
   if (server.listening) {

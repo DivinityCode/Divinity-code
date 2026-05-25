@@ -512,6 +512,7 @@ function parseProviderChatArgs(values) {
     provider_id: 'openrouter',
     base_url: '',
     messages: [],
+    provider_tool_execution_files: [],
     requested_model: '',
     max_completion_tokens: 0,
     max_output_tokens: 0,
@@ -543,6 +544,11 @@ function parseProviderChatArgs(values) {
       index += 1;
     } else if (value.startsWith('--message=')) {
       options.messages.push({ role: 'user', content: value.slice('--message='.length) });
+    } else if (value === '--tool-execution-file') {
+      options.provider_tool_execution_files.push(next);
+      index += 1;
+    } else if (value.startsWith('--tool-execution-file=')) {
+      options.provider_tool_execution_files.push(value.slice('--tool-execution-file='.length));
     } else if (value === '--model') {
       options.requested_model = next;
       index += 1;
@@ -614,6 +620,9 @@ function parseProviderChatArgs(values) {
   options.messages = options.messages
     .map(message => ({ role: message.role, content: String(message.content || '') }))
     .filter(message => message.content);
+  options.provider_tool_execution_files = options.provider_tool_execution_files
+    .map(value => String(value || '').trim())
+    .filter(Boolean);
   options.requested_model = String(options.requested_model || '').trim();
   options.max_completion_tokens = Number(options.max_completion_tokens || 0);
   options.max_output_tokens = Number(options.max_output_tokens || 0);
@@ -627,6 +636,29 @@ function parseProviderChatArgs(values) {
   }
   options.toolsets.disabled = options.toolsets.disabled.map(value => String(value || '').trim()).filter(Boolean);
   return options;
+}
+
+function executionRecordsFromJson(value) {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === 'object' && Array.isArray(value.executions)) return value.executions;
+  if (value && typeof value === 'object' && value.execution && typeof value.execution === 'object') return [value.execution];
+  if (value && typeof value === 'object') return [value];
+  return [];
+}
+
+function loadProviderToolExecutionsFromFiles(filePaths) {
+  const executions = [];
+  for (const filePath of filePaths) {
+    const resolved = path.resolve(cwd, filePath);
+    let parsed;
+    try {
+      parsed = JSON.parse(fs.readFileSync(resolved, 'utf8'));
+    } catch (error) {
+      throw new Error(`failed to read provider tool execution file ${filePath}: ${error.message}`);
+    }
+    executions.push(...executionRecordsFromJson(parsed));
+  }
+  return executions;
 }
 
 function parseApprovalCommentArgs(values) {
@@ -1817,6 +1849,8 @@ function providerRoute() {
 async function providerChat() {
   try {
     const options = parseProviderChatArgs(args);
+    options.provider_tool_executions = loadProviderToolExecutionsFromFiles(options.provider_tool_execution_files);
+    delete options.provider_tool_execution_files;
     options.limit_ledger = createConfiguredProviderLimitLedger(process.env);
     options.usage_ledger = createConfiguredProviderUsageLedger(process.env);
     const executor = options.stream ? executeProviderProxyChatStream : executeProviderProxyChat;
