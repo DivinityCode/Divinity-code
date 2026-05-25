@@ -27,6 +27,20 @@ assert.ok(catalog.execution_adapters.every(adapter => adapter.description));
 assert.ok(catalog.execution_adapters.every(adapter => Array.isArray(adapter.action_types)));
 assert.equal(catalog.execution_adapters.find(adapter => adapter.adapter === 'package_script').shell_interpolation, false);
 
+assert.deepEqual(catalog.runtime_adapters.map(adapter => adapter.adapter), [
+  'divinity_local',
+  'claude_local',
+  'codex_local',
+  'generic_process'
+]);
+assert.ok(catalog.runtime_adapters.every(adapter => adapter.description));
+assert.ok(catalog.runtime_adapters.every(adapter => ['local', 'external'].includes(adapter.kind)));
+assert.ok(catalog.runtime_adapters.every(adapter => typeof adapter.requires_auth === 'boolean'));
+assert.ok(catalog.runtime_adapters.every(adapter => Array.isArray(adapter.capabilities)));
+assert.ok(catalog.runtime_adapters.find(adapter => adapter.adapter === 'divinity_local').capabilities.includes('json_output'));
+assert.ok(catalog.runtime_adapters.find(adapter => adapter.adapter === 'claude_local').capabilities.includes('resumable_session'));
+assert.ok(catalog.runtime_adapters.find(adapter => adapter.adapter === 'codex_local').capabilities.includes('structured_events'));
+
 assert.deepEqual(catalog.runner_isolation_profiles.map(profile => profile.profile_id), [
   'workspace_snapshot',
   'container_sandbox'

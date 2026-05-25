@@ -63,7 +63,7 @@ Paperclip is the strongest control-plane reference for organizational agent work
 The code examples reinforce the current bootstrap direction and add these concrete follow-on slices:
 
 1. **Approval command family:** implemented the first expansion with `approvals`, API-backed `approve`, API-backed `reject`, and local structured decision payloads. Future slices can add get/revision/comment subcommands once approval records need richer review workflows.
-2. **Runtime adapter registry:** extend `packages/capabilities` and execution adapter metadata before adding new runtime integrations so CLI/API/dashboard all expose the same adapter identity.
+2. **Runtime adapter registry:** implemented a first catalog pass for Divinity, Claude, Codex, and generic process runtimes so CLI/API/dashboard expose the same adapter identity before runtime execution is wired in.
 3. **Policy-hook bridge:** model hook-like pre-execution checks as policy-pack extensions, preserving deterministic preflight output before any adapter runs.
 4. **Durable goal model:** promote task success criteria into optional durable goal state only after budget accounting, continuation behavior, and completion evidence are represented in contracts.
 5. **Budget incidents:** add soft/hard budget incident records before adding richer dashboard controls so financial risk state remains auditable.
@@ -72,11 +72,11 @@ The code examples reinforce the current bootstrap direction and add these concre
 ## Local Mapping
 | External pattern | Current Divinity surface |
 | --- | --- |
-| Plugin/skill/adapter catalogs | `packages/capabilities`, `packages/connectors`, `packages/policy-packs` |
+| Plugin/skill/adapter catalogs | `packages/capabilities`, `packages/runtime-adapters`, `packages/connectors`, `packages/policy-packs` |
 | Preflight and hook-style checks | `packages/policy-engine`, `packages/execution`, API preflight and step gates |
 | Durable task/goal semantics | `packages/contracts/schemas/task.v1.json`, CLI criteria flags, API task persistence |
 | App/server schemas | `packages/contracts/schemas`, `packages/contracts/examples`, `tests/scripts_validate_contracts.mjs` |
 | Doctor/setup diagnostics | `apps/cli/src/index.mjs`, `tests/tests_cli_doctor.mjs` |
-| Runtime adapters and execution records | `packages/execution`, `packages/runner-isolation`, API step execution routes |
+| Runtime adapters and execution records | `packages/runtime-adapters`, `packages/execution`, `packages/runner-isolation`, API step execution routes |
 | Approval lifecycle | `packages/contracts/schemas/approval.v1.json`, API approval routes, dashboard approval queue |
 | Heartbeats and liveness | `packages/heartbeats`, `packages/observability`, dashboard liveness card |

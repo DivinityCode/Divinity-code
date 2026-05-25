@@ -12,6 +12,7 @@
    - Budget metering
 3. **Execution Plane**
    - Isolated runner workspaces
+   - Runtime adapters (Divinity, local agent CLIs, configured processes)
    - Tool adapters (git, tests, package managers, shell)
    - External connector adapters (tickets, docs, CI)
 4. **Intelligence Services**
@@ -46,9 +47,10 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 
 ## Capability Discovery
 - CLI `capabilities` and API `GET /capabilities` expose `divinity.capabilities.v1`.
-- The catalog lists policy presets, constrained execution adapters, runner isolation profiles, connector adapters, and starter recipe summaries from the shared package layer.
+- The catalog lists policy presets, runtime adapters, constrained execution adapters, runner isolation profiles, connector adapters, and starter recipe summaries from the shared package layer.
+- Runtime adapters identify which agent runtime can own work; execution adapters identify the constrained commands a policy-approved step may execute.
 - Connector adapters identify ticket, docs, and CI status reference surfaces used by task creation and run-level external context attachments.
-- Capability discovery keeps extension points explicit so clients do not hard-code supported policies, execution adapters, or connector adapters.
+- Capability discovery keeps extension points explicit so clients do not hard-code supported policies, runtime adapters, execution adapters, or connector adapters.
 
 ## Connector References
 - CLI `run --connector adapter:resource_type:resource_id[:url]` can attach initial ticket, docs, or CI context to a task and resolved run output.

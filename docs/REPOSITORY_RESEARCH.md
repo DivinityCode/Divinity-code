@@ -107,7 +107,7 @@ The 2026-05-25 refresh confirmed the latest observed releases above are still cu
 6. **Diagnostics:** implemented `divinity doctor` for Node, optional npm, pnpm/Corepack fallback, aggregate package-manager readiness, optional Docker runtime readiness for container-sandbox execution, installed dependencies, AJV validator dependencies, git, package manifest, and API server source readiness checks.
 7. **Operator observability:** implemented run health, budget utilization, approval backlog, and policy/budget/execution failure taxonomy summaries in the API and dashboard.
 8. **Execution adapter expansion:** implemented constrained package-script execution for Node-based package scripts without shell interpolation.
-9. **Capability discovery:** implemented a shared `divinity.capabilities.v1` catalog so clients can discover policy presets, execution adapters, runner isolation profiles, connector adapters, and starter recipes.
+9. **Capability discovery:** implemented a shared `divinity.capabilities.v1` catalog so clients can discover policy presets, runtime adapters, execution adapters, runner isolation profiles, connector adapters, and starter recipes.
 10. **Post-execution verification:** implemented `divinity.verification.v1` records so executed steps carry verifier results through run state, events, audit, and dashboard rendering.
 11. **Observable agent activity:** implemented `divinity.agent_activity.v1` records so planner, executor, and verifier work carries actor, reason, evidence, status, and budget estimates.
 12. **Run heartbeats:** implemented `divinity.heartbeat.v1` records, `POST /runs/:id/heartbeat`, liveness fields in observability summaries, and a dashboard liveness card for heartbeat and stale-run visibility.
@@ -119,3 +119,4 @@ The 2026-05-25 refresh confirmed the latest observed releases above are still cu
 18. **Structured bug reports:** implemented `divinity.bug_report.v1` and CLI `bug` output with GitHub-ready Markdown, environment details, git context, and local setup diagnostics.
 19. **Task success criteria:** implemented optional Task `success_criteria` arrays plus CLI criteria flags and API persistence to make acceptance signals explicit alongside objectives.
 20. **Approval command family:** implemented CLI `approvals`, API-backed `approve`, API-backed `reject`, and local structured approval/rejection payloads so operator approval workflows are scriptable outside the dashboard.
+21. **Runtime adapter registry:** implemented runtime adapter metadata for Divinity local, Claude local, Codex local, and generic process runtimes in the shared capabilities catalog.

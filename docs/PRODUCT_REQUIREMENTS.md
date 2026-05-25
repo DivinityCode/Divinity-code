@@ -42,14 +42,14 @@ This baseline defines who Divinity Code is for, what work it must help them comp
 2. Route approved execution through managed workspaces and explicit runner isolation profiles.
 3. Record execution locks so concurrent execution is observable and recoverable.
 4. Preserve provenance for memory, decisions, artifacts, connector context, and verification results.
-5. Discover supported policy presets, execution adapters, runner isolation profiles, connector adapters, and starter recipes through a shared capabilities contract.
+5. Discover supported policy presets, runtime adapters, execution adapters, runner isolation profiles, connector adapters, and starter recipes through a shared capabilities contract.
 
 ## MVP Requirements
 - **Contract-first surfaces:** CLI, API, dashboard, and IDE commands must share Task, Run, Preflight, Event, Artifact, Policy, and capability vocabulary.
 - **Trust-first execution:** Risk, budget, policy, approval, evidence, and audit state must be visible before side effects.
 - **Deterministic verification:** Local validation and smoke paths must run without polluting the repository root.
 - **Operational dashboard:** Operator Mode must manage run status, approval decisions, evidence, liveness, artifacts, and audit metadata.
-- **Extensible runtime:** Execution adapters, connector references, runner isolation profiles, recipes, and policy packs must be discoverable rather than hard-coded by clients.
+- **Extensible runtime:** Runtime adapters, execution adapters, connector references, runner isolation profiles, recipes, and policy packs must be discoverable rather than hard-coded by clients.
 
 ## Non-Goals
 - General chat assistant UX as the primary product surface.
