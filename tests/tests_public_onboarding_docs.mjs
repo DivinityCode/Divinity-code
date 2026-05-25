@@ -83,6 +83,7 @@ for (const item of [
   'node apps/cli/src/index.mjs doctor --profile source',
   'pnpm run release:artifacts',
   'pnpm run test:release-artifacts',
+  'release artifact integrity and signing readiness',
   'pnpm run validate:contracts',
   'pnpm run test:deprecations',
   'pnpm test',

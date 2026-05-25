@@ -1,4 +1,5 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { createHash } from 'crypto';
+import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
 import path from 'path';
 
 const DEFAULT_OUTPUT = path.join('dist', 'release-artifacts.json');
@@ -26,6 +27,105 @@ function parseArgs(values) {
   return options;
 }
 
+function skippedIntegrityPath(relativePath) {
+  return (
+    relativePath.startsWith('node_modules/') ||
+    relativePath.startsWith('dist/') ||
+    relativePath.startsWith('.git/') ||
+    relativePath.includes('/node_modules/') ||
+    relativePath.includes('/dist/') ||
+    relativePath.includes('.divinity') ||
+    relativePath.includes('provider-usage-ledger') ||
+    relativePath.includes('provider-limits')
+  );
+}
+
+function packageFileEntries(packageFiles) {
+  const entries = [];
+  for (const packageFile of packageFiles) {
+    const relativePath = String(packageFile || '').trim();
+    if (!relativePath || skippedIntegrityPath(relativePath)) continue;
+    const absolutePath = path.resolve(relativePath);
+    let stat;
+    try {
+      stat = statSync(absolutePath);
+    } catch {
+      continue;
+    }
+    if (stat.isFile()) {
+      entries.push(relativePath);
+    } else if (stat.isDirectory()) {
+      const pending = [relativePath];
+      while (pending.length > 0) {
+        const current = pending.pop();
+        for (const entry of readdirSync(current, { withFileTypes: true })) {
+          const child = path.join(current, entry.name).split(path.sep).join('/');
+          if (skippedIntegrityPath(child)) continue;
+          if (entry.isDirectory()) {
+            pending.push(child);
+          } else if (entry.isFile()) {
+            entries.push(child);
+          }
+        }
+      }
+    }
+  }
+  return [...new Set(entries)].sort();
+}
+
+function sha256File(filePath) {
+  return createHash('sha256').update(readFileSync(filePath)).digest('hex');
+}
+
+function buildArtifactIntegrity(packageFiles) {
+  const files = packageFileEntries(packageFiles).map(filePath => ({
+    path: filePath,
+    bytes: statSync(filePath).size,
+    sha256: sha256File(filePath)
+  }));
+  return {
+    algorithm: 'sha256',
+    generated_from_package_files: true,
+    redacts_secrets: true,
+    files
+  };
+}
+
+function buildArtifactSigning({ publishingBlocked, warningReason }) {
+  const blockedReason = publishingBlocked
+    ? `package.json private=true and the non-production warning block signing release artifacts. ${warningReason}`
+    : `The non-production warning blocks signing release artifacts. ${warningReason}`;
+  return {
+    required: true,
+    status: 'blocked',
+    reason: blockedReason,
+    key_source_required: true,
+    allowed_algorithms: ['cosign', 'minisign', 'sigstore'],
+    targets: [
+      {
+        artifact_id: 'source_integrity_manifest',
+        digest_algorithm: 'sha256',
+        signature_status: 'unsigned',
+        reason: 'Integrity metadata is generated, but no release signing key is configured while release gates are blocked.'
+      },
+      {
+        artifact_id: 'package_registry_tarball',
+        digest_algorithm: 'sha256',
+        signature_status: publishingBlocked ? 'blocked' : 'unsigned',
+        reason: publishingBlocked
+          ? 'package.json private=true blocks package tarball publishing and signing.'
+          : 'Package tarball signing requires a configured release signing key.'
+      },
+      {
+        artifact_id: 'binary_download',
+        digest_algorithm: 'sha256',
+        signature_status: 'blocked',
+        reason: 'No signed binary download is published while the non-production warning is active.'
+      }
+    ]
+  };
+}
+
 function buildManifest() {
   const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
   const publishingBlocked = packageJson.private === true;
@@ -45,6 +145,8 @@ function buildManifest() {
       bin: packageJson.bin || {}
     },
     non_production_warning_active: true,
+    artifact_integrity: buildArtifactIntegrity(packageJson.files || []),
+    artifact_signing: buildArtifactSigning({ publishingBlocked, warningReason }),
     install_paths: [
       {
         install_path_id: 'source_checkout',

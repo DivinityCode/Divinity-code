@@ -1,8 +1,13 @@
 import assert from 'assert/strict';
 import { execFileSync } from 'child_process';
+import { createHash } from 'crypto';
 import { existsSync, mkdtempSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
+
+function sha256(filePath) {
+  return createHash('sha256').update(readFileSync(filePath)).digest('hex');
+}
 
 const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
 const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-release-artifacts-'));
@@ -31,6 +36,54 @@ assert.equal(artifact.package.node_engine, packageJson.engines.node);
 assert.equal(artifact.package.package_manager, packageJson.packageManager);
 assert.deepEqual(artifact.package.bin, packageJson.bin);
 assert.equal(artifact.non_production_warning_active, true);
+
+assert.equal(artifact.artifact_integrity.algorithm, 'sha256');
+assert.equal(artifact.artifact_integrity.generated_from_package_files, true);
+assert.equal(artifact.artifact_integrity.redacts_secrets, true);
+assert.ok(Array.isArray(artifact.artifact_integrity.files));
+for (const expectedPath of [
+  'README.md',
+  'package.json',
+  'apps/cli/src/index.mjs',
+  'packages/provider-proxy/src/index.mjs'
+]) {
+  const entry = artifact.artifact_integrity.files.find(file => file.path === expectedPath);
+  assert.ok(entry, `missing integrity entry: ${expectedPath}`);
+  assert.equal(entry.sha256, sha256(expectedPath));
+  assert.match(entry.sha256, /^[a-f0-9]{64}$/);
+  assert.equal(Number.isInteger(entry.bytes) && entry.bytes > 0, true);
+}
+
+const integrityPaths = artifact.artifact_integrity.files.map(file => file.path);
+assert.deepEqual([...integrityPaths].sort(), integrityPaths);
+for (const disallowedPathPart of [
+  'node_modules/',
+  'dist/',
+  '.divinity',
+  'provider-usage-ledger',
+  'provider-limits'
+]) {
+  assert.equal(
+    integrityPaths.some(filePath => filePath.includes(disallowedPathPart)),
+    false,
+    `integrity manifest must not include ${disallowedPathPart}`
+  );
+}
+
+assert.equal(artifact.artifact_signing.required, true);
+assert.equal(artifact.artifact_signing.status, 'blocked');
+assert.match(artifact.artifact_signing.reason, /non-production warning|private=true/);
+assert.equal(artifact.artifact_signing.key_source_required, true);
+assert.deepEqual(artifact.artifact_signing.allowed_algorithms, ['cosign', 'minisign', 'sigstore']);
+assert.ok(artifact.artifact_signing.targets.some(target => (
+  target.artifact_id === 'source_integrity_manifest' &&
+  target.digest_algorithm === 'sha256' &&
+  target.signature_status === 'unsigned'
+)));
+assert.ok(artifact.artifact_signing.targets.some(target => (
+  target.artifact_id === 'binary_download' &&
+  target.signature_status === 'blocked'
+)));
 
 const installPathsById = new Map(artifact.install_paths.map(installPath => [installPath.install_path_id, installPath]));
 for (const installPathId of [
