@@ -11,6 +11,8 @@ This research covers the referenced GitHub repositories and public project docum
 
 The goal is to translate repo-level patterns into product and implementation decisions for Divinity Code.
 
+Source-level examples for the same repositories are tracked in [Referenced Repository Code Examples](REPOSITORY_CODE_EXAMPLES.md). That appendix is commit-pinned and maps concrete upstream file paths to Divinity Code implementation implications.
+
 ## Current Repo Signals
 | Repo | Primary language | Latest observed release | Positioning signal |
 | --- | --- | --- | --- |

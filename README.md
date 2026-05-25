@@ -13,6 +13,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - [Architecture Draft](docs/ARCHITECTURE.md)
 - [MVP Backlog](docs/MVP_BACKLOG.md)
 - [Competitive Repository Research](docs/REPOSITORY_RESEARCH.md)
+- [Referenced Repository Code Examples](docs/REPOSITORY_CODE_EXAMPLES.md)
 - [Week 1 Execution Plan](docs/WEEK1_EXECUTION_PLAN.md)
 
 ## Implemented Surfaces
