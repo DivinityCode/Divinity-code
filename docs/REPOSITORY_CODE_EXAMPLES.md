@@ -74,7 +74,7 @@ The code examples reinforce the current bootstrap direction and add these concre
 | --- | --- |
 | Plugin/skill/adapter catalogs | `packages/capabilities`, `packages/runtime-adapters`, `packages/connectors`, `packages/policy-packs` |
 | Preflight and hook-style checks | `packages/policy-engine`, `packages/execution`, API preflight and step gates |
-| Durable task/goal semantics | `packages/contracts/schemas/task.v1.json`, `packages/contracts/schemas/goal.v1.json`, `packages/goals`, CLI/API run `goals` |
+| Durable task/goal semantics | `packages/contracts/schemas/task.v1.json`, `packages/contracts/schemas/goal.v1.json`, `packages/goals`, CLI/API run `goals`, dashboard goal panel |
 | Budget incidents and auditability | `packages/budget-incidents`, `packages/contracts/schemas/budget-incident.v1.json`, API audit export |
 | App/server schemas | `packages/contracts/schemas`, `packages/contracts/examples`, `tests/scripts_validate_contracts.mjs` |
 | Doctor/setup diagnostics | `apps/cli/src/index.mjs`, `tests/tests_cli_doctor.mjs` |

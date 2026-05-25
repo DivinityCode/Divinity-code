@@ -734,6 +734,7 @@ dd {
   margin-top: 10px;
 }
 
+.goal-panel,
 .connector-panel,
 .agent-activity-panel,
 .execution-panel {
@@ -744,6 +745,7 @@ dd {
   background: var(--surface);
 }
 
+.goal-panel h3,
 .connector-panel h3,
 .agent-activity-panel h3,
 .execution-panel h3 {
@@ -752,6 +754,7 @@ dd {
   font-size: 13px;
 }
 
+.goal-panel ul,
 .connector-panel ul,
 .agent-activity-panel ul,
 .execution-panel ul {
@@ -760,6 +763,42 @@ dd {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.goal-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px 12px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-alt);
+}
+
+.goal-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.goal-copy strong,
+.goal-copy span {
+  overflow-wrap: anywhere;
+}
+
+.goal-copy span,
+.goal-budget {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.goal-budget {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+.goal-item .claim-list {
+  grid-column: 1 / -1;
 }
 
 .connector-reference-item {

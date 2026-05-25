@@ -68,6 +68,7 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 ## Goal Records
 - CLI and API run assembly convert each task success criterion into a `divinity.goal.v1` record on the run payload.
 - Goal records carry run/task identity, org/project scope, initial lifecycle status, allocated preflight budget estimate, criterion evidence, budget evidence, and empty completion evidence for later verifier-backed updates.
+- The operator dashboard renders goal records from sample data and API-loaded runs so acceptance criteria are visible next to the decision trace before mutation routes exist.
 - This bootstrap slice is record-only; it does not add free-form goal mutation routes.
 
 ## Run Lifecycle

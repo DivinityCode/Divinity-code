@@ -23,6 +23,10 @@ const sampleRuns = [
       evidence('inferred', 'task.objective', 'Predicted write and test execution actions.'),
       evidence('observed', 'policy.permissions', 'safe_exec policy grants scoped write and shell execution.')
     ]),
+    goals: [
+      goalRecord('goal_0012_001', 'All contract examples validate', 'pending', 0.75),
+      goalRecord('goal_0012_002', 'Smoke path leaves no repo config behind', 'pending', 0.75)
+    ],
     connector_references: [
       connectorReference('ref_a11ce0000000001', 'ticket_reference', 'ticket', 'DIV-17', 'https://example.test/tickets/DIV-17', 'Pagination ticket'),
       connectorReference('ref_a11ce0000000002', 'docs_reference', 'document', 'SPEC-USERS-PAGING', 'https://example.test/docs/users-pagination', 'Pagination spec')
@@ -62,6 +66,9 @@ const sampleRuns = [
     decision_trace: decisionTrace('queue_for_execution', 'pause_or_request_approval', 'Preflight allowed the run to enter the execution queue.', [
       evidence('observed', 'policy.permissions', 'safe_exec policy grants scoped write and shell execution.')
     ]),
+    goals: [
+      goalRecord('goal_0011_001', 'API key middleware remains backward compatible', 'pending', 0.38)
+    ],
     connector_references: [
       connectorReference('ref_a11ce0000000011', 'ci_status', 'ci_run', 'ci-5812', 'https://example.test/ci/5812', 'Middleware CI')
     ],
@@ -95,6 +102,10 @@ const sampleRuns = [
     decision_trace: decisionTrace('queue_for_execution', 'pause_or_request_approval', 'Preflight allowed the run to enter the execution queue.', [
       evidence('inferred', 'task.objective', 'No high-risk action predicted.')
     ]),
+    goals: [
+      goalRecord('goal_0010_001', 'User list query count is stable', 'completed', 0.13),
+      goalRecord('goal_0010_002', 'Summary artifact explains the fix', 'completed', 0.12)
+    ],
     agent_activity: [
       agentActivity('activity_0010_planner', 'planner', 'completed', 0.05),
       agentActivity('activity_0010_executor', 'executor', 'ready', 0.15),
@@ -179,6 +190,9 @@ const sampleRuns = [
     decision_trace: decisionTrace('stop_before_execution', 'execute_disallowed_action', 'Policy or permission checks blocked the requested work before side effects.', [
       evidence('observed', 'policy.permissions', 'Migration permission was missing.')
     ]),
+    goals: [
+      goalRecord('goal_0009_001', 'Index migration is reviewed before execution', 'blocked', 0.75)
+    ],
     artifacts: [
       artifact('artifact_log_0009', 'log', 'artifact://run_2026_05_24_0009/run.log'),
       artifact('artifact_summary_0009', 'summary', 'artifact://run_2026_05_24_0009/summary.md')
@@ -201,6 +215,9 @@ const sampleRuns = [
       event('evt_081', 'task_created', 'queued', 'Task created', 'Waiting for scheduler capacity.', '2026-05-24T07:22:45.000Z', '-')
     ],
     decision_trace: decisionTrace('queue_for_execution', 'pause_or_request_approval', 'Preflight allowed the run to enter the execution queue.', []),
+    goals: [
+      goalRecord('goal_0008_001', 'Dependency update keeps lockfile reproducible', 'pending', 0.25)
+    ],
     artifacts: [],
     audit: {
       hash: 'f1c9e5b0a4d8f2c6e1b9a3d7f0c4e8b2a6d1da8f3c7e2b6a1d9f4c8e3b7a2d6a',
@@ -227,6 +244,9 @@ const sampleRuns = [
     decision_trace: decisionTrace('pause_for_budget_review', 'continue_past_hard_budget_cap', 'Hard budget cap enforcement pauses execution before additional work starts.', [
       evidence('observed', 'task.budget', 'Budget limits and spend are loaded from run state.')
     ]),
+    goals: [
+      goalRecord('goal_0007_001', 'Rate limiting policy is budget-reviewed before more work', 'blocked', 1.5)
+    ],
     artifacts: [
       artifact('artifact_log_0007', 'log', 'artifact://run_2026_05_24_0007/run.log')
     ],
@@ -304,6 +324,24 @@ function connectorReference(reference_id, adapter, resource_type, resource_id, u
   };
   if (url) reference.url = url;
   return reference;
+}
+
+function goalRecord(goal_id, title, status, budget_estimate_usd) {
+  return {
+    format: 'divinity.goal.v1',
+    goal_id,
+    run_id: '',
+    task_id: '',
+    scope: DEFAULT_SCOPE,
+    source: 'task.success_criteria',
+    title,
+    status,
+    budget_estimate_usd,
+    evidence_refs: [
+      evidence('observed', 'task.success_criteria', title)
+    ],
+    completion_evidence_refs: []
+  };
 }
 
 function agentActivity(activity_id, role, status, budget_estimate_usd) {
@@ -586,6 +624,7 @@ function normalizeApiRun(run) {
     actor: run.approval?.actor || 'api',
     events: (run.events || []).map(normalizeApiEvent),
     decision_trace: decisionTraceForRun(run),
+    goals: run.goals || [],
     agent_activity: run.agent_activity || [],
     executions: run.executions || stepExecutions,
     verifications: run.verifications || stepVerifications,
@@ -666,6 +705,7 @@ function hydrateRunReferences(sourceRuns) {
     for (const runEvent of run.events) runEvent.run_id = run.run_id;
     for (const runArtifact of run.artifacts) runArtifact.run_id = run.run_id;
     for (const connector of run.connector_references || []) connector.run_id = run.run_id;
+    for (const goal of run.goals || []) goal.run_id = run.run_id;
     for (const activity of run.agent_activity || []) activity.run_id = run.run_id;
     for (const runVerification of run.verifications || []) runVerification.run_id = run.run_id;
     for (const runHeartbeat of run.heartbeats || []) runHeartbeat.run_id = run.run_id;
@@ -740,6 +780,12 @@ function statusClass(status) {
 function statusLabel(status, compact = false) {
   if (compact && status === 'awaiting_approval') return 'awaiting';
   return status;
+}
+
+function goalStatusClass(status) {
+  if (status === 'blocked') return 'status-paused';
+  if (status === 'completed') return 'status-completed';
+  return 'status-queued';
 }
 
 function riskClass(risk) {
@@ -911,6 +957,7 @@ function renderRunDetail() {
 
   document.querySelector('[data-event-timeline]').innerHTML = run.events.map(renderEvent).join('');
   document.querySelector('[data-decision-trace]').innerHTML = renderDecisionTrace(run.decision_trace);
+  document.querySelector('[data-goal-list]').innerHTML = renderGoals(run);
   document.querySelector('[data-connector-reference-list]').innerHTML = renderConnectorReferences(run);
   document.querySelector('[data-agent-activity-list]').innerHTML = renderAgentActivity(run);
   document.querySelector('[data-execution-list]').innerHTML = renderExecutions(run);
@@ -1000,6 +1047,25 @@ function renderConnectorReferences(run) {
         <span>${reference.resource_type} / ${reference.resource_id}</span>
       </span>
       ${reference.url ? `<a href="${reference.url}" target="_blank" rel="noreferrer">Open</a>` : '<span class="connector-missing-link">No link</span>'}
+    </li>
+  `).join('');
+}
+
+function renderGoals(run) {
+  const goals = run.goals || [];
+  if (!goals.length) {
+    return '<li class="empty-state">Goals appear when task success criteria are attached.</li>';
+  }
+
+  return goals.map(goal => `
+    <li class="goal-item">
+      <span class="goal-copy">
+        <strong>${goal.title}</strong>
+        <span>${goal.source} / ${goal.goal_id}</span>
+      </span>
+      <span class="status-pill ${goalStatusClass(goal.status)}">${goal.status}</span>
+      <span class="goal-budget">${formatCurrency(goal.budget_estimate_usd || 0)}</span>
+      ${renderEvidenceLabels(goal.evidence_refs)}
     </li>
   `).join('');
 }

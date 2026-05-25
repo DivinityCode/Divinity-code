@@ -14,6 +14,7 @@ for (const selector of [
   'data-run-list',
   'data-event-timeline',
   'data-decision-trace',
+  'data-goal-list',
   'data-connector-reference-list',
   'data-agent-activity-list',
   'data-execution-list',
@@ -95,6 +96,20 @@ const runs = vm.runInNewContext(runDataMatch[1], {
     attached_by: 'operator@divinity',
     attached_at: '2026-05-24T10:12:43.000Z',
     metadata: {}
+  }),
+  goalRecord: (goal_id, title, status, budget_estimate_usd) => ({
+    goal_id,
+    run_id: '',
+    task_id: 'task_dashboard_static',
+    scope: { org_id: 'fraction-estate', project_id: 'divinity-code' },
+    source: 'task.success_criteria',
+    title,
+    status,
+    budget_estimate_usd,
+    evidence_refs: [
+      { evidence_id: `${goal_id}_criteria`, source: 'task.success_criteria', claim_type: 'observed', summary: title, supports: ['goal.title'] }
+    ],
+    completion_evidence_refs: []
   })
 });
 const statuses = new Set(runs.map(run => run.status));
@@ -112,6 +127,7 @@ assert(runs.some(run => run.status === 'awaiting_approval'), 'approval queue nee
 assert(runs.every(run => run.budget && Number.isFinite(run.budget.soft) && Number.isFinite(run.budget.hard)), 'runs need soft and hard budgets');
 assert(runs.every(run => Array.isArray(run.events) && run.events.length > 0), 'runs need timelines');
 assert(runs.every(run => run.decision_trace?.chosen_path && run.decision_trace?.rejected_alternative), 'runs need decision traces');
+assert(runs.some(run => Array.isArray(run.goals) && run.goals.length > 0), 'sample data should include goal records');
 assert(runs.some(run => Array.isArray(run.agent_activity) && run.agent_activity.length > 0), 'sample data should include agent activity records');
 assert(runs.some(run => Array.isArray(run.executions) && run.executions.length > 0), 'sample data should include execution records');
 assert(runs.some(run => Array.isArray(run.verifications) && run.verifications.length > 0), 'sample data should include verification records');
@@ -120,12 +136,14 @@ assert(runs.some(run => Array.isArray(run.connector_references) && run.connector
 assert(js.includes('claim_type'), 'dashboard sample data should include fact/inference labels');
 assert(js.includes('renderEvidenceLabels'), 'dashboard should render evidence labels');
 assert(js.includes('renderDecisionTrace'), 'dashboard should render decision trace panel');
+assert(js.includes('renderGoals'), 'dashboard should render goal records');
 assert(js.includes('renderConnectorReferences'), 'dashboard should render connector references');
 assert(js.includes('renderAgentActivity'), 'dashboard should render agent activity records');
 assert(js.includes('renderExecutions'), 'dashboard should render execution records');
 assert(js.includes('renderVerificationResult'), 'dashboard should render verification records');
 assert(js.includes('git_status') && js.includes('file_read') && js.includes('node_test') && js.includes('package_script'), 'dashboard should show execution adapter names');
 assert(css.includes('verification-chip'), 'dashboard should style verification chips');
+assert(css.includes('goal-item'), 'dashboard should style goal records');
 assert(css.includes('connector-reference-item'), 'dashboard should style connector reference items');
 assert(js.includes('Observed') && js.includes('Inferred'), 'dashboard should show observed/inferred label text');
 assert(runs.some(run => run.artifacts.length > 0), 'at least one run needs artifacts');
