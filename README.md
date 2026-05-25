@@ -8,6 +8,10 @@ Divinity Code is an AI engineering platform designed to combine best-in-class co
 Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows with explicit task success criteria, durable goal records with verifier-backed completion, policy and budget gates, budget incident records, policy-pack pre-execution hook checks, approval transitions, approval comments, approval revision/resubmission records, execution locks, bounded execution retries, execution adapter and verifier records, observable planner/executor/verifier activity, run heartbeats, isolated local and Git URL execution workspaces with cleanup, runner isolation profiles with Docker-backed constrained command execution, patch/log/summary/PR-summary artifacts, structured bug reports, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, team policy packs, constrained package-script execution, discoverable runtime, connector, LLM provider, toolset governance, provider route-planning, and provider chat-execution surfaces, run-level connector references, org/project observability rollups, a shared capabilities catalog, and opt-in file-backed API run storage.
 
 ## Documents
+- [Install Guide](docs/INSTALL.md)
+- [Quickstart](docs/QUICKSTART.md)
+- [Upgrade Guide](docs/UPGRADE.md)
+- [Release Checklist](docs/RELEASE_CHECKLIST.md)
 - [Product Plan](docs/PRODUCT_PLAN.md)
 - [Product Requirements Baseline](docs/PRODUCT_REQUIREMENTS.md)
 - [UI Information Architecture](docs/INFORMATION_ARCHITECTURE.md)
@@ -63,12 +67,13 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 
 
 ## Validation
-- Run `npm install`
-- Run `npm run validate:contracts` to validate schema examples and CI contract checks.
-- Run `npm run test:smoke` for the local MVP demo flow plus CLI/API smoke path.
-- Run `npm run test:providers` for focused LLM provider catalog coverage.
-- Run `npm run test:toolsets` for focused toolset catalog coverage.
-- Run `npm run test:goals` for focused success-criteria-to-goal and verifier-backed completion coverage.
-- Run `npm run test:approval` for focused approval decision, approval comment, and approval revision coverage.
-- Run `npm test` for preflight engine, approval API, execution adapters, run events, artifacts, audit export, CLI, and smoke checks.
-- If `npm` is unavailable but cached Corepack pnpm is present, run scripts with `node ~/.cache/node/corepack/v1/pnpm/<version>/bin/pnpm.cjs <script>`.
+- Run `corepack enable` and `pnpm install`
+- If `pnpm` is unavailable but cached Corepack pnpm is present, run scripts with `node ~/.cache/node/corepack/v1/pnpm/<version>/bin/pnpm.cjs <script>`.
+- Run `pnpm run validate:contracts` to validate schema examples and CI contract checks.
+- Run `pnpm run test:public-docs` to validate public install, quickstart, upgrade, and release checklist docs.
+- Run `pnpm run test:smoke` for the local MVP demo flow plus CLI/API smoke path.
+- Run `pnpm run test:providers` for focused LLM provider catalog coverage.
+- Run `pnpm run test:toolsets` for focused toolset catalog coverage.
+- Run `pnpm run test:goals` for focused success-criteria-to-goal and verifier-backed completion coverage.
+- Run `pnpm run test:approval` for focused approval decision, approval comment, and approval revision coverage.
+- Run `pnpm test` for preflight engine, approval API, execution adapters, run events, artifacts, audit export, CLI, and smoke checks.

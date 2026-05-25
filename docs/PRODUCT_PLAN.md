@@ -104,7 +104,8 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: dashboard run detail and approval cards render provider/toolset operator controls from `task.toolset_resolution`.
    - Next production slice: add more approved tool adapters and richer operator-reviewed result handoff behind the same route policy.
 3. Public onboarding and release packaging.
-   - Next production slice: add install/upgrade docs, release artifacts, environment bootstrap checks, and a first-run quickstart that does not require repo internals.
+   - Bootstrap status: public install, quickstart, upgrade, and release checklist docs are linked from the README and guarded by `test:public-docs`.
+   - Next production slice: add release artifacts, published package/binary installation paths, and environment bootstrap checks that do not require repo internals.
 4. Hosted/identity/billing boundary.
    - Non-goal for the current bootstrap: hosted identity, billing, and managed secrets are not implemented until local provider/tool/runtime behavior is stable.
 
