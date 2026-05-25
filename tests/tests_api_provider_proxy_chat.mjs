@@ -55,6 +55,39 @@ async function requestJson(url, options = {}) {
   return { response, body: await response.json() };
 }
 
+async function requestText(url, options = {}) {
+  const response = await fetch(url, {
+    headers: { 'content-type': 'application/json', ...options.headers },
+    ...options
+  });
+  return { response, body: await response.text() };
+}
+
+function writeSse(res, events) {
+  res.statusCode = 200;
+  res.setHeader('content-type', 'text/event-stream');
+  for (const event of events) {
+    if (event.event) res.write(`event: ${event.event}\n`);
+    res.write(`data: ${typeof event.data === 'string' ? event.data : JSON.stringify(event.data)}\n\n`);
+  }
+  res.end();
+}
+
+function parseSseEvents(body) {
+  return String(body || '').trim().split(/\r?\n\r?\n/).filter(Boolean).map(record => {
+    let event = '';
+    const data = [];
+    for (const line of record.split(/\r?\n/)) {
+      if (line.startsWith('event:')) event = line.slice('event:'.length).trim();
+      if (line.startsWith('data:')) data.push(line.slice('data:'.length).trim());
+    }
+    return {
+      event,
+      data: data.length ? JSON.parse(data.join('\n')) : null
+    };
+  });
+}
+
 const apiSecret = 'openrouter-secret-value';
 const secretPrompt = 'secret prompt for api proxy';
 const toolSecret = 'secret tool argument for api proxy';
@@ -141,6 +174,30 @@ const anthropicMock = await createMockChatServer(({ req, res, body }) => {
       output_tokens: 3
     }
   }));
+});
+const streamMock = await createMockChatServer(({ req, res, body }) => {
+  assert.equal(req.url, '/chat/completions');
+  assert.equal(body.stream, true);
+  assert.equal(body.max_completion_tokens, 16);
+  writeSse(res, [
+    {
+      data: {
+        id: 'chatcmpl_api_stream',
+        object: 'chat.completion.chunk',
+        model: body.model,
+        choices: [{ index: 0, delta: { content: 'api ' }, finish_reason: null }]
+      }
+    },
+    {
+      data: {
+        id: 'chatcmpl_api_stream',
+        object: 'chat.completion.chunk',
+        model: body.model,
+        choices: [{ index: 0, delta: { content: 'stream' }, finish_reason: 'stop' }]
+      }
+    },
+    { data: '[DONE]' }
+  ]);
 });
 
 try {
@@ -254,6 +311,28 @@ try {
   assert.equal(JSON.stringify(anthropicBody).includes(secretPrompt), false);
   assert.equal(JSON.stringify(anthropicBody).includes(apiSecret), false);
 
+  const { response: streamResponse, body: streamBody } = await requestText(`${baseUrl}/provider-proxy/chat/stream`, {
+    method: 'POST',
+    body: JSON.stringify({
+      candidates: [{ provider_id: 'custom_openai_compatible', base_url: streamMock.base_url }],
+      model: 'mock-model',
+      messages: [{ role: 'user', content: secretPrompt }],
+      max_completion_tokens: 16
+    })
+  });
+
+  assert.equal(streamResponse.status, 200);
+  assert.match(streamResponse.headers.get('content-type'), /^text\/event-stream/);
+  const streamEvents = parseSseEvents(streamBody);
+  assert.equal(streamEvents.some(item => item.event === 'provider_stream_event'), true);
+  assert.equal(streamEvents.some(item => item.event === 'provider_stream_completed'), true);
+  const completed = streamEvents.find(item => item.event === 'provider_stream_completed').data;
+  assert.equal(completed.result.format, 'divinity.provider_proxy_stream_result.v1');
+  assert.equal(completed.result.output_text, 'api stream');
+  assert.equal(streamMock.requests.length, 1);
+  assert.equal(streamBody.includes(secretPrompt), false);
+  assert.equal(streamBody.includes(apiSecret), false);
+
   const { response: limitedLedgerResponse, body: limitedLedgerBody } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
     method: 'POST',
     body: JSON.stringify({
@@ -300,6 +379,7 @@ try {
   await ledgerBackupMock.close();
   await toolCallMock.close();
   await anthropicMock.close();
+  await streamMock.close();
   if (server.listening) {
     await new Promise((resolve, reject) => {
       server.close(error => error ? reject(error) : resolve());

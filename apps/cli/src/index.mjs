@@ -20,6 +20,7 @@ import { createOrchestrationTrace } from '../../../packages/orchestration/src/in
 import {
   createConfiguredProviderLimitLedger,
   executeProviderProxyChat,
+  executeProviderProxyChatStream,
   planProviderProxyRoute
 } from '../../../packages/provider-proxy/src/index.mjs';
 import { providerCredentialReadiness, publicLlmProviders, resolveProviderRuntime } from '../../../packages/provider-runtime/src/index.mjs';
@@ -511,6 +512,7 @@ function parseProviderChatArgs(values) {
     requested_model: '',
     max_completion_tokens: 0,
     max_output_tokens: 0,
+    stream: false,
     request_budget: {},
     toolsets: {
       enabled: null,
@@ -552,6 +554,8 @@ function parseProviderChatArgs(values) {
       index += 1;
     } else if (value.startsWith('--max-output-tokens=')) {
       options.max_output_tokens = value.slice('--max-output-tokens='.length);
+    } else if (value === '--stream') {
+      options.stream = true;
     } else if (value === '--max-prompt-chars') {
       options.request_budget.max_prompt_chars = next;
       index += 1;
@@ -1454,7 +1458,8 @@ async function providerChat() {
   try {
     const options = parseProviderChatArgs(args);
     options.limit_ledger = createConfiguredProviderLimitLedger(process.env);
-    const result = await executeProviderProxyChat(options);
+    const executor = options.stream ? executeProviderProxyChatStream : executeProviderProxyChat;
+    const result = await executor(options);
     print({ ok: result.status === 'completed', command: 'provider-chat', result });
   } catch (error) {
     print({ ok: false, command: 'provider-chat', error: error.message });

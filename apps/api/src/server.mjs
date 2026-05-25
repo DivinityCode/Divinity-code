@@ -26,6 +26,7 @@ import { evaluatePreflight, evaluateStepGate } from '../../../packages/policy-en
 import {
   createConfiguredProviderLimitLedger,
   executeProviderProxyChat,
+  executeProviderProxyChatStream,
   planProviderProxyRoute
 } from '../../../packages/provider-proxy/src/index.mjs';
 import { createConfiguredRunStore } from '../../../packages/run-store/src/index.mjs';
@@ -457,6 +458,43 @@ const server = http.createServer((req, res) => {
         sendJson(res, 200, evaluatePreflight({ task: scopedTask, policyPack }));
       } catch (error) {
         sendJson(res, 400, { error: error.message });
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/provider-proxy/chat/stream') {
+    readJson(req, async (body) => {
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      try {
+        const result = await executeProviderProxyChatStream({
+          candidates: body.candidates,
+          limit_state: body.limit_state,
+          limit_ledger: providerLimitLedger,
+          rotation_intent: body.rotation_intent,
+          requested_model: body.requested_model || body.model,
+          messages: body.messages,
+          max_completion_tokens: body.max_completion_tokens,
+          max_output_tokens: body.max_output_tokens,
+          request_budget: body.request_budget,
+          toolsets: body.toolsets,
+          enabled_toolsets: body.enabled_toolsets,
+          disabled_toolsets: body.disabled_toolsets,
+          temperature: body.temperature,
+          on_event: event => sendSse(res, 'provider_stream_event', { event })
+        });
+        const finalEvent = result.status === 'failed'
+          ? 'provider_stream_failed'
+          : 'provider_stream_completed';
+        sendSse(res, finalEvent, { result });
+      } catch (error) {
+        sendSse(res, 'provider_stream_failed', { error: error.message });
+      } finally {
+        res.end();
       }
     });
     return;

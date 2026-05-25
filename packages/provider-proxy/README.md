@@ -8,9 +8,9 @@ Provider route planning and guarded chat execution for LLM proxy flows.
 - Returns route metadata only; it does not call an LLM provider or proxy request bodies.
 - Does not return secret values. Route plans include credential environment variable names and configured variable names only.
 - Blocks public shared-key candidates and explicit limit-bypass intent.
-- Executes OpenAI-compatible Chat Completions, Anthropic Messages, and OpenAI Responses requests through `executeProviderProxyChat()` after route planning succeeds.
+- Executes OpenAI-compatible Chat Completions, Anthropic Messages, and OpenAI Responses requests through `executeProviderProxyChat()` or `executeProviderProxyChatStream()` after route planning succeeds.
 - Fails closed for unsupported future transports until dedicated handlers are implemented.
-- Returns response metadata without echoing prompts, request bodies, credential values, or raw tool arguments.
+- Returns response metadata without echoing prompts, request bodies, credential values, raw tool arguments, or Anthropic thinking/signature content.
 - Blocks credentialed provider `base_url` overrides during execution so operator-owned API keys are not forwarded to caller-supplied endpoints.
 - Provides `createProviderLimitLedger()` and `createConfiguredProviderLimitLedger()` for storing provider retry windows without prompts, request bodies, credentials, or provider response bodies.
 
@@ -36,7 +36,7 @@ Rotation is for authorized failover across operator-configured credentials. It i
 - `retry_after_seconds`
 - `source`
 
-`planProviderProxyRoute()` merges active ledger entries with caller-supplied `limit_state`. Expired entries do not block routing. `executeProviderProxyChat()` records upstream `429` responses when a ledger is supplied and returns a redacted `limit_ledger_record` in the limited result.
+`planProviderProxyRoute()` merges active ledger entries with caller-supplied `limit_state`. Expired entries do not block routing. `executeProviderProxyChat()` and `executeProviderProxyChatStream()` record upstream `429` responses when a ledger is supplied and return a redacted `limit_ledger_record` in the limited result.
 
 `createConfiguredProviderLimitLedger(process.env)` uses `DIVINITY_PROVIDER_LIMIT_LEDGER_PATH` for optional file-backed persistence. The API uses an in-process ledger by default and can persist it when the env var is set. The CLI only uses the file-backed ledger when the env var is set, so ordinary commands do not create repo-root state files.
 
@@ -53,7 +53,18 @@ Rotation is for authorized failover across operator-configured credentials. It i
 - Prompt and request-body data are sent only to the selected provider endpoint and are not included in the returned result metadata.
 - Local custom endpoints can be used without a credential for development and tests. Credentialed catalog providers execute only against their trusted catalog endpoint in this slice.
 
+`executeProviderProxyChatStream()` uses the same route, credential, endpoint override, toolset compatibility, prompt budget, output budget, and limit-ledger checks as non-streaming chat execution, then sets `stream: true` on the upstream request. It returns `format: "divinity.provider_proxy_stream_result.v1"` with accumulated `output_text`, redacted `stream_events`, `event_counts`, usage when available, and the same redacted tool-call governance metadata.
+
+Streaming normalizes provider SSE events instead of forwarding raw provider events:
+
+- Chat Completions `choices[].delta.content` becomes `text_delta`; streamed `delta.tool_calls` become redacted `tool_call_delta` metadata.
+- Anthropic `content_block_delta` text becomes `text_delta`; `input_json_delta` becomes redacted tool metadata; `thinking_delta` and `signature_delta` are counted as `redacted_reasoning_delta` without exposing their content.
+- OpenAI Responses `response.output_text.delta` becomes `text_delta`; `response.output_item.added` and function-call argument events become redacted tool metadata.
+- Unknown SSE events are ignored. `[DONE]` terminators are not returned.
+
 Transport shapes are anchored to current official provider docs:
 - OpenAI Responses: https://developers.openai.com/api/reference/responses/create
 - OpenAI Chat Completions: https://developers.openai.com/api/reference/chat/create
 - Anthropic Messages: https://platform.claude.com/docs/en/build-with-claude/working-with-messages
+- OpenAI Responses streaming events: https://developers.openai.com/api/reference/resources/responses/streaming-events
+- Anthropic Messages streaming: https://platform.claude.com/docs/en/api/messages-streaming
