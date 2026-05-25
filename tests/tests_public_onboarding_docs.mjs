@@ -1,0 +1,103 @@
+import assert from 'assert/strict';
+import { existsSync, readFileSync } from 'fs';
+
+function read(path) {
+  return readFileSync(path, 'utf8');
+}
+
+function assertIncludes(source, expected, label) {
+  assert.ok(
+    source.includes(expected),
+    `${label} must include ${expected}`
+  );
+}
+
+function assertNotIncludes(source, disallowed, label) {
+  assert.equal(
+    source.includes(disallowed),
+    false,
+    `${label} must not include ${disallowed}`
+  );
+}
+
+const requiredDocs = [
+  ['docs/INSTALL.md', 'Install Guide'],
+  ['docs/QUICKSTART.md', 'Quickstart'],
+  ['docs/UPGRADE.md', 'Upgrade Guide'],
+  ['docs/RELEASE_CHECKLIST.md', 'Release Checklist']
+];
+
+for (const [path] of requiredDocs) {
+  assert.equal(existsSync(path), true, `${path} must exist`);
+}
+
+const readme = read('README.md');
+for (const [path, label] of requiredDocs) {
+  assertIncludes(readme, `[${label}](${path})`, 'README');
+}
+
+const install = read('docs/INSTALL.md');
+assertIncludes(install, 'Node.js 22', 'install guide');
+assertIncludes(install, 'Corepack pnpm', 'install guide');
+assertIncludes(install, 'pnpm install', 'install guide');
+assertIncludes(install, 'pnpm run validate:contracts', 'install guide');
+assertIncludes(install, 'pnpm test', 'install guide');
+assertIncludes(install, 'npm is optional', 'install guide');
+
+const quickstart = read('docs/QUICKSTART.md');
+for (const command of [
+  'divinity init',
+  'divinity doctor',
+  'divinity providers',
+  'divinity provider-route',
+  'divinity run',
+  'divinity status',
+  'pnpm run test:smoke'
+]) {
+  assertIncludes(quickstart, command, 'quickstart');
+}
+
+const upgrade = read('docs/UPGRADE.md');
+for (const command of [
+  'git pull --ff-only',
+  'pnpm install',
+  'pnpm run validate:contracts',
+  'pnpm run test:providers',
+  'pnpm run test:smoke',
+  'pnpm test'
+]) {
+  assertIncludes(upgrade, command, 'upgrade guide');
+}
+assertIncludes(upgrade, 'deprecation review', 'upgrade guide');
+
+const releaseChecklist = read('docs/RELEASE_CHECKLIST.md');
+for (const item of [
+  'README warning review',
+  'git status --short --branch',
+  'pnpm run validate:contracts',
+  'pnpm test',
+  'pnpm run test:smoke',
+  'pnpm run test:providers',
+  'git diff --check',
+  'conflict marker scan',
+  'GitHub Actions'
+]) {
+  assertIncludes(releaseChecklist, item, 'release checklist');
+}
+
+const publicDocs = [
+  readme,
+  install,
+  quickstart,
+  upgrade,
+  releaseChecklist
+].join('\n');
+
+for (const disallowed of [
+  'npm install -g divinity-code',
+  'npx divinity'
+]) {
+  assertNotIncludes(publicDocs, disallowed, 'public onboarding docs');
+}
+
+console.log(JSON.stringify({ ok: true, test: 'public-onboarding-docs' }));
