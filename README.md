@@ -3,7 +3,7 @@
 Divinity Code is an AI engineering platform designed to combine best-in-class coding execution, multi-agent orchestration, and a user-friendly trust-first UX.
 
 ## Current Status
-Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows with explicit task success criteria, durable goal records with verifier-backed completion, policy and budget gates, budget incident records, policy-pack pre-execution hook checks, approval transitions, approval comments, approval revision/resubmission records, execution locks, bounded execution retries, execution adapter and verifier records, observable planner/executor/verifier activity, run heartbeats, isolated local and Git URL execution workspaces with cleanup, runner isolation profiles with Docker-backed constrained command execution, patch/log/summary/PR-summary artifacts, structured bug reports, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, team policy packs, constrained package-script execution, discoverable runtime, connector, LLM provider, and toolset catalogs, run-level connector references, org/project observability rollups, a shared capabilities catalog, and opt-in file-backed API run storage.
+Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows with explicit task success criteria, durable goal records with verifier-backed completion, policy and budget gates, budget incident records, policy-pack pre-execution hook checks, approval transitions, approval comments, approval revision/resubmission records, execution locks, bounded execution retries, execution adapter and verifier records, observable planner/executor/verifier activity, run heartbeats, isolated local and Git URL execution workspaces with cleanup, runner isolation profiles with Docker-backed constrained command execution, patch/log/summary/PR-summary artifacts, structured bug reports, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, team policy packs, constrained package-script execution, discoverable runtime, connector, LLM provider, toolset, and provider route-planning catalogs, run-level connector references, org/project observability rollups, a shared capabilities catalog, and opt-in file-backed API run storage.
 
 ## Documents
 - [Product Plan](docs/PRODUCT_PLAN.md)
@@ -18,9 +18,9 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - [Week 1 Execution Plan](docs/WEEK1_EXECUTION_PLAN.md)
 
 ## Implemented Surfaces
-1. Builder CLI: `init`, `run`, API-backed `status`, `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `approval-revision`, `approval-resubmit`, `goal-complete`, `capabilities`, `providers`, `toolsets`, `recipes`, `doctor`, and `bug`. `init` and `run` carry provider/tool runtime metadata without storing secret values.
+1. Builder CLI: `init`, `run`, API-backed `status`, `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `approval-revision`, `approval-resubmit`, `goal-complete`, `capabilities`, `providers`, `provider-route`, `toolsets`, `recipes`, `doctor`, and `bug`. `init` and `run` carry provider/tool runtime metadata without storing secret values.
 2. IDE extension scaffold: task run, dashboard launch, and doctor commands delegated to the repo-local CLI.
-3. Control Plane API: health, capabilities, provider and toolset catalogs, preflight, task creation, run retrieval, approvals, approval comments, approval revisions, goal completion, step gates and execution locks, verifier evidence, run heartbeats, connector references, artifacts, audit export, and live run streams.
+3. Control Plane API: health, capabilities, provider and toolset catalogs, provider route planning, preflight, task creation, run retrieval, approvals, approval comments, approval revisions, goal completion, step gates and execution locks, verifier evidence, run heartbeats, connector references, artifacts, audit export, and live run streams.
 4. Operator dashboard: run queue, approvals, approval comments, approval revisions, run timeline, decision trace, goal records, connector references, agent activity, execution and verification evidence with retry attempts, liveness summary, artifacts, audit metadata, and API-backed live updates.
 
 
@@ -34,6 +34,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - `packages/capabilities` - shared policy, runtime adapter, execution adapter, connector adapter, LLM provider, toolset, and recipe capability catalog
 - `packages/runtime-adapters` - agent runtime adapter metadata for Divinity, local CLI runtimes, and generic processes
 - `packages/provider-runtime` - data-backed LLM provider catalog and side-effect-free credential readiness helpers
+- `packages/provider-proxy` - side-effect-free LLM provider route planning with shared-key and limit-bypass blocks
 - `packages/toolsets` - toolset catalog and default tool resolution helpers
 - `packages/connectors` - ticket, docs, and CI connector adapter metadata and run reference helpers
 - `packages/policy-engine` - trust and budget gate evaluation

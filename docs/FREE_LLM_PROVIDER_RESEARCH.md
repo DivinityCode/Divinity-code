@@ -36,13 +36,15 @@ Excluded provider sources:
 - `packages/provider-runtime` loads and validates the local provider catalog at runtime.
 - Task payloads may carry `llm_provider`, `provider_runtime`, `toolsets`, and `toolset_resolution` so provider/tool decisions are visible before execution.
 - The provider catalog includes authorized free-tier candidates from the research, such as Groq, Cerebras, Mistral, and GitHub Models, but it stores only endpoint metadata and credential environment variable names.
-- A future proxy should terminate client requests, select only authorized configured providers, enforce per-provider rate limits, redact secrets from logs, and fail closed when no compliant route is available.
+- `packages/provider-proxy` now plans safe provider routes from the trusted catalog and blocks public shared-key sources, missing credentials, unknown providers, and explicit limit-bypass intent.
+- CLI `provider-route` and API `POST /provider-proxy/route` expose route-plan metadata only. They do not send prompts, call providers, store credentials, or print secret values.
+- A future live proxy should terminate client requests, reuse the provider-proxy policy, enforce per-provider rate limits, redact secrets from logs, and fail closed when no compliant route is available.
 - Rotation is acceptable for reliability and cost policy across operator-owned credentials; it is not acceptable for evading limits.
 
 ## Next Safe Slice
-Build a provider proxy package that:
-- accepts only provider ids present in the trusted local catalog;
-- reads credentials from environment or an approved secret store;
-- applies per-provider request and token budgets;
-- records which provider/model handled each request without logging prompts or secrets by default;
-- returns clear `429` or policy errors when limits are reached instead of bypassing them.
+Extend the provider proxy from route planning to controlled execution:
+- accept only provider ids present in the trusted local catalog;
+- read credentials from environment or an approved secret store;
+- apply per-provider request and token budgets;
+- record which provider/model handled each request without logging prompts or secrets by default;
+- return clear `429` or policy errors when limits are reached instead of bypassing them.

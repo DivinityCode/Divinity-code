@@ -17,6 +17,7 @@ import { createInitialRunEvents } from '../../../packages/events/src/index.mjs';
 import { completeGoalRecord, createGoalRecords } from '../../../packages/goals/src/index.mjs';
 import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
+import { planProviderProxyRoute } from '../../../packages/provider-proxy/src/index.mjs';
 import { providerCredentialReadiness, publicLlmProviders, resolveProviderRuntime } from '../../../packages/provider-runtime/src/index.mjs';
 import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
 import { evaluatePreflight, POLICY_PRESETS } from '../../../packages/policy-engine/src/index.mjs';
@@ -447,6 +448,54 @@ function parseStatusArgs(values) {
 
   options.api = String(options.api || '').trim().replace(/\/+$/, '');
   options.run_id = String(options.run_id || '').trim();
+  return options;
+}
+
+function parseProviderRouteArgs(values) {
+  const options = {
+    candidates: [],
+    limit_state: {},
+    rotation_intent: 'reliability',
+    requested_model: ''
+  };
+
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    const next = values[index + 1];
+
+    if (value === '--candidate' || value === '--provider' || value === '--provider-id') {
+      options.candidates.push(next);
+      index += 1;
+    } else if (value.startsWith('--candidate=')) {
+      options.candidates.push(value.slice('--candidate='.length));
+    } else if (value.startsWith('--provider=')) {
+      options.candidates.push(value.slice('--provider='.length));
+    } else if (value === '--rotation-intent') {
+      options.rotation_intent = next;
+      index += 1;
+    } else if (value.startsWith('--rotation-intent=')) {
+      options.rotation_intent = value.slice('--rotation-intent='.length);
+    } else if (value === '--limit-reached') {
+      options.limit_state[String(next || '').trim()] = { limit_reached: true };
+      index += 1;
+    } else if (value.startsWith('--limit-reached=')) {
+      options.limit_state[value.slice('--limit-reached='.length).trim()] = { limit_reached: true };
+    } else if (value === '--model') {
+      options.requested_model = next;
+      index += 1;
+    } else if (value.startsWith('--model=')) {
+      options.requested_model = value.slice('--model='.length);
+    } else {
+      throw new Error(`unknown provider-route option: ${value}`);
+    }
+  }
+
+  options.candidates = options.candidates.map(candidate => String(candidate || '').trim()).filter(Boolean);
+  options.rotation_intent = String(options.rotation_intent || 'reliability').trim() || 'reliability';
+  options.requested_model = String(options.requested_model || '').trim();
+  for (const providerId of Object.keys(options.limit_state)) {
+    if (!providerId) delete options.limit_state[providerId];
+  }
   return options;
 }
 
@@ -1291,6 +1340,16 @@ function providers() {
   print({ ok: true, command: 'providers', llm_providers: publicLlmProviders() });
 }
 
+function providerRoute() {
+  try {
+    const options = parseProviderRouteArgs(args);
+    const route = planProviderProxyRoute(options);
+    print({ ok: route.status === 'ready', command: 'provider-route', route });
+  } catch (error) {
+    print({ ok: false, command: 'provider-route', error: error.message });
+  }
+}
+
 function toolsets() {
   print({ ok: true, command: 'toolsets', toolsets: publicToolsets(), resolution: resolveToolsets() });
 }
@@ -1348,6 +1407,7 @@ switch (command) {
   case 'goal-complete': await goalComplete(); break;
   case 'capabilities': capabilities(); break;
   case 'providers': providers(); break;
+  case 'provider-route': providerRoute(); break;
   case 'toolsets': toolsets(); break;
   case 'recipes': recipes(); break;
   case 'doctor': doctor(); break;
@@ -1355,6 +1415,6 @@ switch (command) {
   default:
     print({
       ok: false,
-      usage: 'divinity <init|run|status|approvals|approval|approve|reject|approval-comment|approval-comments|approval-revision|approval-resubmit|goal-complete|capabilities|providers|toolsets|recipes|doctor|bug> [args]'
+      usage: 'divinity <init|run|status|approvals|approval|approve|reject|approval-comment|approval-comments|approval-revision|approval-resubmit|goal-complete|capabilities|providers|provider-route|toolsets|recipes|doctor|bug> [args]'
     });
 }
