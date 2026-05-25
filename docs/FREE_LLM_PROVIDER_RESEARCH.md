@@ -46,14 +46,15 @@ Excluded provider sources:
 - Provider tool execution records now consume approved calls as `divinity.provider_tool_execution.v1`. Execution requires fresh operator-supplied argument values, supports read-only `read_file`, `search_files`, and `list_files` adapters, accepts optional reviewed `operator_summary` text, stores no raw arguments, paths, filenames, directory names, search queries, or file contents, and records unsupported tools as blocked.
 - Provider chat continuation can now accept approved provider tool execution records as redacted continuation context. The next provider call receives only execution ids, tool call ids, tool names, statuses, adapters, output summaries, optional operator summaries, `read_file` byte/line counts, `search_files` scan/match counts, and `list_files` file/directory/depth counts; raw arguments, file paths, filenames, directory names, search queries, file contents, raw outputs, prompts, and credentials are not forwarded.
 - Provider chat execution enforces selected toolset compatibility before upstream calls; chat-only free-tier candidates cannot be used for toolsets that require provider `tool_calls` support.
+- Hosted runtimes can inject a provider `credential_resolver` so route planning can report configured secret reference ids and chat execution can build upstream provider headers without storing or returning secret values. Local CLI/API use still relies on environment variables until a hosted runtime supplies that resolver.
 - Credentialed provider endpoint overrides fail closed during execution so operator-owned secrets are never forwarded to caller-supplied URLs.
 - Provider retry windows can now be tracked in a provider limit ledger. API chat execution uses an in-process ledger by default and optional `DIVINITY_PROVIDER_LIMIT_LEDGER_PATH` persistence; CLI route/chat commands use that file-backed ledger only when configured.
 - Provider request/token usage can now be tracked in a provider usage ledger when `DIVINITY_PROVIDER_USAGE_LEDGER_PATH` is configured. The ledger stores daily provider/model request and token totals only; `usage_budget` can enforce daily request/input/output/total token caps before upstream calls.
-- A future live proxy should extend this with hosted secret integration and additional approved tool adapters while preserving fail-closed behavior.
+- A future live proxy should extend this package-level secret resolver boundary into a hosted operator secret store, identity, and audit surface while preserving fail-closed behavior.
 - Rotation is acceptable for reliability and cost policy across operator-owned credentials; it is not acceptable for evading limits.
 
 ## Next Safe Slice
 Extend controlled execution toward production operations:
-- integrate an approved secret store while keeping environment variables as the local development path;
+- wire the injected secret resolver to an approved hosted operator secret store while keeping environment variables as the local development path;
 - add more approved tool adapters and richer operator-reviewed result handoff without weakening redaction guarantees;
 - keep returning clear `429` or policy errors when limits are reached instead of bypassing them.

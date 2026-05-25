@@ -1,5 +1,8 @@
 import assert from 'assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'fs';
 import http from 'http';
+import { tmpdir } from 'os';
+import path from 'path';
 
 import {
   createProviderLimitLedger,
@@ -114,6 +117,89 @@ try {
   assert.equal(JSON.stringify(blockedByUsageBudget).includes(apiSecret), false);
 } finally {
   await completedServer.close();
+}
+
+const hostedSecret = 'hosted-openrouter-secret';
+const hostedSecretServer = await createMockChatServer(async ({ req, res, body }) => {
+  assert.equal(req.method, 'POST');
+  assert.equal(req.url, '/chat/completions');
+  assert.equal(req.headers.authorization, `Bearer ${hostedSecret}`);
+  assert.equal(body.model, 'hosted-secret-model');
+  assert.deepEqual(body.messages, [{ role: 'user', content: secretPrompt }]);
+
+  res.statusCode = 200;
+  res.setHeader('content-type', 'application/json');
+  res.end(JSON.stringify({
+    id: 'chatcmpl_hosted_secret_mock',
+    object: 'chat.completion',
+    model: 'hosted-secret-model',
+    choices: [
+      {
+        index: 0,
+        message: { role: 'assistant', content: 'hosted secret response' },
+        finish_reason: 'stop'
+      }
+    ],
+    usage: {
+      prompt_tokens: 4,
+      completion_tokens: 3,
+      total_tokens: 7
+    }
+  }));
+});
+
+const hostedSecretTmp = mkdtempSync(path.join(tmpdir(), 'divinity-hosted-secret-provider-'));
+try {
+  const overlayPath = path.join(hostedSecretTmp, 'providers-overlay.json');
+  writeFileSync(overlayPath, JSON.stringify({
+    format: 'divinity.llm_provider_catalog.v1',
+    providers: [
+      {
+        provider_id: 'hosted_secret_mock',
+        display_name: 'Hosted Secret Mock',
+        transport: 'chat_completions',
+        base_url: hostedSecretServer.base_url,
+        auth_modes: ['api_key'],
+        credential_env_vars: ['HOSTED_SECRET_MOCK_API_KEY'],
+        supports_custom_base_url: false,
+        default_model: 'hosted-secret-model',
+        capabilities: ['chat', 'tool_calls', 'openai_compatible'],
+        source: 'operator_config'
+      }
+    ]
+  }, null, 2));
+
+  const hostedSecretCompleted = await executeProviderProxyChat({
+    candidates: ['hosted_secret_mock'],
+    env: { DIVINITY_PROVIDER_CATALOG_PATH: overlayPath },
+    requested_model: 'hosted-secret-model',
+    messages: [{ role: 'user', content: secretPrompt }],
+    max_completion_tokens: 32,
+    credential_resolver: {
+      configuredSecretRefs(runtime) {
+        return runtime.provider_id === 'hosted_secret_mock'
+          ? ['secret://divinity/providers/hosted-secret-mock/api-key']
+          : [];
+      },
+      resolveCredential(runtime) {
+        return runtime.provider_id === 'hosted_secret_mock' ? hostedSecret : '';
+      }
+    }
+  });
+
+  assert.equal(hostedSecretCompleted.status, 'completed');
+  assert.equal(hostedSecretCompleted.provider_id, 'hosted_secret_mock');
+  assert.equal(hostedSecretCompleted.message.content, 'hosted secret response');
+  assert.deepEqual(
+    hostedSecretCompleted.route.selected_provider_runtime.auth.configured_secret_refs,
+    ['secret://divinity/providers/hosted-secret-mock/api-key']
+  );
+  assert.equal(JSON.stringify(hostedSecretCompleted).includes(hostedSecret), false);
+  assert.equal(JSON.stringify(hostedSecretCompleted).includes(secretPrompt), false);
+  assert.equal(hostedSecretServer.requests.length, 1);
+} finally {
+  rmSync(hostedSecretTmp, { recursive: true, force: true });
+  await hostedSecretServer.close();
 }
 
 const toolSecret = 'secret tool argument value';
