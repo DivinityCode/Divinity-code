@@ -86,15 +86,16 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: LLM provider metadata and side-effect-free credential readiness are exposed through capabilities, CLI `providers`, API `/providers`, and `doctor`.
    - Bootstrap status: CLI/API task assembly resolves provider runtime metadata from config or request input without printing or storing secret values.
    - Bootstrap status: provider route planning is exposed through CLI `provider-route`, API `POST /provider-proxy/route`, and `packages/provider-proxy`, with explicit blocks for public shared keys and limit-bypass intent.
-   - Bootstrap status: non-streaming OpenAI-compatible Chat Completions, Anthropic Messages, and OpenAI Responses execution is exposed through CLI `provider-chat`, API `POST /provider-proxy/chat`, and `executeProviderProxyChat()`, with prompt/secret redaction, credentialed endpoint-override blocking, transport-specific token fields, and fail-closed `429` handling.
-   - Next production slice: add managed rate-limit storage, streaming, approved hosted secret integration, and live tool-call governance behind the same route policy.
+   - Bootstrap status: non-streaming OpenAI-compatible Chat Completions, Anthropic Messages, and OpenAI Responses execution is exposed through CLI `provider-chat`, API `POST /provider-proxy/chat`, and `executeProviderProxyChat()`, with prompt/secret redaction, raw tool-argument redaction, credentialed endpoint-override blocking, transport-specific token fields, and fail-closed `429` handling.
+   - Next production slice: add managed rate-limit storage, streaming, approved hosted secret integration, and approved tool execution loops behind the same route policy.
 2. Toolset governance.
    - Bootstrap status: public toolset metadata and default resolution are exposed through capabilities, CLI `toolsets`, API `/toolsets`, and `doctor`.
    - Bootstrap status: CLI/API task assembly carries toolset resolution metadata on task/run payloads.
    - Bootstrap status: toolset resolution now carries policy permission unions, risk summaries, provider `tool_calls` capability checks, and operator-control recommendations/requirements on task/run payloads.
    - Bootstrap status: provider chat execution enforces selected toolset compatibility before upstream calls and returns `toolset_resolution` metadata on completed or blocked proxy results.
+   - Bootstrap status: provider-returned tool calls are detected across Chat Completions, Anthropic Messages, and OpenAI Responses, then returned as `requires_action` with redacted `tool_call_requests` and required `tool_call_review` operator controls instead of being executed automatically.
    - Bootstrap status: dashboard run detail and approval cards render provider/toolset operator controls from `task.toolset_resolution`.
-   - Next production slice: add live tool-call execution governance.
+   - Next production slice: add approval recording and approved live tool execution loops.
 3. Public onboarding and release packaging.
    - Next production slice: add install/upgrade docs, release artifacts, environment bootstrap checks, and a first-run quickstart that does not require repo internals.
 4. Hosted/identity/billing boundary.

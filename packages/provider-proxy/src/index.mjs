@@ -137,6 +137,90 @@ function textFromContent(content) {
     .join('');
 }
 
+function parseJsonObject(value) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+  if (typeof value !== 'string') return {};
+
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function argumentKeysFrom(value) {
+  return Object.keys(parseJsonObject(value)).sort();
+}
+
+function toolCallRequest({ runtime, toolCallId, name, argumentSource }) {
+  return {
+    format: 'divinity.provider_tool_call_request.v1',
+    tool_call_id: String(toolCallId || '').trim(),
+    provider_id: runtime.provider_id,
+    transport: runtime.transport,
+    name: String(name || '').trim(),
+    argument_keys: argumentKeysFrom(argumentSource),
+    arguments_redacted: true,
+    status: 'requires_operator_approval'
+  };
+}
+
+function toolCallReviewControl(toolCallRequests) {
+  return {
+    control_id: 'tool_call_review',
+    status: 'required',
+    reason: 'provider returned tool call requests; execution is not automatic',
+    tool_call_ids: toolCallRequests.map(item => item.tool_call_id).filter(Boolean),
+    tools: [...new Set(toolCallRequests.map(item => item.name).filter(Boolean))].sort()
+  };
+}
+
+function withToolCallGovernance(result, toolCallRequests) {
+  if (toolCallRequests.length === 0) return result;
+  return {
+    ...result,
+    status: 'requires_action',
+    tool_call_requests: toolCallRequests,
+    operator_controls: [toolCallReviewControl(toolCallRequests)]
+  };
+}
+
+function redactedChatMessage(message) {
+  if (!message) return null;
+  const safeMessage = {
+    role: message.role || 'assistant',
+    content: message.content ?? null
+  };
+  const toolCalls = Array.isArray(message.tool_calls) ? message.tool_calls : [];
+  if (toolCalls.length > 0) {
+    safeMessage.tool_calls = toolCalls.map(call => ({
+      id: String(call?.id || '').trim(),
+      type: String(call?.type || 'function').trim() || 'function',
+      function: {
+        name: String(call?.function?.name || '').trim(),
+        argument_keys: argumentKeysFrom(call?.function?.arguments),
+        arguments_redacted: true
+      }
+    }));
+  }
+  return safeMessage;
+}
+
+function redactedAnthropicContent(content) {
+  if (!Array.isArray(content)) return [];
+  return content.map(part => {
+    if (part?.type !== 'tool_use') return part;
+    return {
+      type: 'tool_use',
+      id: String(part.id || '').trim(),
+      name: String(part.name || '').trim(),
+      input_keys: argumentKeysFrom(part.input),
+      input_redacted: true
+    };
+  });
+}
+
 function systemPrompt(messages) {
   return messages
     .filter(message => message?.role === 'system')
@@ -259,8 +343,16 @@ function buildTransportRequest({ runtime, requestedModel, messages, outputTokens
 function normalizeTransportResult({ runtime, payload, response, model, route, toolsetResolution }) {
   if (runtime.transport === 'chat_completions') {
     const choice = Array.isArray(payload.choices) ? payload.choices[0] : {};
-    const message = choice?.message || null;
-    return {
+    const rawMessage = choice?.message || null;
+    const toolCalls = Array.isArray(rawMessage?.tool_calls) ? rawMessage.tool_calls : [];
+    const toolCallRequests = toolCalls.map(call => toolCallRequest({
+      runtime,
+      toolCallId: call?.id,
+      name: call?.function?.name,
+      argumentSource: call?.function?.arguments
+    }));
+    const message = redactedChatMessage(rawMessage);
+    return withToolCallGovernance({
       ...resultBase(route, toolsetResolution),
       status: 'completed',
       provider_id: runtime.provider_id,
@@ -272,15 +364,24 @@ function normalizeTransportResult({ runtime, payload, response, model, route, to
       output_text: textFromContent(message?.content),
       finish_reason: choice?.finish_reason || '',
       usage: payload.usage || null
-    };
+    }, toolCallRequests);
   }
 
   if (runtime.transport === 'anthropic_messages') {
+    const content = Array.isArray(payload.content) ? payload.content : [];
+    const toolCallRequests = content
+      .filter(part => part?.type === 'tool_use')
+      .map(part => toolCallRequest({
+        runtime,
+        toolCallId: part.id,
+        name: part.name,
+        argumentSource: part.input
+      }));
     const message = {
       role: payload.role || 'assistant',
-      content: Array.isArray(payload.content) ? payload.content : []
+      content: redactedAnthropicContent(content)
     };
-    return {
+    return withToolCallGovernance({
       ...resultBase(route, toolsetResolution),
       status: 'completed',
       provider_id: runtime.provider_id,
@@ -292,17 +393,24 @@ function normalizeTransportResult({ runtime, payload, response, model, route, to
       output_text: textFromContent(message.content),
       finish_reason: payload.stop_reason || '',
       usage: payload.usage || null
-    };
+    }, toolCallRequests);
   }
 
   if (runtime.transport === 'codex_responses') {
     const output = Array.isArray(payload.output) ? payload.output : [];
+    const functionCalls = output.filter(item => item?.type === 'function_call');
+    const toolCallRequests = functionCalls.map(item => toolCallRequest({
+      runtime,
+      toolCallId: item.call_id || item.id,
+      name: item.name,
+      argumentSource: item.arguments
+    }));
     const outputMessage = output.find(item => item?.type === 'message') || {};
     const message = {
       role: outputMessage.role || 'assistant',
       content: Array.isArray(outputMessage.content) ? outputMessage.content : []
     };
-    return {
+    return withToolCallGovernance({
       ...resultBase(route, toolsetResolution),
       status: 'completed',
       provider_id: runtime.provider_id,
@@ -314,7 +422,7 @@ function normalizeTransportResult({ runtime, payload, response, model, route, to
       output_text: textFromContent(message.content),
       finish_reason: payload.status || outputMessage.status || '',
       usage: payload.usage || null
-    };
+    }, toolCallRequests);
   }
 
   throw new Error(`unsupported transport for provider proxy chat execution: ${runtime.transport}`);

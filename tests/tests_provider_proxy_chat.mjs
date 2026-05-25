@@ -82,6 +82,63 @@ try {
   await completedServer.close();
 }
 
+const toolSecret = 'secret tool argument value';
+const toolCallServer = await createMockChatServer(async ({ res }) => {
+  res.statusCode = 200;
+  res.setHeader('content-type', 'application/json');
+  res.end(JSON.stringify({
+    id: 'chatcmpl_tool_mock',
+    object: 'chat.completion',
+    model: 'mock-model',
+    choices: [
+      {
+        index: 0,
+        message: {
+          role: 'assistant',
+          content: null,
+          tool_calls: [
+            {
+              id: 'call_search_1',
+              type: 'function',
+              function: {
+                name: 'web_search',
+                arguments: JSON.stringify({ query: toolSecret })
+              }
+            }
+          ]
+        },
+        finish_reason: 'tool_calls'
+      }
+    ],
+    usage: {
+      prompt_tokens: 4,
+      completion_tokens: 3,
+      total_tokens: 7
+    }
+  }));
+});
+
+try {
+  const toolCallResult = await executeProviderProxyChat({
+    candidates: [{ provider_id: 'custom_openai_compatible', base_url: toolCallServer.base_url }],
+    env: { CUSTOM_LLM_API_KEY: apiSecret },
+    requested_model: 'mock-model',
+    messages: [{ role: 'user', content: secretPrompt }],
+    max_completion_tokens: 32
+  });
+
+  assert.equal(toolCallResult.status, 'requires_action');
+  assert.equal(toolCallResult.tool_call_requests[0].name, 'web_search');
+  assert.deepEqual(toolCallResult.tool_call_requests[0].argument_keys, ['query']);
+  assert.equal(toolCallResult.tool_call_requests[0].arguments_redacted, true);
+  assert.equal(toolCallResult.operator_controls[0].control_id, 'tool_call_review');
+  assert.equal(JSON.stringify(toolCallResult).includes(toolSecret), false);
+  assert.equal(JSON.stringify(toolCallResult).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(toolCallResult).includes(apiSecret), false);
+} finally {
+  await toolCallServer.close();
+}
+
 const limitedServer = await createMockChatServer(async ({ res }) => {
   res.statusCode = 429;
   res.setHeader('content-type', 'application/json');
@@ -249,6 +306,53 @@ try {
   await anthropicServer.close();
 }
 
+const anthropicToolServer = await createMockChatServer(async ({ res }) => {
+  res.statusCode = 200;
+  res.setHeader('content-type', 'application/json');
+  res.end(JSON.stringify({
+    id: 'msg_tool_mock',
+    type: 'message',
+    role: 'assistant',
+    model: 'claude-mock',
+    content: [
+      { type: 'text', text: 'I need to inspect a file.' },
+      {
+        type: 'tool_use',
+        id: 'toolu_read_1',
+        name: 'read_file',
+        input: { path: toolSecret }
+      }
+    ],
+    stop_reason: 'tool_use',
+    usage: {
+      input_tokens: 5,
+      output_tokens: 4
+    }
+  }));
+});
+
+try {
+  const toolCallResult = await executeProviderProxyChat({
+    candidates: [{ provider_id: 'custom_anthropic_compatible', base_url: anthropicToolServer.base_url }],
+    env: { CUSTOM_ANTHROPIC_API_KEY: apiSecret },
+    requested_model: 'claude-mock',
+    messages: [{ role: 'user', content: secretPrompt }],
+    max_output_tokens: 64
+  });
+
+  assert.equal(toolCallResult.status, 'requires_action');
+  assert.equal(toolCallResult.tool_call_requests[0].tool_call_id, 'toolu_read_1');
+  assert.equal(toolCallResult.tool_call_requests[0].name, 'read_file');
+  assert.deepEqual(toolCallResult.tool_call_requests[0].argument_keys, ['path']);
+  assert.equal(toolCallResult.message.content[1].input_redacted, true);
+  assert.equal(toolCallResult.operator_controls[0].control_id, 'tool_call_review');
+  assert.equal(JSON.stringify(toolCallResult).includes(toolSecret), false);
+  assert.equal(JSON.stringify(toolCallResult).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(toolCallResult).includes(apiSecret), false);
+} finally {
+  await anthropicToolServer.close();
+}
+
 const responsesServer = await createMockChatServer(async ({ req, res, body }) => {
   assert.equal(req.method, 'POST');
   assert.equal(req.url, '/responses');
@@ -309,6 +413,52 @@ try {
   assert.equal(JSON.stringify(completed).includes(apiSecret), false);
 } finally {
   await responsesServer.close();
+}
+
+const responsesToolServer = await createMockChatServer(async ({ res }) => {
+  res.statusCode = 200;
+  res.setHeader('content-type', 'application/json');
+  res.end(JSON.stringify({
+    id: 'resp_tool_mock',
+    object: 'response',
+    status: 'completed',
+    model: 'gpt-mock',
+    output: [
+      {
+        type: 'function_call',
+        id: 'fc_1',
+        call_id: 'call_patch_1',
+        name: 'patch_file',
+        arguments: JSON.stringify({ file: toolSecret })
+      }
+    ],
+    usage: {
+      input_tokens: 6,
+      output_tokens: 5,
+      total_tokens: 11
+    }
+  }));
+});
+
+try {
+  const toolCallResult = await executeProviderProxyChat({
+    candidates: [{ provider_id: 'custom_openai_responses', base_url: responsesToolServer.base_url }],
+    env: { CUSTOM_RESPONSES_API_KEY: apiSecret },
+    requested_model: 'gpt-mock',
+    messages: [{ role: 'user', content: secretPrompt }],
+    max_output_tokens: 48
+  });
+
+  assert.equal(toolCallResult.status, 'requires_action');
+  assert.equal(toolCallResult.tool_call_requests[0].tool_call_id, 'call_patch_1');
+  assert.equal(toolCallResult.tool_call_requests[0].name, 'patch_file');
+  assert.deepEqual(toolCallResult.tool_call_requests[0].argument_keys, ['file']);
+  assert.equal(toolCallResult.operator_controls[0].control_id, 'tool_call_review');
+  assert.equal(JSON.stringify(toolCallResult).includes(toolSecret), false);
+  assert.equal(JSON.stringify(toolCallResult).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(toolCallResult).includes(apiSecret), false);
+} finally {
+  await responsesToolServer.close();
 }
 
 const budgetServer = await createMockChatServer(async ({ res }) => {

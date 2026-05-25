@@ -57,12 +57,47 @@ async function requestJson(url, options = {}) {
 
 const apiSecret = 'openrouter-secret-value';
 const secretPrompt = 'secret prompt for api proxy';
+const toolSecret = 'secret tool argument for api proxy';
 
 process.env.DIVINITY_API_AUTOSTART = '0';
 process.env.OPENROUTER_API_KEY = apiSecret;
 process.env.CEREBRAS_API_KEY = 'cerebras-secret';
 const { server } = await import('../apps/api/src/server.mjs');
 const mock = await createMockChatServer();
+const toolCallMock = await createMockChatServer(({ res }) => {
+  res.statusCode = 200;
+  res.setHeader('content-type', 'application/json');
+  res.end(JSON.stringify({
+    id: 'chatcmpl_api_tool_mock',
+    object: 'chat.completion',
+    model: 'mock-model',
+    choices: [
+      {
+        index: 0,
+        message: {
+          role: 'assistant',
+          content: null,
+          tool_calls: [
+            {
+              id: 'call_api_search',
+              type: 'function',
+              function: {
+                name: 'web_search',
+                arguments: JSON.stringify({ query: toolSecret })
+              }
+            }
+          ]
+        },
+        finish_reason: 'tool_calls'
+      }
+    ],
+    usage: {
+      prompt_tokens: 4,
+      completion_tokens: 3,
+      total_tokens: 7
+    }
+  }));
+});
 const anthropicMock = await createMockChatServer(({ req, res, body }) => {
   assert.equal(req.url, '/v1/messages');
   assert.equal(req.headers['anthropic-version'], '2023-06-01');
@@ -106,6 +141,26 @@ try {
   assert.equal(mock.requests.length, 1);
   assert.equal(JSON.stringify(body).includes(secretPrompt), false);
   assert.equal(JSON.stringify(body).includes(apiSecret), false);
+
+  const { response: toolCallResponse, body: toolCallBody } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
+    method: 'POST',
+    body: JSON.stringify({
+      candidates: [{ provider_id: 'custom_openai_compatible', base_url: toolCallMock.base_url }],
+      model: 'mock-model',
+      messages: [{ role: 'user', content: secretPrompt }],
+      max_completion_tokens: 32
+    })
+  });
+
+  assert.equal(toolCallResponse.status, 202);
+  assert.equal(toolCallBody.result.status, 'requires_action');
+  assert.equal(toolCallBody.result.tool_call_requests[0].name, 'web_search');
+  assert.deepEqual(toolCallBody.result.tool_call_requests[0].argument_keys, ['query']);
+  assert.equal(toolCallBody.result.tool_call_requests[0].arguments_redacted, true);
+  assert.equal(toolCallBody.result.operator_controls[0].control_id, 'tool_call_review');
+  assert.equal(JSON.stringify(toolCallBody).includes(toolSecret), false);
+  assert.equal(JSON.stringify(toolCallBody).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(toolCallBody).includes(apiSecret), false);
 
   const { response: blockedResponse, body: blocked } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
     method: 'POST',
@@ -176,6 +231,7 @@ try {
   assert.equal(JSON.stringify(anthropicBody).includes(apiSecret), false);
 } finally {
   await mock.close();
+  await toolCallMock.close();
   await anthropicMock.close();
   if (server.listening) {
     await new Promise((resolve, reject) => {

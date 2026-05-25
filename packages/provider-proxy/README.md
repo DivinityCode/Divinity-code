@@ -10,7 +10,7 @@ Provider route planning and guarded chat execution for LLM proxy flows.
 - Blocks public shared-key candidates and explicit limit-bypass intent.
 - Executes OpenAI-compatible Chat Completions, Anthropic Messages, and OpenAI Responses requests through `executeProviderProxyChat()` after route planning succeeds.
 - Fails closed for unsupported future transports until dedicated handlers are implemented.
-- Returns response metadata without echoing prompts, request bodies, or credential values.
+- Returns response metadata without echoing prompts, request bodies, credential values, or raw tool arguments.
 - Blocks credentialed provider `base_url` overrides during execution so operator-owned API keys are not forwarded to caller-supplied endpoints.
 
 ## Policy
@@ -34,6 +34,7 @@ Rotation is for authorized failover across operator-configured credentials. It i
 - `codex_responses`: `POST <base_url>/responses` with `input`, optional `instructions`, `model`, `max_output_tokens`, and optional `temperature`.
 - OpenAI-compatible Chat Completions does not use deprecated `max_tokens`; OpenAI Responses uses `max_output_tokens`; Anthropic Messages uses its current `max_tokens` field.
 - A live upstream `429` returns `status: "limited"` and does not automatically retry through another provider.
+- Provider-returned tool calls are detected but not executed. Chat Completions `message.tool_calls`, Anthropic Messages `tool_use` content blocks, and OpenAI Responses `function_call` output items return `status: "requires_action"`, redacted `tool_call_requests`, and a required `tool_call_review` operator control.
 - Prompt and request-body data are sent only to the selected provider endpoint and are not included in the returned result metadata.
 - Local custom endpoints can be used without a credential for development and tests. Credentialed catalog providers execute only against their trusted catalog endpoint in this slice.
 

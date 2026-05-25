@@ -70,7 +70,42 @@ async function runCli(args, env = {}) {
 
 const apiSecret = 'openrouter-secret-value';
 const secretPrompt = 'secret prompt for cli proxy';
+const toolSecret = 'secret tool argument for cli proxy';
 const server = await createMockChatServer();
+const toolCallServer = await createMockChatServer(({ res }) => {
+  res.statusCode = 200;
+  res.setHeader('content-type', 'application/json');
+  res.end(JSON.stringify({
+    id: 'chatcmpl_cli_tool_mock',
+    object: 'chat.completion',
+    model: 'mock-model',
+    choices: [
+      {
+        index: 0,
+        message: {
+          role: 'assistant',
+          content: null,
+          tool_calls: [
+            {
+              id: 'call_cli_search',
+              type: 'function',
+              function: {
+                name: 'web_search',
+                arguments: JSON.stringify({ query: toolSecret })
+              }
+            }
+          ]
+        },
+        finish_reason: 'tool_calls'
+      }
+    ],
+    usage: {
+      prompt_tokens: 4,
+      completion_tokens: 3,
+      total_tokens: 7
+    }
+  }));
+});
 const responsesServer = await createMockChatServer(({ req, res, body }) => {
   assert.equal(req.url, '/responses');
   assert.equal(body.max_output_tokens, 24);
@@ -119,6 +154,27 @@ try {
   assert.equal(server.requests.length, 1);
   assert.equal(JSON.stringify(completed).includes(secretPrompt), false);
   assert.equal(JSON.stringify(completed).includes(apiSecret), false);
+
+  const toolCall = await runCli([
+    'provider-chat',
+    '--provider', 'custom_openai_compatible',
+    '--base-url', toolCallServer.base_url,
+    '--model', 'mock-model',
+    '--message', secretPrompt,
+    '--max-completion-tokens', '32'
+  ], {
+    CUSTOM_LLM_API_KEY: apiSecret
+  });
+
+  assert.equal(toolCall.ok, false);
+  assert.equal(toolCall.result.status, 'requires_action');
+  assert.equal(toolCall.result.tool_call_requests[0].name, 'web_search');
+  assert.deepEqual(toolCall.result.tool_call_requests[0].argument_keys, ['query']);
+  assert.equal(toolCall.result.tool_call_requests[0].arguments_redacted, true);
+  assert.equal(toolCall.result.operator_controls[0].control_id, 'tool_call_review');
+  assert.equal(JSON.stringify(toolCall).includes(toolSecret), false);
+  assert.equal(JSON.stringify(toolCall).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(toolCall).includes(apiSecret), false);
 
   const blocked = await runCli([
     'provider-chat',
@@ -194,6 +250,7 @@ try {
   assert.equal(JSON.stringify(responsesCompleted).includes(apiSecret), false);
 } finally {
   await server.close();
+  await toolCallServer.close();
   await responsesServer.close();
 }
 
