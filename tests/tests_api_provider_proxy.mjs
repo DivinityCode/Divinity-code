@@ -1,6 +1,47 @@
 import assert from 'assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import path from 'path';
+
+const tmpRoot = mkdtempSync(path.join(tmpdir(), 'divinity-api-provider-proxy-route-'));
+const secretRefsPath = path.join(tmpRoot, 'provider-secret-refs.json');
+const providerCatalogPath = path.join(tmpRoot, 'provider-catalog.json');
+const apiResolverSecret = 'api-route-resolver-secret';
+const apiResolverSecretRef = 'secret://divinity/providers/api-secret-ref-mock/api-key';
+
+writeFileSync(secretRefsPath, JSON.stringify({
+  format: 'divinity.provider_secret_refs.v1',
+  providers: [
+    {
+      provider_id: 'api_secret_ref_mock',
+      secret_ref: apiResolverSecretRef,
+      credential_env_var: 'API_SECRET_REF_MOCK_API_KEY'
+    }
+  ]
+}, null, 2));
+
+writeFileSync(providerCatalogPath, JSON.stringify({
+  format: 'divinity.llm_provider_catalog.v1',
+  providers: [
+    {
+      provider_id: 'api_secret_ref_mock',
+      display_name: 'API Secret Ref Mock',
+      transport: 'chat_completions',
+      base_url: 'https://api-secret-ref.example.test/v1',
+      auth_modes: ['api_key'],
+      credential_env_vars: ['UNSET_API_SECRET_REF_MOCK_API_KEY'],
+      supports_custom_base_url: false,
+      default_model: 'api-secret-ref-model',
+      capabilities: ['chat', 'tool_calls', 'openai_compatible'],
+      source: 'operator_config'
+    }
+  ]
+}, null, 2));
 
 process.env.DIVINITY_API_AUTOSTART = '0';
+process.env.DIVINITY_PROVIDER_SECRET_REFS_PATH = secretRefsPath;
+process.env.DIVINITY_PROVIDER_CATALOG_PATH = providerCatalogPath;
+process.env.API_SECRET_REF_MOCK_API_KEY = apiResolverSecret;
 process.env.OPENROUTER_API_KEY = 'openrouter-secret';
 process.env.GROQ_API_KEY = 'groq-secret';
 const { server } = await import('../apps/api/src/server.mjs');
@@ -17,6 +58,22 @@ try {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address();
   const baseUrl = `http://127.0.0.1:${port}`;
+
+  const { response: secretRefResponse, body: secretRefBody } = await requestJson(`${baseUrl}/provider-proxy/route`, {
+    method: 'POST',
+    body: JSON.stringify({
+      candidates: ['api_secret_ref_mock']
+    })
+  });
+
+  assert.equal(secretRefResponse.status, 200);
+  assert.equal(secretRefBody.route.status, 'ready');
+  assert.equal(secretRefBody.route.selected_provider_runtime.provider_id, 'api_secret_ref_mock');
+  assert.deepEqual(secretRefBody.route.selected_provider_runtime.auth.configured_env_vars, []);
+  assert.deepEqual(secretRefBody.route.selected_provider_runtime.auth.configured_secret_refs, [apiResolverSecretRef]);
+  assert.deepEqual(secretRefBody.route.candidate_results[0].configured_env_vars, []);
+  assert.deepEqual(secretRefBody.route.candidate_results[0].configured_secret_refs, [apiResolverSecretRef]);
+  assert.equal(JSON.stringify(secretRefBody).includes(apiResolverSecret), false);
 
   const { response, body } = await requestJson(`${baseUrl}/provider-proxy/route`, {
     method: 'POST',
@@ -54,4 +111,5 @@ try {
       server.close(error => error ? reject(error) : resolve());
     });
   }
+  rmSync(tmpRoot, { recursive: true, force: true });
 }

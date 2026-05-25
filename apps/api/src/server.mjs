@@ -30,6 +30,7 @@ import {
   executeProviderProxyChatStream,
   planProviderProxyRoute
 } from '../../../packages/provider-proxy/src/index.mjs';
+import { createProviderCredentialResolver } from '../../../packages/provider-secrets/src/index.mjs';
 import { createProviderToolCallApproval } from '../../../packages/provider-tool-approvals/src/index.mjs';
 import { createProviderToolExecution } from '../../../packages/provider-tool-executions/src/index.mjs';
 import { createConfiguredRunStore } from '../../../packages/run-store/src/index.mjs';
@@ -42,6 +43,7 @@ const runStore = createConfiguredRunStore();
 const { runs, artifacts, auditRecords } = runStore;
 const providerLimitLedger = createConfiguredProviderLimitLedger(process.env, { memoryFallback: true });
 const providerUsageLedger = createConfiguredProviderUsageLedger(process.env);
+const providerCredentialResolver = createProviderCredentialResolver({ env: process.env });
 const runSubscribers = new Map();
 const DEFAULT_SCOPE = { org_id: 'default-org', project_id: 'default-project' };
 const DEFAULT_ENABLED_TOOLSETS = resolveToolsets().toolsets.map(toolset => toolset.toolset_id);
@@ -381,7 +383,8 @@ const server = http.createServer((req, res) => {
         limit_state: body.limit_state,
         limit_ledger: providerLimitLedger,
         rotation_intent: body.rotation_intent,
-        requested_model: body.requested_model || body.model
+        requested_model: body.requested_model || body.model,
+        credential_resolver: providerCredentialResolver
       });
       sendJson(res, route.status === 'ready' ? 200 : 400, { route });
     });
@@ -407,7 +410,8 @@ const server = http.createServer((req, res) => {
           toolsets: body.toolsets,
           enabled_toolsets: body.enabled_toolsets,
           disabled_toolsets: body.disabled_toolsets,
-          temperature: body.temperature
+          temperature: body.temperature,
+          credential_resolver: providerCredentialResolver
         });
         const statusCode = result.status === 'completed'
           ? 200
@@ -494,6 +498,7 @@ const server = http.createServer((req, res) => {
           enabled_toolsets: body.enabled_toolsets,
           disabled_toolsets: body.disabled_toolsets,
           temperature: body.temperature,
+          credential_resolver: providerCredentialResolver,
           on_event: event => sendSse(res, 'provider_stream_event', { event })
         });
         const finalEvent = result.status === 'failed'
