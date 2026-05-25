@@ -14,6 +14,7 @@ Build a best-in-class AI engineering platform that combines:
 
 ### Deliverables
 1. Product requirements baseline (personas, jobs-to-be-done, non-goals).
+   - Bootstrap status: documented in [Product Requirements Baseline](PRODUCT_REQUIREMENTS.md).
 2. Domain model for tasks/runs/artifacts/policies.
 3. UI information architecture for Builder Mode and Operator Mode.
 4. MVP backlog with acceptance criteria.
