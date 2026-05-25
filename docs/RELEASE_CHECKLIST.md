@@ -54,6 +54,12 @@ pnpm run validate:contracts
 pnpm run test:package
 ```
 
+- [ ] Deprecation/current-surface audit:
+
+```bash
+pnpm run test:deprecations
+```
+
 - [ ] Release artifact manifest:
 
 ```bash

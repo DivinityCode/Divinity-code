@@ -94,6 +94,11 @@ function buildManifest() {
         required: true
       },
       {
+        gate_id: 'deprecation_audit',
+        command: 'pnpm run test:deprecations',
+        required: true
+      },
+      {
         gate_id: 'contracts',
         command: 'pnpm run validate:contracts',
         required: true
