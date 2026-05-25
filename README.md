@@ -7,6 +7,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 
 ## Documents
 - [Product Plan](docs/PRODUCT_PLAN.md)
+- [Product Requirements Baseline](docs/PRODUCT_REQUIREMENTS.md)
 - [Architecture Draft](docs/ARCHITECTURE.md)
 - [MVP Backlog](docs/MVP_BACKLOG.md)
 - [Competitive Repository Research](docs/REPOSITORY_RESEARCH.md)

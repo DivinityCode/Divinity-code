@@ -86,13 +86,14 @@ The 2026-05-25 refresh confirmed the latest observed releases above are still cu
 5. **Extensible agent runtime:** adapters, plugins, memory, skills, and portable execution backends.
 
 ## Implementation Decisions Adopted
-1. Add preflight decisions as a first-class contract before dashboard work.
-2. Return preflight risk, budget, approval, and block state from CLI and API flows.
-3. Add policy presets for `read_only`, `scoped_edit`, `safe_exec`, and `full_exec`.
-4. Keep smoke tests local and deterministic by using temp workspaces.
-5. Keep documentation current with observed repo signals and implementation status.
-6. Emit structured bug reports from the CLI so support evidence is generated from the same local checks operators already run.
-7. Carry task success criteria in the shared Task contract so goal/subgoal-style acceptance signals survive across CLI, API, and run storage.
+1. Use the product requirements baseline to keep each feature tied to a persona, job-to-be-done, non-goal boundary, and verification command.
+2. Add preflight decisions as a first-class contract before dashboard work.
+3. Return preflight risk, budget, approval, and block state from CLI and API flows.
+4. Add policy presets for `read_only`, `scoped_edit`, `safe_exec`, and `full_exec`.
+5. Keep smoke tests local and deterministic by using temp workspaces.
+6. Keep documentation current with observed repo signals and implementation status.
+7. Emit structured bug reports from the CLI so support evidence is generated from the same local checks operators already run.
+8. Carry task success criteria in the shared Task contract so goal/subgoal-style acceptance signals survive across CLI, API, and run storage.
 
 ## Build Slices Adopted From Research
 1. **Approval queue:** implemented run storage with an in-memory default, opt-in file-backed persistence, approval-required runs, and approve/reject transitions.
