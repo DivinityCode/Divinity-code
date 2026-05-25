@@ -1,6 +1,6 @@
 # Competitive Repository Research (Claude Code, Codex, Hermes Agent, Paperclip)
 
-_Last refreshed: 2026-05-25_
+_Last refreshed: 2026-05-26_
 
 ## Scope
 This research covers the referenced GitHub repositories and public project documentation for:
@@ -20,9 +20,9 @@ Free-provider research requested for testing and cost offload is tracked in [Fre
 | `anthropics/claude-code` | Shell | [`v2.1.150`](https://github.com/anthropics/claude-code/releases/tag/v2.1.150) | Terminal-native coding agent with IDE and GitHub adjacency. |
 | `openai/codex` | Rust | [`rust-v0.133.0`](https://github.com/openai/codex/releases/tag/rust-v0.133.0) | Lightweight local coding agent spanning CLI, IDE, app, and web surfaces. |
 | `NousResearch/hermes-agent` | Python | [`v2026.5.16`](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.5.16) | Self-improving multi-channel agent with memory, skills, schedulers, and portable runtimes. |
-| `paperclipai/paperclip` | TypeScript | [`v2026.517.0`](https://github.com/paperclipai/paperclip/releases/tag/v2026.517.0) | Agent-management control plane for goals, budgets, governance, heartbeats, and audit trails. |
+| `paperclipai/paperclip` | TypeScript | [`v2026.525.0`](https://github.com/paperclipai/paperclip/releases/tag/v2026.525.0) | Agent-management control plane for goals, budgets, governance, heartbeats, and audit trails. |
 
-The 2026-05-25 refresh confirmed the latest observed releases above are still current. Notable live release signals since the prior research pass: Codex now enables durable goals by default and expands plugin/permission-profile inspection; Hermes emphasizes lighter installs, local proxy/runtime portability, per-write verification, and API approval events; Paperclip emphasizes first-class local runtimes, document locks, sandbox reliability, and faster PR verification. A deeper Hermes provider/tooling pass inspected default-branch commit `4117fc3645b59c5c0f9d623e0991fc9bc864c0e2` plus release tag `v2026.5.16`, confirming that provider identity, runtime credential resolution, transport implementations, and toolset selection are separate layers.
+The 2026-05-26 refresh confirmed Claude Code `v2.1.150`, Codex `rust-v0.133.0`, and Hermes Agent `v2026.5.16` as the latest observed releases, while Paperclip advanced to `v2026.525.0`. Notable live release signals since the prior research pass: Codex continues to emphasize durable goals, remote-control commands, permission-profile APIs, plugin discovery, and extension lifecycle events; Hermes emphasizes a one-command PyPI package, OpenAI-compatible local proxy support for OAuth providers, lazy dependencies, cold-start improvements, and runtime portability; Paperclip emphasizes a Modal sandbox provider plugin, workspace diff viewer plugin, routine environment/secrets support, local cloud upstream sync, and an ACPX-Claude adapter. A deeper Hermes provider/tooling pass inspected default-branch commit `4117fc3645b59c5c0f9d623e0991fc9bc864c0e2` plus release tag `v2026.5.16`, confirming that provider identity, runtime credential resolution, transport implementations, and toolset selection are separate layers.
 
 ## 1) Claude Code
 ### Observed strengths
@@ -160,3 +160,4 @@ The 2026-05-25 refresh confirmed the latest observed releases above are still cu
 52. **Provider secret readiness audit:** added API `GET /provider-secrets/readiness`, `divinity.provider_secret_readiness.v1`, and redacted `provider_secret_readiness`/`provider_secret_ref` audit records so operators can verify configured provider secret refs and trace route/chat/stream usage without exposing resolved credential values.
 53. **Provider secret store bootstrap:** added AES-256-GCM encrypted local provider secret store records, API `POST /provider-secrets/store`, actor/reason write controls, store-backed credential resolution, and redacted `provider_secret_write` audit records so API provider proxy credentials can move beyond env-only bootstrapping without storing plaintext in manifests, responses, or audit logs.
 54. **Provider write file adapter:** implemented approved `write_file` provider tool execution so Hermes-style provider tool calls can request repository writes through the same operator-gated API/CLI path, while writing only inside the run workspace, blocking traversal plus protected `.git` and `node_modules` targets, storing only byte/line counts and redaction flags, and never forwarding raw paths, contents, prompts, or credentials in continuation context.
+55. **Package tarball smoke gate:** implemented a local `npm pack` smoke test that installs the produced tarball into a temporary consumer project and verifies the installed `divinity` CLI outside the source checkout, reflecting Codex/Hermes installer discipline and Paperclip runtime/package readiness signals.

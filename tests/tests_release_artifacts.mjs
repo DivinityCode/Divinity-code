@@ -89,6 +89,7 @@ const installPathsById = new Map(artifact.install_paths.map(installPath => [inst
 for (const installPathId of [
   'source_checkout',
   'pnpm_global_link',
+  'local_package_tarball',
   'package_registry',
   'binary_download'
 ]) {
@@ -99,6 +100,9 @@ assert.equal(installPathsById.get('source_checkout').status, 'available');
 assert.match(installPathsById.get('source_checkout').command, /node apps\/cli\/src\/index\.mjs doctor/);
 assert.equal(installPathsById.get('pnpm_global_link').status, 'available');
 assert.match(installPathsById.get('pnpm_global_link').command, /pnpm link --global/);
+assert.equal(installPathsById.get('local_package_tarball').status, 'available');
+assert.equal(installPathsById.get('local_package_tarball').command, 'pnpm run test:package-tarball');
+assert.match(installPathsById.get('local_package_tarball').notes, /temporary consumer project/);
 assert.equal(installPathsById.get('package_registry').status, 'blocked');
 assert.match(installPathsById.get('package_registry').reason, /private/);
 assert.equal(installPathsById.get('binary_download').status, 'blocked');
@@ -106,6 +110,7 @@ assert.match(installPathsById.get('binary_download').reason, /non-production war
 
 for (const command of [
   'pnpm run test:package',
+  'pnpm run test:package-tarball',
   'node apps/cli/src/index.mjs doctor',
   'node apps/cli/src/index.mjs doctor --profile source',
   'pnpm run test:deprecations',

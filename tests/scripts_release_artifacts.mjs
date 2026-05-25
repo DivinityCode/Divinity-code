@@ -163,6 +163,13 @@ function buildManifest() {
         notes: 'Use from a reviewed local checkout; this does not publish the package.'
       },
       {
+        install_path_id: 'local_package_tarball',
+        status: 'available',
+        label: 'Local package tarball smoke',
+        command: 'pnpm run test:package-tarball',
+        notes: 'Builds a local npm pack tarball, installs it into a temporary consumer project, and runs the installed divinity CLI.'
+      },
+      {
         install_path_id: 'package_registry',
         status: publishingBlocked ? 'blocked' : 'available',
         label: 'Package registry install',
@@ -183,6 +190,11 @@ function buildManifest() {
       {
         gate_id: 'package_manifest',
         command: 'pnpm run test:package',
+        required: true
+      },
+      {
+        gate_id: 'package_tarball_smoke',
+        command: 'pnpm run test:package-tarball',
         required: true
       },
       {

@@ -110,8 +110,9 @@ Build a best-in-class AI engineering platform that combines:
 3. Public onboarding and release packaging.
    - Bootstrap status: public install, quickstart, upgrade, and release checklist docs are linked from the README and guarded by `test:public-docs`.
    - Bootstrap status: package metadata declares the `divinity` CLI bin target, Node engine, pnpm package manager, repository, files allowlist, and package-lock root metadata, guarded by `test:package`.
+   - Bootstrap status: `test:package-tarball` packs the release candidate into a local npm tarball, installs it into a temporary consumer project, and verifies the installed `divinity` CLI works outside the source checkout.
    - Bootstrap status: `divinity doctor` now defaults to a runtime-safe profile for installed or linked package use outside the repo root, while `doctor --profile source` preserves contributor diagnostics for repo internals.
-   - Bootstrap status: `release:artifacts` generates `dist/release-artifacts.json` with source checkout, local pnpm-link, package-registry, and binary-download install paths plus release gates, guarded by `test:release-artifacts`.
+   - Bootstrap status: `release:artifacts` generates `dist/release-artifacts.json` with source checkout, local pnpm-link, local package-tarball, package-registry, and binary-download install paths plus release gates, guarded by `test:release-artifacts`.
    - Bootstrap status: `test:deprecations` guards public docs, release artifact gates, and provider proxy token-field guidance against deprecated install/provider instructions.
    - Bootstrap status: release artifacts now include sha256 source integrity entries and explicit signing readiness metadata, blocked while the non-production warning and `private: true` gates remain active.
    - Next production slice: add actual published package and signed binary artifacts after the production warning and `private: true` release gates are cleared.
