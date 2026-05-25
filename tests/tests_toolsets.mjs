@@ -66,7 +66,12 @@ assert.deepEqual(resolved.risk_summary.low_risk_toolsets, ['web']);
 
 const defaultResolved = resolveToolsets();
 assert.ok(defaultResolved.toolsets.some(toolset => toolset.toolset_id === 'web'));
+assert.ok(defaultResolved.tools.includes('list_files'));
 assert.ok(defaultResolved.tools.includes('read_file'));
+const listFilesSchema = defaultResolved.tool_schemas.find(tool => tool.name === 'list_files');
+assert.equal(listFilesSchema.description, 'List repository files under a directory and return redacted shape metadata.');
+assert.deepEqual(listFilesSchema.input_schema.required, ['path']);
+assert.equal(listFilesSchema.input_schema.properties.max_depth.type, 'integer');
 assert.equal(defaultResolved.toolsets.some(toolset => toolset.toolset_id === 'terminal'), false);
 assert.ok(defaultResolved.policy_permissions.includes('file:read'));
 assert.equal(defaultResolved.risk_summary.highest_risk_level, 'high');

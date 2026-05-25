@@ -14,11 +14,19 @@ const secretSearchScope = 'secret-search-scope';
 const secretSearchPath = path.join(secretSearchScope, 'secret-search-target.md');
 const secretSearchQuery = 'secret provider search query';
 const secretSearchContents = `visible heading\n${secretSearchQuery}\nsecret provider search file contents`;
+const secretListScope = 'secret-list-scope';
+const secretListNestedScope = path.join(secretListScope, 'secret-list-nested');
+const secretListPath = path.join(secretListNestedScope, 'secret-list-target.md');
+const secretListIgnoredPath = path.join(secretListScope, 'dist', 'secret-list-ignored.md');
 
 mkdirSync(workspaceRoot, { recursive: true });
 mkdirSync(path.join(workspaceRoot, secretSearchScope), { recursive: true });
+mkdirSync(path.join(workspaceRoot, secretListNestedScope), { recursive: true });
+mkdirSync(path.join(workspaceRoot, secretListScope, 'dist'), { recursive: true });
 writeFileSync(path.join(workspaceRoot, secretPath), `${secretFileContents}\n`);
 writeFileSync(path.join(workspaceRoot, secretSearchPath), `${secretSearchContents}\n`);
+writeFileSync(path.join(workspaceRoot, secretListPath), 'secret list file contents\n');
+writeFileSync(path.join(workspaceRoot, secretListIgnoredPath), 'secret ignored list file contents\n');
 
 const approval = createProviderToolCallApproval({
   run_id: 'run_tool_execution',
@@ -198,6 +206,64 @@ try {
   assert.match(searchTraversal.error, /workspace/);
   assert.equal(JSON.stringify(searchTraversal).includes('../outside-search'), false);
   assert.equal(JSON.stringify(searchTraversal).includes(secretSearchQuery), false);
+
+  const listApproval = createProviderToolCallApproval({
+    run_id: 'run_tool_execution',
+    tool_call_id: 'call_list_files_1',
+    provider_id: 'custom_openai_compatible',
+    transport: 'chat_completions',
+    name: 'list_files',
+    argument_keys: ['path', 'max_depth'],
+    arguments_redacted: true,
+    decision: 'approve',
+    actor: 'operator@example.com',
+    reason: 'Read-only repository shape listing is approved.',
+    decided_at: '2026-05-25T12:03:00Z',
+    index: 6
+  });
+
+  const listExecution = createProviderToolExecution({
+    run_id: 'run_tool_execution',
+    approval: listApproval,
+    argument_values: { path: secretListScope, max_depth: 4 },
+    workspace_root: workspaceRoot,
+    actor: 'operator@example.com',
+    reason: 'Execute the approved redacted repository listing.',
+    operator_summary: 'Operator reviewed the listing result: scoped project files are present.',
+    started_at: '2026-05-25T12:03:01Z',
+    completed_at: '2026-05-25T12:03:02Z',
+    index: 6
+  });
+
+  assert.equal(listExecution.status, 'completed');
+  assert.equal(listExecution.adapter, 'list_files');
+  assert.equal(listExecution.operator_summary, 'Operator reviewed the listing result: scoped project files are present.');
+  assert.equal(listExecution.operator_summary_source, 'operator');
+  assert.deepEqual(listExecution.argument_keys, ['max_depth', 'path']);
+  assert.equal(listExecution.output_redacted, true);
+  assert.equal(listExecution.output_metadata.files_listed, 1);
+  assert.equal(listExecution.output_metadata.directories_scanned, 2);
+  assert.equal(listExecution.output_metadata.max_depth, 4);
+  assert.equal(listExecution.output_metadata.paths_redacted, true);
+  assert.equal(listExecution.output_metadata.content_redacted, true);
+  assert.equal(JSON.stringify(listExecution).includes(secretListScope), false);
+  assert.equal(JSON.stringify(listExecution).includes('secret-list-nested'), false);
+  assert.equal(JSON.stringify(listExecution).includes('secret-list-target.md'), false);
+  assert.equal(JSON.stringify(listExecution).includes('secret ignored list file contents'), false);
+
+  const listTraversal = createProviderToolExecution({
+    run_id: 'run_tool_execution',
+    approval: listApproval,
+    argument_values: { path: '../outside-list', max_depth: 1 },
+    workspace_root: workspaceRoot,
+    reason: 'List path traversal must fail closed.',
+    index: 7
+  });
+
+  assert.equal(listTraversal.status, 'failed');
+  assert.equal(listTraversal.adapter, 'list_files');
+  assert.match(listTraversal.error, /workspace/);
+  assert.equal(JSON.stringify(listTraversal).includes('../outside-list'), false);
 } finally {
   rmSync(tmpRoot, { recursive: true, force: true });
 }

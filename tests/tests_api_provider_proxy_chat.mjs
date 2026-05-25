@@ -101,8 +101,10 @@ const repoFixture = path.join(tmpRoot, 'repo');
 const usageLedgerPath = path.join(tmpRoot, 'provider-usage-ledger.json');
 mkdirSync(repoFixture);
 mkdirSync(path.join(repoFixture, 'api-search-scope'));
+mkdirSync(path.join(repoFixture, 'api-list-scope', 'api-list-nested'), { recursive: true });
 writeFileSync(path.join(repoFixture, 'README.md'), '# Provider Proxy API Fixture\n');
 writeFileSync(path.join(repoFixture, 'api-search-scope', 'search-target.md'), 'api secret search needle\n');
+writeFileSync(path.join(repoFixture, 'api-list-scope', 'api-list-nested', 'list-target.md'), 'api secret list file contents\n');
 
 process.env.DIVINITY_API_AUTOSTART = '0';
 process.env.DIVINITY_WORKSPACE_ROOT = path.join(tmpRoot, 'workspaces');
@@ -504,6 +506,53 @@ try {
   assert.equal(JSON.stringify(searchExecutionBody).includes('api-search-scope'), false);
   assert.equal(JSON.stringify(searchExecutionBody).includes('search-target.md'), false);
   assert.equal(JSON.stringify(searchExecutionBody).includes('api secret search needle'), false);
+
+  const { response: listApprovalResponse, body: listApprovalBody } = await requestJson(`${baseUrl}/runs/${approvalRun.run_id}/provider-tool-call-approvals`, {
+    method: 'POST',
+    body: JSON.stringify({
+      tool_call_id: 'call_api_list_files',
+      provider_id: 'custom_openai_compatible',
+      transport: 'chat_completions',
+      name: 'list_files',
+      argument_keys: ['path', 'max_depth'],
+      arguments_redacted: true,
+      decision: 'approve',
+      actor: 'operator@example.com',
+      reason: 'The provider requested read-only repository listing.',
+      decided_at: '2026-05-25T12:09:00Z'
+    })
+  });
+
+  assert.equal(listApprovalResponse.status, 201);
+  assert.equal(listApprovalBody.approval.name, 'list_files');
+
+  const { response: listExecutionResponse, body: listExecutionBody } = await requestJson(`${baseUrl}/runs/${approvalRun.run_id}/provider-tool-executions`, {
+    method: 'POST',
+    body: JSON.stringify({
+      approval_id: listApprovalBody.approval.approval_id,
+      argument_values: { path: 'api-list-scope', max_depth: 3 },
+      actor: 'operator@example.com',
+      reason: 'Execute the approved redacted repository listing.',
+      operator_summary: 'Operator reviewed the API listing result.',
+      started_at: '2026-05-25T12:09:01Z',
+      completed_at: '2026-05-25T12:09:02Z'
+    })
+  });
+
+  assert.equal(listExecutionResponse.status, 201);
+  assert.equal(listExecutionBody.execution.name, 'list_files');
+  assert.equal(listExecutionBody.execution.status, 'completed');
+  assert.equal(listExecutionBody.execution.adapter, 'list_files');
+  assert.equal(listExecutionBody.execution.operator_summary, 'Operator reviewed the API listing result.');
+  assert.equal(listExecutionBody.execution.operator_summary_source, 'operator');
+  assert.equal(listExecutionBody.execution.output_metadata.files_listed, 1);
+  assert.equal(listExecutionBody.execution.output_metadata.directories_scanned, 2);
+  assert.equal(listExecutionBody.execution.output_metadata.max_depth, 3);
+  assert.equal(listExecutionBody.execution.output_metadata.paths_redacted, true);
+  assert.equal(listExecutionBody.execution.output_metadata.content_redacted, true);
+  assert.equal(JSON.stringify(listExecutionBody).includes('api-list-scope'), false);
+  assert.equal(JSON.stringify(listExecutionBody).includes('list-target.md'), false);
+  assert.equal(JSON.stringify(listExecutionBody).includes('api secret list file contents'), false);
 
   const { response: blockedResponse, body: blocked } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
     method: 'POST',
