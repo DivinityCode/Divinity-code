@@ -183,7 +183,7 @@ test ! -e .divinity.json
 pnpm test
 ```
 
-- [ ] Commit as `feat: add provider tool call governance`, push, open a ready PR, wait for GitHub Actions, merge if green, sync `main`, delete the branch, rerun focused post-merge verification, and mark this publish step complete in a docs-only follow-up PR.
+- [x] Commit as `feat: add provider tool call governance`, push, open a ready PR, wait for GitHub Actions, merge if green, sync `main`, delete the branch, rerun focused post-merge verification, and mark this publish step complete in a docs-only follow-up PR.
 
 ## Self-Review
 
