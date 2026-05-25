@@ -47,6 +47,20 @@ try {
   assert.equal(result.task.provider_runtime.auth.credential_configured, true);
   assert.equal(JSON.stringify(result.task.provider_runtime).includes('OPENROUTER_API_KEY_VALUE'), false);
   assert.ok(result.task.toolset_resolution.tools.includes('read_file'));
+  assert.ok(result.task.toolset_resolution.policy_permissions.includes('file:read'));
+  assert.equal(result.task.toolset_resolution.risk_summary.highest_risk_level, 'high');
+  assert.ok(
+    result.task.toolset_resolution.provider_capability_checks.some(check => (
+      check.capability === 'tool_calls' &&
+      check.status === 'supported'
+    ))
+  );
+  assert.ok(
+    result.task.toolset_resolution.operator_controls.some(control => (
+      control.control_id === 'approval_required' &&
+      control.status === 'recommended'
+    ))
+  );
   assert.equal(
     result.task.toolset_resolution.toolsets.some(toolset => toolset.toolset_id === 'terminal'),
     false

@@ -50,7 +50,23 @@
         "policy_permissions": ["network:read"]
       }
     ],
-    "tools": ["web_extract", "web_search"]
+    "tools": ["web_extract", "web_search"],
+    "policy_permissions": ["network:read"],
+    "risk_summary": {
+      "highest_risk_level": "low",
+      "high_risk_toolsets": [],
+      "medium_risk_toolsets": [],
+      "low_risk_toolsets": ["web"]
+    },
+    "provider_capability_checks": [
+      {
+        "provider_id": "openrouter",
+        "capability": "tool_calls",
+        "status": "supported",
+        "required_by_toolsets": ["web"]
+      }
+    ],
+    "operator_controls": []
   },
   "created_at": "2026-05-24T00:00:00Z"
 }

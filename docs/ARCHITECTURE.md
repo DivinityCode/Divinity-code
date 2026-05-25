@@ -63,6 +63,7 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 - CLI `providers` and `toolsets`, API `GET /providers` and `GET /toolsets`, and the shared capabilities catalog expose the same metadata shape.
 - CLI `doctor` reports provider catalog readiness, toolset catalog readiness, and optional LLM credential readiness without printing or storing secret values.
 - CLI/API task assembly resolves optional `llm_provider` and `toolsets` input into `provider_runtime` and `toolset_resolution` metadata so run records show which provider/tool policy would be used before execution.
+- Toolset resolution now exposes policy permission unions, risk summaries, provider `tool_calls` capability checks, and operator controls such as approval recommendations or provider capability review requirements.
 - This mirrors Hermes Agent's separation between provider identity, runtime credential/transport resolution, transport implementations, and toolset configuration. This slice intentionally does not make live LLM calls or persist credentials.
 - Public free-provider lists are research inputs only. Shared public API keys, no-registration credential reuse, quota bypass, and rotation to evade provider limits are excluded from the architecture.
 

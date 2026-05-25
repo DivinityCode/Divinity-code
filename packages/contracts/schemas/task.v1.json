@@ -167,6 +167,78 @@
         "tools": {
           "type": "array",
           "items": { "type": "string" }
+        },
+        "policy_permissions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "risk_summary": {
+          "type": "object",
+          "required": ["highest_risk_level", "high_risk_toolsets", "medium_risk_toolsets", "low_risk_toolsets"],
+          "properties": {
+            "highest_risk_level": {
+              "type": "string",
+              "enum": ["low", "medium", "high"]
+            },
+            "high_risk_toolsets": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "medium_risk_toolsets": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "low_risk_toolsets": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
+        },
+        "provider_capability_checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["provider_id", "capability", "status", "required_by_toolsets"],
+            "properties": {
+              "provider_id": { "type": "string" },
+              "capability": { "type": "string" },
+              "status": {
+                "type": "string",
+                "enum": ["supported", "missing"]
+              },
+              "required_by_toolsets": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "operator_controls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["control_id", "status", "reason", "toolsets"],
+            "properties": {
+              "control_id": {
+                "type": "string",
+                "enum": ["approval_required", "provider_capability_review"]
+              },
+              "status": {
+                "type": "string",
+                "enum": ["recommended", "required"]
+              },
+              "reason": { "type": "string" },
+              "provider_id": { "type": "string" },
+              "capability": { "type": "string" },
+              "toolsets": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            },
+            "additionalProperties": false
+          }
         }
       },
       "additionalProperties": false

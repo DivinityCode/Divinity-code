@@ -41,11 +41,55 @@ const resolved = resolveToolsets({
 });
 assert.deepEqual(resolved.toolsets.map(toolset => toolset.toolset_id), ['web']);
 assert.deepEqual(resolved.tools, ['web_extract', 'web_search']);
+assert.deepEqual(resolved.policy_permissions, ['network:read']);
+assert.equal(resolved.risk_summary.highest_risk_level, 'low');
+assert.deepEqual(resolved.risk_summary.low_risk_toolsets, ['web']);
 
 const defaultResolved = resolveToolsets();
 assert.ok(defaultResolved.toolsets.some(toolset => toolset.toolset_id === 'web'));
 assert.ok(defaultResolved.tools.includes('read_file'));
 assert.equal(defaultResolved.toolsets.some(toolset => toolset.toolset_id === 'terminal'), false);
+assert.ok(defaultResolved.policy_permissions.includes('file:read'));
+assert.equal(defaultResolved.risk_summary.highest_risk_level, 'high');
+assert.ok(defaultResolved.operator_controls.some(control => control.control_id === 'approval_required'));
+
+const missingProviderCapabilities = resolveToolsets({
+  enabled_toolsets: ['web'],
+  provider_runtime: {
+    provider_id: 'cerebras',
+    capabilities: ['chat']
+  }
+});
+assert.deepEqual(missingProviderCapabilities.provider_capability_checks, [
+  {
+    provider_id: 'cerebras',
+    capability: 'tool_calls',
+    status: 'missing',
+    required_by_toolsets: ['web']
+  }
+]);
+assert.ok(
+  missingProviderCapabilities.operator_controls.some(control => (
+    control.control_id === 'provider_capability_review' &&
+    control.status === 'required'
+  ))
+);
+
+const supportedProviderCapabilities = resolveToolsets({
+  enabled_toolsets: ['web'],
+  provider_runtime: {
+    provider_id: 'openrouter',
+    capabilities: ['chat', 'tool_calls']
+  }
+});
+assert.deepEqual(supportedProviderCapabilities.provider_capability_checks, [
+  {
+    provider_id: 'openrouter',
+    capability: 'tool_calls',
+    status: 'supported',
+    required_by_toolsets: ['web']
+  }
+]);
 
 assert.throws(
   () => resolveToolsets({ enabled_toolsets: ['unknown'] }),
