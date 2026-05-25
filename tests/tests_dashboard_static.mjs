@@ -134,6 +134,7 @@ assert(runs.some(run => Array.isArray(run.approval_comments) && run.approval_com
 assert(runs.some(run => run.approval_revision?.status === 'requested'), 'sample data should include requested approval revision');
 assert(runs.some(run => Array.isArray(run.agent_activity) && run.agent_activity.length > 0), 'sample data should include agent activity records');
 assert(runs.some(run => Array.isArray(run.executions) && run.executions.length > 0), 'sample data should include execution records');
+assert(runs.some(run => (run.executions || []).some(execution => execution.attempt === 2 && execution.retry_of)), 'sample data should include retry execution metadata');
 assert(runs.some(run => Array.isArray(run.verifications) && run.verifications.length > 0), 'sample data should include verification records');
 assert(runs.some(run => Array.isArray(run.heartbeats) && run.heartbeats.length > 0), 'sample data should include heartbeat records');
 assert(runs.some(run => Array.isArray(run.connector_references) && run.connector_references.length > 0), 'sample data should include connector references');
@@ -148,9 +149,12 @@ assert(js.includes('approval_revision: run.approval_revision || null'), 'dashboa
 assert(js.includes('renderConnectorReferences'), 'dashboard should render connector references');
 assert(js.includes('renderAgentActivity'), 'dashboard should render agent activity records');
 assert(js.includes('renderExecutions'), 'dashboard should render execution records');
+assert(js.includes('renderRetryMetadata'), 'dashboard should render retry metadata');
 assert(js.includes('renderVerificationResult'), 'dashboard should render verification records');
+assert(js.includes('attempt') && js.includes('retry_of') && js.includes('max_attempts'), 'dashboard should preserve execution retry fields');
 assert(js.includes('git_status') && js.includes('file_read') && js.includes('node_test') && js.includes('package_script'), 'dashboard should show execution adapter names');
 assert(css.includes('verification-chip'), 'dashboard should style verification chips');
+assert(css.includes('retry-chip'), 'dashboard should style retry metadata');
 assert(css.includes('goal-item'), 'dashboard should style goal records');
 assert(css.includes('approval-comment-item'), 'dashboard should style approval comments');
 assert(css.includes('approval-revision-card'), 'dashboard should style approval revisions');

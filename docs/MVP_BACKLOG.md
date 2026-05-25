@@ -83,7 +83,7 @@
 - CLI and API run payloads include resolved team policy pack metadata by org scope.
 - API exposes `GET /audit` for hash-backed run audit exports with optional timeframe filters.
 - API exposes `GET /observability` for run health, heartbeat liveness, approval backlog, budget utilization, org/project scope rollups, risk mix, and failure taxonomy summaries.
-- Dashboard shell exists at `apps/dashboard` with contract-shaped local sample data plus opt-in API loading through `?api=<base-url>` for task filtering, run timeline, goal records, approval decisions, approval comments, approval revisions, cost/risk badges, observability, scope rollups, liveness summaries, agent activity, execution and verification evidence, artifacts, audit metadata, and live updates.
+- Dashboard shell exists at `apps/dashboard` with contract-shaped local sample data plus opt-in API loading through `?api=<base-url>` for task filtering, run timeline, goal records, approval decisions, approval comments, approval revisions, cost/risk badges, observability, scope rollups, liveness summaries, agent activity, execution and verification evidence including retry attempts, artifacts, audit metadata, and live updates.
 - Dashboard run detail renders connector references for attached ticket, docs, and CI context.
 - Missing permissions still produce blocked preflight decisions; soft caps emit `estimated_cost_exceeds_soft_limit` warnings.
 - Preflight and step-gate decision payloads include evidence references for the objective/action, policy permissions, policy hooks, and budget limits.
