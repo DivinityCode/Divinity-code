@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BugReport",
+  "type": "object",
+  "required": [
+    "format",
+    "title",
+    "summary",
+    "created_at",
+    "cwd",
+    "environment",
+    "git",
+    "diagnostics",
+    "markdown"
+  ],
+  "properties": {
+    "format": { "const": "divinity.bug_report.v1" },
+    "title": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "cwd": { "type": "string", "minLength": 1 },
+    "environment": {
+      "type": "object",
+      "required": ["node", "platform", "arch"],
+      "properties": {
+        "node": { "type": "string", "minLength": 1 },
+        "platform": { "type": "string", "minLength": 1 },
+        "arch": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "git": {
+      "type": "object",
+      "required": ["branch", "head", "status_short"],
+      "properties": {
+        "branch": { "type": "string" },
+        "head": { "type": "string" },
+        "status_short": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "diagnostics": {
+      "type": "object",
+      "required": ["ok", "checks"],
+      "properties": {
+        "ok": { "type": "boolean" },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["check_id", "ok", "required", "summary"],
+            "properties": {
+              "check_id": { "type": "string", "minLength": 1 },
+              "ok": { "type": "boolean" },
+              "required": { "type": "boolean" },
+              "summary": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "markdown": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": false
+}

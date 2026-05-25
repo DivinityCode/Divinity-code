@@ -115,6 +115,67 @@ function packageManagerCheck(npmCheck, pnpmCheck) {
   };
 }
 
+function buildDoctorChecks() {
+  const npmCheck = optionalCommandCheck('npm', 'npm', ['--version']);
+  const pnpmCheck = cachedPnpmCheck();
+  const dockerCheck = optionalCommandCheck('docker', 'docker', ['--version']);
+  return [
+    { check_id: 'node', ok: true, required: true, summary: process.version },
+    npmCheck,
+    pnpmCheck,
+    packageManagerCheck(npmCheck, pnpmCheck),
+    dockerCheck,
+    commandCheck('git', 'git', ['--version']),
+    fileCheck('package_json', path.join(cwd, 'package.json')),
+    directoryCheck('node_modules', path.join(cwd, 'node_modules')),
+    dependencyCheck('ajv_dependencies', ['ajv', 'ajv-cli', 'ajv-formats']),
+    fileCheck('api_server_source', path.join(cwd, 'apps/api/src/server.mjs'))
+  ];
+}
+
+function runGit(values) {
+  const result = spawnSync('git', values, {
+    cwd,
+    encoding: 'utf8'
+  });
+  return result.status === 0 ? (result.stdout || '').trim() : '';
+}
+
+function gitContext() {
+  return {
+    branch: runGit(['branch', '--show-current']),
+    head: runGit(['rev-parse', '--short', 'HEAD']),
+    status_short: runGit(['status', '--short'])
+  };
+}
+
+function renderBugMarkdown(report) {
+  const diagnostics = report.diagnostics.checks.map(check => (
+    `- ${check.check_id}: ${check.ok ? 'ok' : 'needs attention'} - ${check.summary}`
+  )).join('\n');
+
+  return [
+    '## Summary',
+    report.summary,
+    '',
+    '## Environment',
+    `- Node: ${report.environment.node}`,
+    `- Platform: ${report.environment.platform}/${report.environment.arch}`,
+    `- CWD: ${report.cwd}`,
+    '',
+    '## Git',
+    `- Branch: ${report.git.branch || '(unknown)'}`,
+    `- Head: ${report.git.head || '(unknown)'}`,
+    '```text',
+    report.git.status_short || '(clean)',
+    '```',
+    '',
+    '## Diagnostics',
+    diagnostics || '(no diagnostics)',
+    ''
+  ].join('\n');
+}
+
 function parseInitArgs(values) {
   const options = {
     wizard: false,
@@ -346,28 +407,42 @@ function capabilities() {
   print({ ok: true, command: 'capabilities', catalog: createCapabilitiesCatalog() });
 }
 
-function doctor() {
-  const npmCheck = optionalCommandCheck('npm', 'npm', ['--version']);
-  const pnpmCheck = cachedPnpmCheck();
-  const dockerCheck = optionalCommandCheck('docker', 'docker', ['--version']);
-  const checks = [
-    { check_id: 'node', ok: true, required: true, summary: process.version },
-    npmCheck,
-    pnpmCheck,
-    packageManagerCheck(npmCheck, pnpmCheck),
-    dockerCheck,
-    commandCheck('git', 'git', ['--version']),
-    fileCheck('package_json', path.join(cwd, 'package.json')),
-    directoryCheck('node_modules', path.join(cwd, 'node_modules')),
-    dependencyCheck('ajv_dependencies', ['ajv', 'ajv-cli', 'ajv-formats']),
-    fileCheck('api_server_source', path.join(cwd, 'apps/api/src/server.mjs'))
-  ];
-
-  print({
+function doctorPayload() {
+  const checks = buildDoctorChecks();
+  return {
     ok: checks.every(check => !check.required || check.ok),
     command: 'doctor',
     checks
-  });
+  };
+}
+
+function doctor() {
+  print(doctorPayload());
+}
+
+function bug() {
+  const summary = args.join(' ').trim() || 'Bug report';
+  const diagnostics = doctorPayload();
+  const report = {
+    format: 'divinity.bug_report.v1',
+    title: `Divinity Code bug report: ${summary}`,
+    summary,
+    created_at: new Date().toISOString(),
+    cwd,
+    environment: {
+      node: process.version,
+      platform: process.platform,
+      arch: process.arch
+    },
+    git: gitContext(),
+    diagnostics: {
+      ok: diagnostics.ok,
+      checks: diagnostics.checks
+    },
+    markdown: ''
+  };
+  report.markdown = renderBugMarkdown(report);
+  print({ ok: true, command: 'bug', report });
 }
 
 switch (command) {
@@ -378,9 +453,10 @@ switch (command) {
   case 'capabilities': capabilities(); break;
   case 'recipes': recipes(); break;
   case 'doctor': doctor(); break;
+  case 'bug': bug(); break;
   default:
     print({
       ok: false,
-      usage: 'divinity <init|run|status|approve|capabilities|recipes|doctor> [args]'
+      usage: 'divinity <init|run|status|approve|capabilities|recipes|doctor|bug> [args]'
     });
 }

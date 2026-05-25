@@ -1,0 +1,35 @@
+{
+  "format": "divinity.bug_report.v1",
+  "title": "Divinity Code bug report: Dashboard does not load",
+  "summary": "Dashboard does not load",
+  "created_at": "2026-05-25T00:00:00Z",
+  "cwd": "/workspace/divinity-code",
+  "environment": {
+    "node": "v22.22.1",
+    "platform": "linux",
+    "arch": "x64"
+  },
+  "git": {
+    "branch": "main",
+    "head": "5e3d17d",
+    "status_short": ""
+  },
+  "diagnostics": {
+    "ok": true,
+    "checks": [
+      {
+        "check_id": "node",
+        "ok": true,
+        "required": true,
+        "summary": "v22.22.1"
+      },
+      {
+        "check_id": "docker",
+        "ok": false,
+        "required": false,
+        "summary": "spawn docker ENOENT"
+      }
+    ]
+  },
+  "markdown": "## Summary\nDashboard does not load\n\n## Diagnostics\n- node: ok - v22.22.1\n"
+}

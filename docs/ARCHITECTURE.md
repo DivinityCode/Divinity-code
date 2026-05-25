@@ -37,6 +37,11 @@
 - The IDE extension scaffold contributes commands for task submission, dashboard launch, and local diagnostics.
 - IDE commands delegate to the repo-local CLI to preserve shared Task/Run/Preflight contracts across Builder Mode surfaces.
 
+## Builder Bug Reports
+- CLI `bug "summary"` emits a `divinity.bug_report.v1` payload with a GitHub-ready Markdown issue body.
+- Bug reports include local environment details, git branch/head/status, and the same structured diagnostics used by `divinity doctor`.
+- This keeps bug reporting inside the builder workflow without opening a browser or mutating repository state.
+
 ## Capability Discovery
 - CLI `capabilities` and API `GET /capabilities` expose `divinity.capabilities.v1`.
 - The catalog lists policy presets, constrained execution adapters, runner isolation profiles, connector adapters, and starter recipe summaries from the shared package layer.

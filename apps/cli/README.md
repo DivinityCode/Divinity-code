@@ -1,7 +1,7 @@
 # CLI App
 Owner: Builder Experience
 
-Planned commands: `init`, `run`, `status`, `approve`, `capabilities`, `recipes`, `doctor`.
+Commands: `init`, `run`, `status`, `approve`, `capabilities`, `recipes`, `doctor`, `bug`.
 
 ## Current Behavior
 - `init` writes `.divinity.json` with the default `safe_exec` policy, budget caps, and org/project scope.
@@ -13,3 +13,4 @@ Planned commands: `init`, `run`, `status`, `approve`, `capabilities`, `recipes`,
 - `capabilities` lists supported policy presets, execution adapters, runner isolation profiles, connector adapters, and starter recipe summaries as `divinity.capabilities.v1`.
 - `recipes` lists the built-in guided starter recipes.
 - `doctor` reports Node, optional npm, optional pnpm/Corepack fallback, aggregate package-manager readiness, optional Docker runtime readiness for container-sandbox execution, installed dependencies, AJV validator dependencies, git, package manifest, and API server source readiness as structured JSON.
+- `bug "summary"` emits a `divinity.bug_report.v1` payload with a GitHub-ready Markdown body, environment details, git status, and the same setup diagnostics used by `doctor`.
