@@ -30,7 +30,7 @@
           "audit_id": { "type": "string" },
           "type": {
             "type": "string",
-            "enum": ["run_created", "run_event", "approval_decision", "approval_comment", "artifact_record", "execution_record", "verification_record", "execution_lock_record", "heartbeat_record", "workspace_cleaned", "connector_reference", "budget_incident"]
+            "enum": ["run_created", "run_event", "approval_decision", "approval_comment", "approval_revision", "artifact_record", "execution_record", "verification_record", "execution_lock_record", "heartbeat_record", "workspace_cleaned", "connector_reference", "budget_incident"]
           },
           "run_id": { "type": "string" },
           "created_at": { "type": "string", "format": "date-time" },

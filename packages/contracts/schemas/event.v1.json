@@ -12,7 +12,7 @@
     },
     "type": {
       "type": "string",
-      "enum": ["task_created", "preflight_completed", "status_changed", "approval_decided", "approval_comment_added", "execution_lock_acquired", "execution_lock_recovered", "execution_lock_released", "step_executed", "step_verified", "heartbeat_recorded", "connector_reference_attached", "workspace_cleaned"]
+      "enum": ["task_created", "preflight_completed", "status_changed", "approval_decided", "approval_comment_added", "approval_revision_requested", "approval_resubmitted", "execution_lock_acquired", "execution_lock_recovered", "execution_lock_released", "step_executed", "step_verified", "heartbeat_recorded", "connector_reference_attached", "workspace_cleaned"]
     },
     "status": {
       "type": "string",

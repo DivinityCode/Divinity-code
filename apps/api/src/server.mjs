@@ -2,6 +2,7 @@ import http from 'http';
 
 import { createAgentActivityRecords } from '../../../packages/agent-activity/src/index.mjs';
 import { createApprovalComment } from '../../../packages/approval-comments/src/index.mjs';
+import { createApprovalRevision, resubmitApprovalRevision } from '../../../packages/approval-revisions/src/index.mjs';
 import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
 import { createAuditRecord, exportAuditLog } from '../../../packages/audit/src/index.mjs';
 import { createBudgetIncidents } from '../../../packages/budget-incidents/src/index.mjs';
@@ -226,9 +227,19 @@ function approvalSnapshot(run) {
     status: run.status,
     approval_required: run.status === 'awaiting_approval',
     approval: run.approval || null,
+    revision: run.approval_revision || null,
     comments: run.approval_comments || [],
     run: publicRun(run)
   };
+}
+
+function requestedChangesFromBody(body) {
+  return [
+    ...(Array.isArray(body.requested_changes) ? body.requested_changes : [body.requested_changes]),
+    ...(Array.isArray(body.changes) ? body.changes : [body.changes]),
+    body.requested_change,
+    body.change
+  ].map(value => String(value || '').trim()).filter(Boolean);
 }
 
 function sendSse(res, event, payload) {
@@ -532,6 +543,108 @@ const server = http.createServer((req, res) => {
       });
       return;
     }
+  }
+
+  const approvalRevisionMatch = req.url.match(/^\/runs\/([^/]+)\/approval\/(revision|resubmit)$/);
+  if (req.method === 'POST' && approvalRevisionMatch) {
+    const run = runs.get(approvalRevisionMatch[1]);
+    const action = approvalRevisionMatch[2];
+    if (!run) {
+      sendJson(res, 404, { error: 'run not found' });
+      return;
+    }
+
+    if (action === 'revision' && run.status !== 'awaiting_approval') {
+      sendJson(res, 409, { error: 'run is not awaiting approval' });
+      return;
+    }
+
+    if (action === 'resubmit' && (
+      run.status !== 'paused' ||
+      !run.approval_revision ||
+      run.approval_revision.status !== 'requested'
+    )) {
+      sendJson(res, 409, { error: 'run does not have a requested approval revision' });
+      return;
+    }
+
+    readJson(req, (body) => {
+      try {
+        if (action === 'revision') {
+          const revision = createApprovalRevision({
+            run_id: run.run_id,
+            actor: body.actor || 'operator',
+            reason: body.reason,
+            requested_changes: requestedChangesFromBody(body)
+          });
+          run.approval_revision = revision;
+          recordAudit({
+            type: 'approval_revision',
+            run_id: run.run_id,
+            created_at: revision.requested_at,
+            payload: revision
+          });
+          run.events.push(createRunEvent({
+            run_id: run.run_id,
+            type: 'approval_revision_requested',
+            status: run.status,
+            message: 'Approval revision requested',
+            metadata: revision
+          }));
+          run.status = 'paused';
+          run.events.push(createRunEvent({
+            run_id: run.run_id,
+            type: 'status_changed',
+            status: run.status,
+            message: 'Run status changed to paused',
+            metadata: { approval_revision: revision.revision_id }
+          }));
+        } else {
+          const revision = resubmitApprovalRevision(run.approval_revision, {
+            actor: body.actor || 'operator',
+            reason: body.reason || ''
+          });
+          run.approval_revision = revision;
+          recordAudit({
+            type: 'approval_revision',
+            run_id: run.run_id,
+            created_at: revision.resubmitted_at,
+            payload: revision
+          });
+          run.events.push(createRunEvent({
+            run_id: run.run_id,
+            type: 'approval_resubmitted',
+            status: run.status,
+            message: 'Approval revision resubmitted',
+            metadata: revision
+          }));
+          run.status = 'awaiting_approval';
+          run.events.push(createRunEvent({
+            run_id: run.run_id,
+            type: 'status_changed',
+            status: run.status,
+            message: 'Run status changed to awaiting_approval',
+            metadata: { approval_revision: revision.revision_id }
+          }));
+        }
+
+        for (const event of run.events.slice(-2)) {
+          recordAudit({
+            type: 'run_event',
+            run_id: run.run_id,
+            created_at: event.created_at,
+            payload: event
+          });
+        }
+        persistRunStore();
+        const payload = publicRun(run);
+        broadcastRun(run);
+        sendJson(res, 200, payload);
+      } catch (error) {
+        sendJson(res, 400, { error: error.message });
+      }
+    });
+    return;
   }
 
   const approvalMatch = req.url.match(/^\/runs\/([^/]+)\/approval$/);

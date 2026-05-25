@@ -24,6 +24,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 | RunEvent | `packages/contracts/schemas/event.v1.json` | Events package, API stream, dashboard timeline | Records lifecycle transitions and operational activity with timestamps and metadata. |
 | ApprovalDecision | `packages/contracts/schemas/approval.v1.json` | API approval routes, dashboard approvals | Records approve/reject decisions, actor, reason, and decision time. |
 | ApprovalComment | `packages/contracts/schemas/approval-comment.v1.json` | Approval comments package, API approval routes, CLI approval comments | Records operator review comments attached to a run approval workflow. |
+| ApprovalRevision | `packages/contracts/schemas/approval-revision.v1.json` | Approval revisions package, API approval routes, CLI approval revision commands | Records requested changes and resubmission metadata for approval workflows that need more evidence before approve/reject. |
 | ExecutionRecord | `packages/contracts/schemas/execution.v1.json` | Execution package | Captures adapter, status, exit code, stdout, stderr, started time, and finished time for observed execution. |
 | VerificationRecord | `packages/contracts/schemas/verification.v1.json` | Verification package | Captures post-execution verifier checks derived from observed execution evidence. |
 | ExecutionLockRecord | `packages/contracts/schemas/execution-lock.v1.json` | Execution locks package | Tracks lock acquire/release/recovery state for run step execution ownership. |
@@ -49,6 +50,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 | Run -> RunEvent | One or more events | Events record task creation, preflight, status changes, approvals, execution, verification, locks, heartbeats, connectors, and cleanup. |
 | Run -> ApprovalDecision | Zero or one active decision | Approval is required only when preflight or step gates require operator intervention. |
 | Run -> ApprovalComment | Zero or more comments | Operators can add review context without changing approval state. |
+| Run -> ApprovalRevision | Zero or one latest revision | Operators can pause an approval for requested changes; builders can resubmit it to the approval queue. |
 | Run -> ConnectorReference | Zero or more references | References can be included at task creation or attached later. |
 | Run -> HeartbeatRecord | Zero or more heartbeats | Heartbeats feed liveness and stale-run summaries. |
 | Run -> ExecutionLockRecord | Zero or more locks | Locks prevent overlapping execution and preserve recovery evidence. |
@@ -69,7 +71,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 | --- | --- | --- | --- |
 | Task, Run, Goals, Preflight | `run` output | `/tasks`, `/preflight`, `/runs/:id` | run queue and selected-run header/detail |
 | Policy and Capabilities | `capabilities`, `doctor` readiness context | `/capabilities` | capability-informed labels and operator context |
-| Events and Approvals | event array in `run`; `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments` | `/runs/:id/events`, `/approvals`, `/runs/:id/approval`, `/runs/:id/approval/comments` | timeline and approval panel |
+| Events and Approvals | event array in `run`; `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `approval-revision`, `approval-resubmit` | `/runs/:id/events`, `/approvals`, `/runs/:id/approval`, `/runs/:id/approval/comments`, `/runs/:id/approval/revision`, `/runs/:id/approval/resubmit` | timeline and approval panel |
 | Artifacts | artifact metadata in `run` | `/runs/:id/artifacts`, `/artifacts/:id` | artifact panel |
 | Execution and Verification | not directly executed by CLI bootstrap | `/runs/:id/steps`, `/runs/:id/steps/:step_id/execute` | execution and verification panels |
 | Audit and Observability | not primary in CLI bootstrap | `/audit`, `/observability` | audit metadata and observability region |
@@ -82,6 +84,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 - Artifact examples: `packages/contracts/examples/artifact.valid.json`, `packages/contracts/examples/artifact.invalid.json`
 - Budget incident examples: `packages/contracts/examples/budget-incident.valid.json`, `packages/contracts/examples/budget-incident.invalid.json`
 - Approval comment examples: `packages/contracts/examples/approval-comment.valid.json`, `packages/contracts/examples/approval-comment.invalid.json`
+- Approval revision examples: `packages/contracts/examples/approval-revision.valid.json`, `packages/contracts/examples/approval-revision.invalid.json`
 - Policy schema: `packages/contracts/schemas/policy.v1.json`
 - Validation entrypoint: `tests/scripts_validate_contracts.mjs`
 - Smoke entrypoint: `tests/scripts_smoke_api.mjs`

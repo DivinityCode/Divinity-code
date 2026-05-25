@@ -1,0 +1,9 @@
+{
+  "revision_id": "approval_revision_run_1_001",
+  "run_id": "run_1",
+  "actor": "",
+  "reason": "",
+  "requested_changes": [""],
+  "status": "maybe",
+  "requested_at": "not-a-date"
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ApprovalRevision",
+  "type": "object",
+  "required": ["revision_id", "run_id", "actor", "reason", "requested_changes", "status", "requested_at"],
+  "properties": {
+    "revision_id": { "type": "string" },
+    "run_id": { "type": "string" },
+    "actor": { "type": "string", "minLength": 1 },
+    "reason": { "type": "string", "minLength": 1 },
+    "requested_changes": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["requested", "resubmitted"]
+    },
+    "requested_at": { "type": "string", "format": "date-time" },
+    "resubmitted_by": { "type": "string", "minLength": 1 },
+    "resubmission_reason": { "type": "string" },
+    "resubmitted_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}
