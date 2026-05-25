@@ -1,7 +1,7 @@
 # API App
 Owner: Control Plane
 
-Control-plane endpoints for task creation, run retrieval, preflight checks, approvals, approval comments, approval revisions, step execution locks, verification, goal records, budget incidents, agent activity, run heartbeats, connector references, artifacts, capabilities, LLM provider and toolset catalogs, observability, and audit export.
+Control-plane endpoints for task creation, run retrieval, preflight checks, approvals, approval comments, approval revisions, step execution locks, verification, goal records, budget incidents, agent activity, run heartbeats, connector references, artifacts, capabilities, LLM provider and toolset catalogs, provider route planning, observability, and audit export.
 
 ## Authentication
 Control-plane routes are public in local development when no API key is configured.
@@ -12,6 +12,7 @@ Set `DIVINITY_API_KEY` or comma-separated `DIVINITY_API_KEYS` to require `Author
 - `GET /capabilities`
 - `GET /providers`
 - `GET /toolsets`
+- `POST /provider-proxy/route`
 - `GET /audit`
 - `GET /observability`
 - `POST /preflight`
@@ -53,4 +54,5 @@ Approval comment posts attach review notes to a run, emit `approval_comment_adde
 Approval revision posts move an `awaiting_approval` run to `paused`, emit `approval_revision_requested` and `status_changed` events, and add `approval_revision` audit entries. Approval resubmission moves a paused revision-requested run back to `awaiting_approval`, emits `approval_resubmitted` and `status_changed` events, and updates the same revision record.
 Capabilities expose the current policy presets, constrained execution adapters, runner isolation profiles, connector adapters, LLM providers, toolsets, and starter recipe summaries for CLI/API/dashboard discovery.
 Provider and toolset routes expose public catalog metadata only. They do not call live LLM providers, store credentials, or return secret values.
+Provider route planning accepts candidate provider ids plus optional limit state, returns `divinity.provider_proxy_route.v1`, and selects only authorized configured providers. It does not proxy prompts, call live LLM providers, print secrets, consume public shared keys, or rotate to bypass limits.
 Observability summaries aggregate run counts, approval backlog, heartbeat liveness, estimated budget usage, org/project scope rollups, risk mix, and policy/budget/execution failure categories.

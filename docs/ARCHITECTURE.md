@@ -66,6 +66,14 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 - This mirrors Hermes Agent's separation between provider identity, runtime credential/transport resolution, transport implementations, and toolset configuration. This slice intentionally does not make live LLM calls or persist credentials.
 - Public free-provider lists are research inputs only. Shared public API keys, no-registration credential reuse, quota bypass, and rotation to evade provider limits are excluded from the architecture.
 
+## Provider Proxy Route Planning
+- `packages/provider-proxy` exposes a pure `planProviderProxyRoute()` helper that accepts candidate provider ids, optional per-provider limit state, rotation intent, and requested model.
+- CLI `provider-route` and API `POST /provider-proxy/route` return `divinity.provider_proxy_route.v1` metadata without sending prompts, proxying live traffic, or returning credential values.
+- Route planning selects the first authorized provider whose credentials are configured through environment variables or a no-key local endpoint policy inherited from provider runtime resolution.
+- If the primary candidate is marked limited, route planning can fail over to another configured candidate for reliability or cost policy and records `rotation_reason: "provider_limit_reached"`.
+- The policy fails closed for public shared-key sources, missing credentials, unknown providers, and explicit `rotation_intent: "bypass_limits"`.
+- Live LLM proxy execution remains future work. It must reuse this route policy, enforce request/token budgets, redact prompts and secrets from logs by default, and return policy or `429` errors instead of evading provider limits.
+
 ## Connector References
 - CLI `run --connector adapter:resource_type:resource_id[:url]` can attach initial ticket, docs, or CI context to a task and resolved run output.
 - API `POST /runs/:id/connectors` validates and appends connector references after run creation; `GET /runs/:id/connectors` lists the attached references.

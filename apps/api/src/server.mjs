@@ -23,6 +23,7 @@ import { createObservabilitySummary } from '../../../packages/observability/src/
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
 import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
 import { evaluatePreflight, evaluateStepGate } from '../../../packages/policy-engine/src/index.mjs';
+import { planProviderProxyRoute } from '../../../packages/provider-proxy/src/index.mjs';
 import { createConfiguredRunStore } from '../../../packages/run-store/src/index.mjs';
 import { createExecutionVerification } from '../../../packages/verification/src/index.mjs';
 import { cleanupRunWorkspace, createRunWorkspace, executionCwdForRun } from '../../../packages/workspaces/src/index.mjs';
@@ -359,6 +360,19 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'GET' && req.url === '/toolsets') {
     sendJson(res, 200, { toolsets: publicToolsets(), resolution: resolveToolsets() });
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/provider-proxy/route') {
+    readJson(req, (body) => {
+      const route = planProviderProxyRoute({
+        candidates: body.candidates,
+        limit_state: body.limit_state,
+        rotation_intent: body.rotation_intent,
+        requested_model: body.requested_model || body.model
+      });
+      sendJson(res, route.status === 'ready' ? 200 : 400, { route });
+    });
     return;
   }
 
