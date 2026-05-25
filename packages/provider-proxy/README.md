@@ -8,8 +8,8 @@ Provider route planning and guarded chat execution for LLM proxy flows.
 - Returns route metadata only; it does not call an LLM provider or proxy request bodies.
 - Does not return secret values. Route plans include credential environment variable names and configured variable names only.
 - Blocks public shared-key candidates and explicit limit-bypass intent.
-- Executes OpenAI-compatible `chat_completions` requests through `executeProviderProxyChat()` after route planning succeeds.
-- Fails closed for unsupported transports until dedicated handlers are implemented.
+- Executes OpenAI-compatible Chat Completions, Anthropic Messages, and OpenAI Responses requests through `executeProviderProxyChat()` after route planning succeeds.
+- Fails closed for unsupported future transports until dedicated handlers are implemented.
 - Returns response metadata without echoing prompts, request bodies, or credential values.
 - Blocks credentialed provider `base_url` overrides during execution so operator-owned API keys are not forwarded to caller-supplied endpoints.
 
@@ -27,12 +27,17 @@ Rotation is for authorized failover across operator-configured credentials. It i
 
 ## Chat Execution
 
-`executeProviderProxyChat()` supports the first proxy execution path:
+`executeProviderProxyChat()` supports the non-streaming proxy execution paths:
 
-- `chat_completions` transport only.
-- `POST <base_url>/chat/completions`.
-- Request body uses `messages`, `model`, `max_completion_tokens`, and optional `temperature`.
-- `max_tokens` is intentionally not used because current OpenAI-compatible chat-completions documentation marks it deprecated in favor of `max_completion_tokens`.
+- `chat_completions`: `POST <base_url>/chat/completions` with `messages`, `model`, `max_completion_tokens`, and optional `temperature`.
+- `anthropic_messages`: `POST <base_url>/v1/messages` with `messages`, optional top-level `system`, `model`, `max_tokens`, optional `temperature`, `anthropic-version: 2023-06-01`, and `x-api-key` when credentials are required.
+- `codex_responses`: `POST <base_url>/responses` with `input`, optional `instructions`, `model`, `max_output_tokens`, and optional `temperature`.
+- OpenAI-compatible Chat Completions does not use deprecated `max_tokens`; OpenAI Responses uses `max_output_tokens`; Anthropic Messages uses its current `max_tokens` field.
 - A live upstream `429` returns `status: "limited"` and does not automatically retry through another provider.
 - Prompt and request-body data are sent only to the selected provider endpoint and are not included in the returned result metadata.
-- Local `custom_openai_compatible` endpoints can be used without a credential for development and tests. Credentialed catalog providers execute only against their trusted catalog endpoint in this slice.
+- Local custom endpoints can be used without a credential for development and tests. Credentialed catalog providers execute only against their trusted catalog endpoint in this slice.
+
+Transport shapes are anchored to current official provider docs:
+- OpenAI Responses: https://developers.openai.com/api/reference/responses/create
+- OpenAI Chat Completions: https://developers.openai.com/api/reference/chat/create
+- Anthropic Messages: https://platform.claude.com/docs/en/build-with-claude/working-with-messages

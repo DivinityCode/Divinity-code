@@ -72,13 +72,15 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 - Route planning selects the first authorized provider whose credentials are configured through environment variables or a no-key local endpoint policy inherited from provider runtime resolution.
 - If the primary candidate is marked limited, route planning can fail over to another configured candidate for reliability or cost policy and records `rotation_reason: "provider_limit_reached"`.
 - The policy fails closed for public shared-key sources, missing credentials, unknown providers, and explicit `rotation_intent: "bypass_limits"`.
-- `executeProviderProxyChat()`, CLI `provider-chat`, and API `POST /provider-proxy/chat` add the first controlled execution path behind the same route policy.
-- Chat execution supports non-streaming OpenAI-compatible `chat_completions` transports only. Anthropic Messages, OpenAI Responses, streaming, hosted secret stores, and managed rate-limit ledgers remain explicit future handlers.
-- The execution path posts `{ model, messages, max_completion_tokens, temperature }` to the selected provider's `/chat/completions` endpoint, using operator-owned environment credentials when required.
-- Credentialed provider `base_url` overrides are blocked during execution so operator-owned API keys cannot be redirected to caller-supplied endpoints; local no-key `custom_openai_compatible` endpoints remain available for development and tests.
+- `executeProviderProxyChat()`, CLI `provider-chat`, and API `POST /provider-proxy/chat` add controlled non-streaming execution paths behind the same route policy.
+- Chat execution supports OpenAI-compatible `chat_completions`, Anthropic `anthropic_messages`, and OpenAI `codex_responses` transports. Streaming, hosted secret stores, managed rate-limit ledgers, and live tool-call execution remain explicit future handlers.
+- The Chat Completions path posts `{ model, messages, max_completion_tokens, temperature }` to `/chat/completions`.
+- The Anthropic Messages path posts `{ model, system, messages, max_tokens, temperature }` to `/v1/messages` with `anthropic-version: 2023-06-01` and `x-api-key` when credentials are required.
+- The OpenAI Responses path posts `{ model, instructions, input, max_output_tokens, temperature }` to `/responses`.
+- Credentialed provider `base_url` overrides are blocked during execution so operator-owned API keys cannot be redirected to caller-supplied endpoints; local no-key custom endpoints remain available for development and tests.
 - Returned `divinity.provider_proxy_chat_result.v1` metadata includes provider, model, status, upstream status, response message, finish reason, and usage, but it omits prompt messages, request bodies, and credential values.
 - Live upstream `429` responses return `status: "limited"` with retry-after metadata and do not automatically fail over to another provider, preventing hidden quota bypass.
-- The current request shape uses `max_completion_tokens`; `max_tokens` is intentionally avoided because current OpenAI-compatible chat-completions documentation marks it deprecated in favor of `max_completion_tokens`.
+- OpenAI-compatible Chat Completions uses `max_completion_tokens`; OpenAI Responses uses `max_output_tokens`; Anthropic Messages uses its current `max_tokens` field.
 
 ## Connector References
 - CLI `run --connector adapter:resource_type:resource_id[:url]` can attach initial ticket, docs, or CI context to a task and resolved run output.

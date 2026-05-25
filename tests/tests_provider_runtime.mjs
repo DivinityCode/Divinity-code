@@ -20,7 +20,9 @@ for (const providerId of [
   'cerebras',
   'mistral',
   'github_models',
-  'custom_openai_compatible'
+  'custom_openai_compatible',
+  'custom_anthropic_compatible',
+  'custom_openai_responses'
 ]) {
   assert.ok(providerIds.includes(providerId), `missing provider ${providerId}`);
 }
@@ -65,6 +67,30 @@ assert.equal(customRuntime.auth.mode, 'none');
 assert.equal(customRuntime.auth.credential_required, false);
 assert.equal(customRuntime.auth.credential_configured, true);
 
+const customAnthropicRuntime = resolveProviderRuntime({
+  provider_id: 'custom_anthropic_compatible',
+  base_url: 'http://127.0.0.1:11435',
+  model: 'local-claude'
+});
+assert.equal(customAnthropicRuntime.transport, 'anthropic_messages');
+assert.equal(customAnthropicRuntime.base_url, 'http://127.0.0.1:11435');
+assert.equal(customAnthropicRuntime.model, 'local-claude');
+assert.equal(customAnthropicRuntime.auth.mode, 'none');
+assert.equal(customAnthropicRuntime.auth.credential_required, false);
+assert.equal(customAnthropicRuntime.auth.credential_configured, true);
+
+const customResponsesRuntime = resolveProviderRuntime({
+  provider_id: 'custom_openai_responses',
+  base_url: 'http://127.0.0.1:11436/v1',
+  model: 'local-responses'
+});
+assert.equal(customResponsesRuntime.transport, 'codex_responses');
+assert.equal(customResponsesRuntime.base_url, 'http://127.0.0.1:11436/v1');
+assert.equal(customResponsesRuntime.model, 'local-responses');
+assert.equal(customResponsesRuntime.auth.mode, 'none');
+assert.equal(customResponsesRuntime.auth.credential_required, false);
+assert.equal(customResponsesRuntime.auth.credential_configured, true);
+
 assert.throws(
   () => resolveProviderRuntime({ provider_id: 'missing' }),
   /unknown LLM provider/
@@ -82,5 +108,7 @@ assert.equal(readiness.any_configured, true);
 assert.ok(readiness.providers.find(provider => provider.provider_id === 'openrouter').credential_configured);
 assert.ok(readiness.providers.find(provider => provider.provider_id === 'groq').credential_configured);
 assert.equal(readiness.providers.find(provider => provider.provider_id === 'custom_openai_compatible').credential_required, false);
+assert.equal(readiness.providers.find(provider => provider.provider_id === 'custom_anthropic_compatible').credential_required, false);
+assert.equal(readiness.providers.find(provider => provider.provider_id === 'custom_openai_responses').credential_required, false);
 
 console.log(JSON.stringify({ ok: true, test: 'provider-runtime' }));

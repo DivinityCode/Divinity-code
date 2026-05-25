@@ -386,6 +386,7 @@ const server = http.createServer((req, res) => {
           requested_model: body.requested_model || body.model,
           messages: body.messages,
           max_completion_tokens: body.max_completion_tokens,
+          max_output_tokens: body.max_output_tokens,
           request_budget: body.request_budget,
           temperature: body.temperature
         });

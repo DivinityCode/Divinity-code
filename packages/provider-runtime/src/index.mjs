@@ -64,6 +64,10 @@ function isLocalBaseUrl(baseUrl) {
   return /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|::1)(:|\/|$)/i.test(baseUrl);
 }
 
+function isCustomLocalProvider(provider) {
+  return String(provider?.provider_id || '').startsWith('custom_');
+}
+
 export function publicLlmProviders() {
   return LLM_PROVIDERS.map(cloneProvider);
 }
@@ -88,7 +92,7 @@ export function resolveProviderRuntime({
   const configuredEnvVars = firstConfiguredEnv(provider, env);
   const requestedBaseUrl = String(base_url || '').trim().replace(/\/$/, '');
   const resolvedBaseUrl = requestedBaseUrl || provider.base_url;
-  const noKeyLocal = provider.provider_id === 'custom_openai_compatible' && isLocalBaseUrl(resolvedBaseUrl);
+  const noKeyLocal = isCustomLocalProvider(provider) && isLocalBaseUrl(resolvedBaseUrl);
   const credentialRequired = !noKeyLocal;
   const credentialConfigured = credentialRequired ? configuredEnvVars.length > 0 : true;
 
@@ -114,7 +118,7 @@ export function resolveProviderRuntime({
 export function providerCredentialReadiness({ env = process.env } = {}) {
   const providers = LLM_PROVIDERS.map(provider => {
     const configuredEnvVars = firstConfiguredEnv(provider, env);
-    const credentialRequired = provider.provider_id !== 'custom_openai_compatible';
+    const credentialRequired = !isCustomLocalProvider(provider);
     return {
       provider_id: provider.provider_id,
       display_name: provider.display_name,

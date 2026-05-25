@@ -1,7 +1,7 @@
 import assert from 'assert/strict';
 import http from 'http';
 
-async function createMockChatServer() {
+async function createMockChatServer(handler) {
   const requests = [];
   const server = http.createServer((req, res) => {
     let rawBody = '';
@@ -10,6 +10,10 @@ async function createMockChatServer() {
     req.on('end', () => {
       const body = rawBody ? JSON.parse(rawBody) : {};
       requests.push({ req, body });
+      if (handler) {
+        handler({ req, res, body });
+        return;
+      }
       res.statusCode = 200;
       res.setHeader('content-type', 'application/json');
       res.end(JSON.stringify({
@@ -58,6 +62,26 @@ process.env.DIVINITY_API_AUTOSTART = '0';
 process.env.OPENROUTER_API_KEY = apiSecret;
 const { server } = await import('../apps/api/src/server.mjs');
 const mock = await createMockChatServer();
+const anthropicMock = await createMockChatServer(({ req, res, body }) => {
+  assert.equal(req.url, '/v1/messages');
+  assert.equal(req.headers['anthropic-version'], '2023-06-01');
+  assert.equal(body.max_tokens, 40);
+  assert.equal('max_completion_tokens' in body, false);
+  res.statusCode = 200;
+  res.setHeader('content-type', 'application/json');
+  res.end(JSON.stringify({
+    id: 'msg_api_mock',
+    type: 'message',
+    role: 'assistant',
+    model: body.model,
+    content: [{ type: 'text', text: 'api anthropic mock' }],
+    stop_reason: 'end_turn',
+    usage: {
+      input_tokens: 4,
+      output_tokens: 3
+    }
+  }));
+});
 
 try {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -110,8 +134,27 @@ try {
   assert.match(exfilBlocked.result.error, /base_url overrides/);
   assert.equal(mock.requests.length, 1);
   assert.equal(JSON.stringify(exfilBlocked).includes(apiSecret), false);
+
+  const { response: anthropicResponse, body: anthropicBody } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
+    method: 'POST',
+    body: JSON.stringify({
+      candidates: [{ provider_id: 'custom_anthropic_compatible', base_url: anthropicMock.base_url }],
+      model: 'claude-mock',
+      messages: [{ role: 'user', content: secretPrompt }],
+      max_output_tokens: 40
+    })
+  });
+
+  assert.equal(anthropicResponse.status, 200);
+  assert.equal(anthropicBody.result.status, 'completed');
+  assert.equal(anthropicBody.result.transport, 'anthropic_messages');
+  assert.equal(anthropicBody.result.output_text, 'api anthropic mock');
+  assert.equal(anthropicMock.requests.length, 1);
+  assert.equal(JSON.stringify(anthropicBody).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(anthropicBody).includes(apiSecret), false);
 } finally {
   await mock.close();
+  await anthropicMock.close();
   if (server.listening) {
     await new Promise((resolve, reject) => {
       server.close(error => error ? reject(error) : resolve());

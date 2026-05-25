@@ -108,6 +108,30 @@
       "default_model": "",
       "capabilities": ["chat", "tool_calls", "local_endpoint", "openai_compatible"],
       "source": "user_config"
+    },
+    {
+      "provider_id": "custom_anthropic_compatible",
+      "display_name": "Custom Anthropic-Compatible Endpoint",
+      "transport": "anthropic_messages",
+      "base_url": "",
+      "auth_modes": ["api_key", "none"],
+      "credential_env_vars": ["CUSTOM_ANTHROPIC_API_KEY"],
+      "supports_custom_base_url": true,
+      "default_model": "",
+      "capabilities": ["chat", "tool_calls", "local_endpoint", "anthropic_compatible"],
+      "source": "user_config"
+    },
+    {
+      "provider_id": "custom_openai_responses",
+      "display_name": "Custom OpenAI Responses-Compatible Endpoint",
+      "transport": "codex_responses",
+      "base_url": "",
+      "auth_modes": ["api_key", "none"],
+      "credential_env_vars": ["CUSTOM_RESPONSES_API_KEY"],
+      "supports_custom_base_url": true,
+      "default_model": "",
+      "capabilities": ["chat", "tool_calls", "local_endpoint", "responses_api"],
+      "source": "user_config"
     }
   ]
 }

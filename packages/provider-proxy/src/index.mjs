@@ -117,6 +117,181 @@ function unsafeCredentialedEndpointOverride(runtime) {
   return runtime.source === 'explicit' && runtime.auth.credential_required;
 }
 
+function joinEndpoint(baseUrl, path) {
+  return `${String(baseUrl || '').replace(/\/$/, '')}${path}`;
+}
+
+function textFromContent(content) {
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
+  return content
+    .map(part => {
+      if (typeof part === 'string') return part;
+      if (typeof part?.text === 'string') return part.text;
+      return '';
+    })
+    .filter(Boolean)
+    .join('');
+}
+
+function systemPrompt(messages) {
+  return messages
+    .filter(message => message?.role === 'system')
+    .map(message => textFromContent(message.content))
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+function nonSystemMessages(messages) {
+  return messages
+    .filter(message => message?.role !== 'system')
+    .map(message => ({
+      role: String(message?.role || 'user'),
+      content: message?.content
+    }));
+}
+
+function resolveCredential(runtime, env) {
+  if (!runtime.auth.credential_required) return '';
+  const credentialName = runtime.auth.configured_env_vars[0];
+  return String(env[credentialName] || '').trim();
+}
+
+function transportHeaders(runtime, credential) {
+  const headers = {
+    'content-type': 'application/json',
+    connection: 'close'
+  };
+
+  if (runtime.transport === 'anthropic_messages') {
+    headers['anthropic-version'] = '2023-06-01';
+    if (credential) headers['x-api-key'] = credential;
+    return headers;
+  }
+
+  if (credential) headers.authorization = `Bearer ${credential}`;
+  return headers;
+}
+
+function anthropicEndpoint(runtime) {
+  const baseUrl = String(runtime.base_url || '').replace(/\/$/, '');
+  return joinEndpoint(baseUrl, baseUrl.endsWith('/v1') ? '/messages' : '/v1/messages');
+}
+
+function buildTransportRequest({ runtime, requestedModel, messages, outputTokens, temperature }) {
+  const model = String(requestedModel || runtime.model || '').trim();
+  const numericTemperature = Number(temperature);
+
+  if (runtime.transport === 'chat_completions') {
+    const body = { model, messages };
+    if (outputTokens) body.max_completion_tokens = outputTokens;
+    if (Number.isFinite(numericTemperature)) body.temperature = numericTemperature;
+    return {
+      endpoint: joinEndpoint(runtime.base_url, '/chat/completions'),
+      body,
+      model
+    };
+  }
+
+  if (runtime.transport === 'anthropic_messages') {
+    const body = {
+      model,
+      messages: nonSystemMessages(messages),
+      max_tokens: outputTokens || 1024
+    };
+    const system = systemPrompt(messages);
+    if (system) body.system = system;
+    if (Number.isFinite(numericTemperature)) body.temperature = numericTemperature;
+    return {
+      endpoint: anthropicEndpoint(runtime),
+      body,
+      model
+    };
+  }
+
+  if (runtime.transport === 'codex_responses') {
+    const body = {
+      model,
+      input: nonSystemMessages(messages)
+    };
+    const instructions = systemPrompt(messages);
+    if (instructions) body.instructions = instructions;
+    if (outputTokens) body.max_output_tokens = outputTokens;
+    if (Number.isFinite(numericTemperature)) body.temperature = numericTemperature;
+    return {
+      endpoint: joinEndpoint(runtime.base_url, '/responses'),
+      body,
+      model
+    };
+  }
+
+  throw new Error(`unsupported transport for provider proxy chat execution: ${runtime.transport}`);
+}
+
+function normalizeTransportResult({ runtime, payload, response, model, route }) {
+  if (runtime.transport === 'chat_completions') {
+    const choice = Array.isArray(payload.choices) ? payload.choices[0] : {};
+    const message = choice?.message || null;
+    return {
+      ...resultBase(route),
+      status: 'completed',
+      provider_id: runtime.provider_id,
+      model: payload.model || model,
+      transport: runtime.transport,
+      upstream_status: response.status,
+      response_id: payload.id || '',
+      message,
+      output_text: textFromContent(message?.content),
+      finish_reason: choice?.finish_reason || '',
+      usage: payload.usage || null
+    };
+  }
+
+  if (runtime.transport === 'anthropic_messages') {
+    const message = {
+      role: payload.role || 'assistant',
+      content: Array.isArray(payload.content) ? payload.content : []
+    };
+    return {
+      ...resultBase(route),
+      status: 'completed',
+      provider_id: runtime.provider_id,
+      model: payload.model || model,
+      transport: runtime.transport,
+      upstream_status: response.status,
+      response_id: payload.id || '',
+      message,
+      output_text: textFromContent(message.content),
+      finish_reason: payload.stop_reason || '',
+      usage: payload.usage || null
+    };
+  }
+
+  if (runtime.transport === 'codex_responses') {
+    const output = Array.isArray(payload.output) ? payload.output : [];
+    const outputMessage = output.find(item => item?.type === 'message') || {};
+    const message = {
+      role: outputMessage.role || 'assistant',
+      content: Array.isArray(outputMessage.content) ? outputMessage.content : []
+    };
+    return {
+      ...resultBase(route),
+      status: 'completed',
+      provider_id: runtime.provider_id,
+      model: payload.model || model,
+      transport: runtime.transport,
+      upstream_status: response.status,
+      response_id: payload.id || '',
+      message,
+      output_text: textFromContent(message.content),
+      finish_reason: payload.status || outputMessage.status || '',
+      usage: payload.usage || null
+    };
+  }
+
+  throw new Error(`unsupported transport for provider proxy chat execution: ${runtime.transport}`);
+}
+
 async function postJson(url, body, headers = {}, signal) {
   const parsedUrl = new URL(url);
   const client = parsedUrl.protocol === 'https:' ? https : http;
@@ -264,6 +439,7 @@ export async function executeProviderProxyChat({
   requested_model = '',
   messages = [],
   max_completion_tokens = 0,
+  max_output_tokens = 0,
   request_budget = {},
   temperature,
   signal
@@ -285,10 +461,6 @@ export async function executeProviderProxyChat({
   }
 
   const runtime = route.selected_provider_runtime;
-  if (runtime.transport !== 'chat_completions') {
-    return blockedChat(route, `unsupported transport for provider proxy chat execution: ${runtime.transport}`);
-  }
-
   if (unsafeCredentialedEndpointOverride(runtime)) {
     return blockedChat(route, 'credentialed provider base_url overrides are not allowed for chat execution');
   }
@@ -298,45 +470,41 @@ export async function executeProviderProxyChat({
     return blockedChat(route, 'prompt budget exceeded');
   }
 
-  const requestedMaxCompletionTokens = positiveInteger(max_completion_tokens);
-  const budgetMaxCompletionTokens = positiveInteger(request_budget.max_completion_tokens);
-  if (budgetMaxCompletionTokens && requestedMaxCompletionTokens > budgetMaxCompletionTokens) {
+  const requestedOutputTokens = positiveInteger(max_output_tokens) || positiveInteger(max_completion_tokens);
+  const budgetOutputTokens = positiveInteger(request_budget.max_output_tokens) || positiveInteger(request_budget.max_completion_tokens);
+  if (budgetOutputTokens && requestedOutputTokens > budgetOutputTokens) {
     return blockedChat(route, 'completion token budget exceeded');
   }
 
-  const resolvedMaxCompletionTokens = requestedMaxCompletionTokens || budgetMaxCompletionTokens || 0;
-  const body = {
-    model: String(requested_model || runtime.model || '').trim(),
-    messages
-  };
-  if (resolvedMaxCompletionTokens) body.max_completion_tokens = resolvedMaxCompletionTokens;
-  if (Number.isFinite(Number(temperature))) body.temperature = Number(temperature);
-
-  const headers = {
-    'content-type': 'application/json',
-    connection: 'close'
-  };
-  if (runtime.auth.credential_required) {
-    const credentialName = runtime.auth.configured_env_vars[0];
-    const credential = String(env[credentialName] || '').trim();
-    if (!credential) {
-      return blockedChat(route, 'configured credential is not available');
-    }
-    headers.authorization = `Bearer ${credential}`;
+  const credential = resolveCredential(runtime, env);
+  if (runtime.auth.credential_required && !credential) {
+    return blockedChat(route, 'configured credential is not available');
   }
 
-  const endpoint = `${runtime.base_url.replace(/\/$/, '')}/chat/completions`;
+  let request;
+  try {
+    request = buildTransportRequest({
+      runtime,
+      requestedModel: requested_model,
+      messages,
+      outputTokens: requestedOutputTokens || budgetOutputTokens || 0,
+      temperature
+    });
+  } catch (error) {
+    return blockedChat(route, error.message);
+  }
+
   let response;
   let payload;
   try {
-    response = await postJson(endpoint, body, headers, signal);
+    response = await postJson(request.endpoint, request.body, transportHeaders(runtime, credential), signal);
     payload = response.payload;
   } catch (error) {
     return {
       ...resultBase(route),
       status: 'failed',
       provider_id: runtime.provider_id,
-      model: body.model,
+      model: request.model,
       transport: runtime.transport,
       error: error.message
     };
@@ -347,7 +515,7 @@ export async function executeProviderProxyChat({
       ...resultBase(route),
       status: 'limited',
       provider_id: runtime.provider_id,
-      model: body.model,
+      model: request.model,
       transport: runtime.transport,
       upstream_status: response.status,
       retry_after_seconds: retryAfterSeconds(response.headers),
@@ -360,24 +528,12 @@ export async function executeProviderProxyChat({
       ...resultBase(route),
       status: 'failed',
       provider_id: runtime.provider_id,
-      model: body.model,
+      model: request.model,
       transport: runtime.transport,
       upstream_status: response.status,
       error: upstreamErrorStatus(response.status)
     };
   }
 
-  const choice = Array.isArray(payload.choices) ? payload.choices[0] : {};
-  return {
-    ...resultBase(route),
-    status: 'completed',
-    provider_id: runtime.provider_id,
-    model: payload.model || body.model,
-    transport: runtime.transport,
-    upstream_status: response.status,
-    response_id: payload.id || '',
-    message: choice?.message || null,
-    finish_reason: choice?.finish_reason || '',
-    usage: payload.usage || null
-  };
+  return normalizeTransportResult({ runtime, payload, response, model: request.model, route });
 }
