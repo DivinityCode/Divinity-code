@@ -17,7 +17,7 @@ import { createInitialRunEvents } from '../../../packages/events/src/index.mjs';
 import { completeGoalRecord, createGoalRecords } from '../../../packages/goals/src/index.mjs';
 import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
-import { planProviderProxyRoute } from '../../../packages/provider-proxy/src/index.mjs';
+import { executeProviderProxyChat, planProviderProxyRoute } from '../../../packages/provider-proxy/src/index.mjs';
 import { providerCredentialReadiness, publicLlmProviders, resolveProviderRuntime } from '../../../packages/provider-runtime/src/index.mjs';
 import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
 import { evaluatePreflight, POLICY_PRESETS } from '../../../packages/policy-engine/src/index.mjs';
@@ -496,6 +496,70 @@ function parseProviderRouteArgs(values) {
   for (const providerId of Object.keys(options.limit_state)) {
     if (!providerId) delete options.limit_state[providerId];
   }
+  return options;
+}
+
+function parseProviderChatArgs(values) {
+  const options = {
+    provider_id: 'openrouter',
+    base_url: '',
+    messages: [],
+    requested_model: '',
+    max_completion_tokens: 0,
+    request_budget: {}
+  };
+
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    const next = values[index + 1];
+
+    if (value === '--provider' || value === '--provider-id') {
+      options.provider_id = next;
+      index += 1;
+    } else if (value.startsWith('--provider=')) {
+      options.provider_id = value.slice('--provider='.length);
+    } else if (value === '--base-url' || value === '--provider-base-url') {
+      options.base_url = next;
+      index += 1;
+    } else if (value.startsWith('--base-url=')) {
+      options.base_url = value.slice('--base-url='.length);
+    } else if (value === '--message') {
+      options.messages.push({ role: 'user', content: next });
+      index += 1;
+    } else if (value.startsWith('--message=')) {
+      options.messages.push({ role: 'user', content: value.slice('--message='.length) });
+    } else if (value === '--model') {
+      options.requested_model = next;
+      index += 1;
+    } else if (value.startsWith('--model=')) {
+      options.requested_model = value.slice('--model='.length);
+    } else if (value === '--max-completion-tokens') {
+      options.max_completion_tokens = next;
+      index += 1;
+    } else if (value.startsWith('--max-completion-tokens=')) {
+      options.max_completion_tokens = value.slice('--max-completion-tokens='.length);
+    } else if (value === '--max-prompt-chars') {
+      options.request_budget.max_prompt_chars = next;
+      index += 1;
+    } else if (value.startsWith('--max-prompt-chars=')) {
+      options.request_budget.max_prompt_chars = value.slice('--max-prompt-chars='.length);
+    } else {
+      throw new Error(`unknown provider-chat option: ${value}`);
+    }
+  }
+
+  const candidate = {
+    provider_id: String(options.provider_id || '').trim() || 'openrouter'
+  };
+  const baseUrl = String(options.base_url || '').trim();
+  if (baseUrl) candidate.base_url = baseUrl;
+  options.candidates = [candidate];
+  options.messages = options.messages
+    .map(message => ({ role: message.role, content: String(message.content || '') }))
+    .filter(message => message.content);
+  options.requested_model = String(options.requested_model || '').trim();
+  options.max_completion_tokens = Number(options.max_completion_tokens || 0);
+  options.request_budget.max_prompt_chars = Number(options.request_budget.max_prompt_chars || 0);
   return options;
 }
 
@@ -1350,6 +1414,16 @@ function providerRoute() {
   }
 }
 
+async function providerChat() {
+  try {
+    const options = parseProviderChatArgs(args);
+    const result = await executeProviderProxyChat(options);
+    print({ ok: result.status === 'completed', command: 'provider-chat', result });
+  } catch (error) {
+    print({ ok: false, command: 'provider-chat', error: error.message });
+  }
+}
+
 function toolsets() {
   print({ ok: true, command: 'toolsets', toolsets: publicToolsets(), resolution: resolveToolsets() });
 }
@@ -1408,6 +1482,7 @@ switch (command) {
   case 'capabilities': capabilities(); break;
   case 'providers': providers(); break;
   case 'provider-route': providerRoute(); break;
+  case 'provider-chat': await providerChat(); break;
   case 'toolsets': toolsets(); break;
   case 'recipes': recipes(); break;
   case 'doctor': doctor(); break;
@@ -1415,6 +1490,6 @@ switch (command) {
   default:
     print({
       ok: false,
-      usage: 'divinity <init|run|status|approvals|approval|approve|reject|approval-comment|approval-comments|approval-revision|approval-resubmit|goal-complete|capabilities|providers|provider-route|toolsets|recipes|doctor|bug> [args]'
+      usage: 'divinity <init|run|status|approvals|approval|approve|reject|approval-comment|approval-comments|approval-revision|approval-resubmit|goal-complete|capabilities|providers|provider-route|provider-chat|toolsets|recipes|doctor|bug> [args]'
     });
 }

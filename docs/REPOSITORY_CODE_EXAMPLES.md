@@ -74,7 +74,8 @@ The code examples reinforce the current bootstrap direction and add these concre
 5. **Budget incidents:** implemented soft/hard budget incident records on CLI/API run payloads and API audit exports so financial risk state is auditable before richer dashboard controls.
 6. **Bounded retry evidence:** implemented attempt metadata and bounded API retries for failed allowed steps so verifier failures preserve evidence without creating unbounded autonomous loops.
 7. **Worktree isolation hardening:** keep run workspace cleanup/quarantine evidence visible as runner isolation moves from local snapshots toward parallel or remote execution.
-8. **Provider/tool runtime foundation:** implemented public LLM provider and toolset catalogs first; future live provider invocation should preserve the same separation between provider identity, transport resolution, auth readiness, toolset resolution, and execution.
+8. **Provider/tool runtime foundation:** implemented public LLM provider and toolset catalogs first; live provider invocation preserves the same separation between provider identity, transport resolution, auth readiness, toolset resolution, and execution.
+9. **Provider proxy chat execution:** implemented the first safe invocation path for OpenAI-compatible `chat_completions` transports behind route policy, with local mock-server tests, no returned prompt/request-body/secret metadata, blocked credentialed endpoint overrides, and explicit future boundaries for Anthropic Messages, OpenAI Responses, streaming, and managed secret stores.
 
 ## Local Mapping
 | External pattern | Current Divinity surface |
@@ -87,6 +88,7 @@ The code examples reinforce the current bootstrap direction and add these concre
 | Doctor/setup diagnostics | `apps/cli/src/index.mjs`, `tests/tests_cli_doctor.mjs` |
 | Runtime adapters, execution records, and bounded retries | `packages/runtime-adapters`, `packages/execution`, `packages/runner-isolation`, API step execution routes |
 | LLM provider and toolset discovery | `packages/provider-runtime`, `packages/toolsets`, CLI `providers`, CLI `toolsets`, API `/providers`, API `/toolsets`, `divinity.capabilities.v1` |
+| Provider proxy execution | `packages/provider-proxy`, CLI `provider-route`, CLI `provider-chat`, API `/provider-proxy/route`, API `/provider-proxy/chat`, provider proxy tests |
 | Free-provider research policy | `docs/FREE_LLM_PROVIDER_RESEARCH.md`, `packages/provider-runtime/providers.v1.json`, Task `provider_runtime`, Task `toolset_resolution` |
 | Approval lifecycle | `packages/contracts/schemas/approval.v1.json`, `packages/contracts/schemas/approval-comment.v1.json`, `packages/contracts/schemas/approval-revision.v1.json`, `packages/approval-comments`, `packages/approval-revisions`, API approval routes, CLI approval commands, dashboard approval queue, comment panel, and revision panel |
 | Heartbeats and liveness | `packages/heartbeats`, `packages/observability`, dashboard liveness card |

@@ -23,7 +23,7 @@ import { createObservabilitySummary } from '../../../packages/observability/src/
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
 import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
 import { evaluatePreflight, evaluateStepGate } from '../../../packages/policy-engine/src/index.mjs';
-import { planProviderProxyRoute } from '../../../packages/provider-proxy/src/index.mjs';
+import { executeProviderProxyChat, planProviderProxyRoute } from '../../../packages/provider-proxy/src/index.mjs';
 import { createConfiguredRunStore } from '../../../packages/run-store/src/index.mjs';
 import { createExecutionVerification } from '../../../packages/verification/src/index.mjs';
 import { cleanupRunWorkspace, createRunWorkspace, executionCwdForRun } from '../../../packages/workspaces/src/index.mjs';
@@ -372,6 +372,34 @@ const server = http.createServer((req, res) => {
         requested_model: body.requested_model || body.model
       });
       sendJson(res, route.status === 'ready' ? 200 : 400, { route });
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/provider-proxy/chat') {
+    readJson(req, async (body) => {
+      try {
+        const result = await executeProviderProxyChat({
+          candidates: body.candidates,
+          limit_state: body.limit_state,
+          rotation_intent: body.rotation_intent,
+          requested_model: body.requested_model || body.model,
+          messages: body.messages,
+          max_completion_tokens: body.max_completion_tokens,
+          request_budget: body.request_budget,
+          temperature: body.temperature
+        });
+        const statusCode = result.status === 'completed'
+          ? 200
+          : result.status === 'limited'
+            ? 429
+            : result.status === 'failed'
+              ? 502
+              : 400;
+        sendJson(res, statusCode, { result });
+      } catch (error) {
+        sendJson(res, 500, { error: error.message });
+      }
     });
     return;
   }
