@@ -8,6 +8,7 @@ import { createInterface } from 'readline/promises';
 
 import { createAgentActivityRecords } from '../../../packages/agent-activity/src/index.mjs';
 import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
+import { createBudgetIncidents } from '../../../packages/budget-incidents/src/index.mjs';
 import { createCapabilitiesCatalog } from '../../../packages/capabilities/src/index.mjs';
 import { createConnectorReferences } from '../../../packages/connectors/src/index.mjs';
 import { createInitialRunEvents } from '../../../packages/events/src/index.mjs';
@@ -489,6 +490,13 @@ function run() {
   const preflight = evaluatePreflight({ task: payload, policyPack: policy_pack });
   const run_id = `run_${Date.now()}`;
   const status = preflight.run_status;
+  const budget_incidents = createBudgetIncidents({
+    run_id,
+    task: payload,
+    preflight,
+    source: 'preflight',
+    created_at: payload.created_at
+  });
   const connector_references = createConnectorReferences({
     run_id,
     references: parsedArgs.connector_references,
@@ -509,6 +517,7 @@ function run() {
     run_id,
     status,
     preflight,
+    budget_incidents,
     policy_pack,
     orchestration: createOrchestrationTrace({ run_id, task: payload, status, preflight }),
     connector_references,

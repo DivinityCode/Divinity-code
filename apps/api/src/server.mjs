@@ -3,6 +3,7 @@ import http from 'http';
 import { createAgentActivityRecords } from '../../../packages/agent-activity/src/index.mjs';
 import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
 import { createAuditRecord, exportAuditLog } from '../../../packages/audit/src/index.mjs';
+import { createBudgetIncidents } from '../../../packages/budget-incidents/src/index.mjs';
 import { createCapabilitiesCatalog } from '../../../packages/capabilities/src/index.mjs';
 import { createConnectorReference, createConnectorReferences } from '../../../packages/connectors/src/index.mjs';
 import { createInitialRunEvents, createRunEvent } from '../../../packages/events/src/index.mjs';
@@ -147,6 +148,19 @@ function recordRunAudit(run) {
       run_id: run.run_id,
       created_at: connectorReference.attached_at,
       payload: connectorReference
+    });
+  }
+
+  recordBudgetIncidents(run, run.budget_incidents || []);
+}
+
+function recordBudgetIncidents(run, incidents) {
+  for (const incident of incidents) {
+    recordAudit({
+      type: 'budget_incident',
+      run_id: run.run_id,
+      created_at: incident.created_at,
+      payload: incident
     });
   }
 }
@@ -304,6 +318,13 @@ const server = http.createServer((req, res) => {
       const runArtifacts = createRunArtifacts({ run_id: runId, task: scopedTask, status, preflight });
       const events = createInitialRunEvents({ run_id: runId, task: scopedTask, preflight, status });
       const createdAt = events[0]?.created_at || new Date().toISOString();
+      const budgetIncidents = createBudgetIncidents({
+        run_id: runId,
+        task: scopedTask,
+        preflight,
+        source: 'preflight',
+        created_at: createdAt
+      });
       let connectorReferences = [];
       try {
         connectorReferences = createConnectorReferences({
@@ -324,6 +345,7 @@ const server = http.createServer((req, res) => {
         status,
         risk_level: preflight.risk_level,
         preflight,
+        budget_incidents: budgetIncidents,
         policy_pack: policyPack,
         orchestration: createOrchestrationTrace({ run_id: runId, task: scopedTask, status, preflight }),
         agent_activity: createAgentActivityRecords({
@@ -501,8 +523,18 @@ const server = http.createServer((req, res) => {
         status: check.status === 'allowed' ? 'pending' : 'blocked',
         pre_execution_check: check
       };
+      const budgetIncidents = createBudgetIncidents({
+        run_id: run.run_id,
+        task: run.task,
+        preflight: check,
+        source: 'step_gate',
+        step,
+        created_at: new Date().toISOString()
+      });
 
       run.steps.push(step);
+      run.budget_incidents = run.budget_incidents || [];
+      run.budget_incidents.push(...budgetIncidents);
 
       if (check.run_status === 'paused') {
         run.status = 'paused';
@@ -522,14 +554,17 @@ const server = http.createServer((req, res) => {
         broadcastRun(run);
         sendJson(res, 409, { error: 'run paused by hard budget cap', step, run: publicRun(run) });
       } else if (check.decision === 'allow') {
+        recordBudgetIncidents(run, budgetIncidents);
         persistRunStore();
         broadcastRun(run);
         sendJson(res, 201, { step });
       } else if (check.decision === 'requires_approval') {
+        recordBudgetIncidents(run, budgetIncidents);
         persistRunStore();
         broadcastRun(run);
         sendJson(res, 409, { error: 'step requires approval before execution', step });
       } else {
+        recordBudgetIncidents(run, budgetIncidents);
         persistRunStore();
         broadcastRun(run);
         sendJson(res, 403, { error: 'step blocked by policy', step });

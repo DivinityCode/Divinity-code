@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BudgetIncident",
+  "type": "object",
+  "required": [
+    "incident_id",
+    "run_id",
+    "task_id",
+    "step_id",
+    "scope",
+    "source",
+    "severity",
+    "threshold",
+    "status",
+    "reason",
+    "estimated_cost_usd",
+    "limit_usd",
+    "evidence_refs",
+    "created_at"
+  ],
+  "properties": {
+    "incident_id": { "type": "string" },
+    "run_id": { "type": "string" },
+    "task_id": { "type": "string" },
+    "step_id": { "type": ["string", "null"] },
+    "scope": {
+      "type": "object",
+      "required": ["org_id", "project_id"],
+      "properties": {
+        "org_id": { "type": "string" },
+        "project_id": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "string",
+      "enum": ["preflight", "step_gate"]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["warning", "hard_stop"]
+    },
+    "threshold": {
+      "type": "string",
+      "enum": ["soft_limit", "hard_limit"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["open", "resolved"]
+    },
+    "reason": { "type": "string" },
+    "estimated_cost_usd": { "type": "number", "minimum": 0 },
+    "limit_usd": { "type": ["number", "null"], "minimum": 0 },
+    "evidence_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["evidence_id", "source", "claim_type", "summary", "supports"],
+        "properties": {
+          "evidence_id": { "type": "string" },
+          "source": { "type": "string" },
+          "claim_type": {
+            "type": "string",
+            "enum": ["observed", "inferred"]
+          },
+          "summary": { "type": "string" },
+          "supports": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

@@ -1,5 +1,9 @@
 # Contracts Changelog
 
+## v1.31.0
+- Added `BudgetIncident` schema and examples for soft/hard budget threshold records.
+- Added `budget_incident` audit record type for immutable financial-risk evidence.
+
 ## v1.30.0
 - Added `policy_hooks` to PreflightDecision so policy-pack pre-execution hook outcomes are contract-visible.
 - Updated preflight examples and validation coverage for policy hook evidence.

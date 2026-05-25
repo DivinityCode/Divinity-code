@@ -19,6 +19,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 | Policy | `packages/contracts/schemas/policy.v1.json` | Policy engine and policy packs | Defines permissions and approval threshold used to gate work. |
 | Step | `packages/contracts/schemas/step.v1.json` | API step routes, execution package | Represents a proposed atomic action and its pre-execution gate result. |
 | Artifact | `packages/contracts/schemas/artifact.v1.json` | Artifacts package and API artifact routes | Describes patch, log, summary, PR-summary, and evidence payloads generated from run context. |
+| BudgetIncident | `packages/contracts/schemas/budget-incident.v1.json` | Budget incidents package, CLI/API run output, audit export | Records soft and hard budget threshold events with scope, cost, limit, status, and evidence. |
 | RunEvent | `packages/contracts/schemas/event.v1.json` | Events package, API stream, dashboard timeline | Records lifecycle transitions and operational activity with timestamps and metadata. |
 | ApprovalDecision | `packages/contracts/schemas/approval.v1.json` | API approval routes, dashboard approvals | Records approve/reject decisions, actor, reason, and decision time. |
 | ExecutionRecord | `packages/contracts/schemas/execution.v1.json` | Execution package | Captures adapter, status, exit code, stdout, stderr, started time, and finished time for observed execution. |
@@ -41,6 +42,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 | Step -> ExecutionRecord | Zero or one execution in current bootstrap | Execution only occurs after policy gates allow the step. |
 | ExecutionRecord -> VerificationRecord | Zero or one verifier record per execution | The verifier records observed status, exit-code, and output checks. |
 | Run -> Artifact | Zero or more artifacts | Patch, log, summary, and PR-summary artifacts are generated for CLI/API runs. |
+| Run -> BudgetIncident | Zero or more incidents | Soft and hard budget threshold events are attached to run state and audit records. |
 | Run -> RunEvent | One or more events | Events record task creation, preflight, status changes, approvals, execution, verification, locks, heartbeats, connectors, and cleanup. |
 | Run -> ApprovalDecision | Zero or one active decision | Approval is required only when preflight or step gates require operator intervention. |
 | Run -> ConnectorReference | Zero or more references | References can be included at task creation or attached later. |
@@ -51,7 +53,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 ## Lifecycle
 1. **Task creation:** Builder or API client submits objective, success criteria, repo, scope, policy, budget, and optional connector references.
 2. **Preflight:** Policy engine infers actions, estimates risk/cost, checks policy permissions, policy-pack hooks, and budget caps, and returns decision plus evidence.
-3. **Run assembly:** API/CLI resolves policy pack, orchestration trace, agent activity, memory provenance, connector references, artifacts, and initial events.
+3. **Run assembly:** API/CLI resolves policy pack, budget incidents, orchestration trace, agent activity, memory provenance, connector references, artifacts, and initial events.
 4. **Approval gate:** High-risk allowed work enters `awaiting_approval`; blocked work fails or pauses before execution.
 5. **Step gate:** API step creation evaluates action-level policy and budget constraints.
 6. **Execution lock:** API acquires a run/step lock before execution and records release or recovery.
@@ -73,6 +75,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 - Run examples: `packages/contracts/examples/run.valid.json`, `packages/contracts/examples/run.invalid.json`
 - Step examples: `packages/contracts/examples/step.valid.json`, `packages/contracts/examples/step.invalid.json`
 - Artifact examples: `packages/contracts/examples/artifact.valid.json`, `packages/contracts/examples/artifact.invalid.json`
+- Budget incident examples: `packages/contracts/examples/budget-incident.valid.json`, `packages/contracts/examples/budget-incident.invalid.json`
 - Policy schema: `packages/contracts/schemas/policy.v1.json`
 - Validation entrypoint: `tests/scripts_validate_contracts.mjs`
 - Smoke entrypoint: `tests/scripts_smoke_api.mjs`
