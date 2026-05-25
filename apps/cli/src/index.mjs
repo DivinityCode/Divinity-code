@@ -803,6 +803,46 @@ async function approvalComments() {
   }
 }
 
+async function approval() {
+  try {
+    const options = parseStatusArgs(args);
+    if (!options.run_id) {
+      throw new Error('approval requires a run_id');
+    }
+
+    if (!options.api) {
+      print({
+        ok: true,
+        command: 'approval',
+        run_id: options.run_id,
+        approval: null,
+        comments: [],
+        note: 'pass --api <url> to read API approval state'
+      });
+      return;
+    }
+
+    const { response, body } = await fetchJson(`${options.api}/runs/${options.run_id}/approval`);
+    print({
+      ok: response.ok,
+      command: 'approval',
+      api: options.api,
+      run_id: options.run_id,
+      status_code: response.status,
+      status: body.status,
+      approval_required: Boolean(body.approval_required),
+      approval: body.approval || null,
+      comments: body.comments || [],
+      run: body.run,
+      response: body
+    });
+    if (!response.ok) process.exitCode = 1;
+  } catch (error) {
+    print({ ok: false, command: 'approval', error: error.message });
+    process.exitCode = 1;
+  }
+}
+
 function recipes() {
   print({ ok: true, command: 'recipes', recipes: publicStarterRecipes() });
 }
@@ -854,6 +894,7 @@ switch (command) {
   case 'run': run(); break;
   case 'status': await status(); break;
   case 'approvals': await approvals(); break;
+  case 'approval': await approval(); break;
   case 'approve': await approve('approve', 'approve'); break;
   case 'reject': await approve('reject', 'reject'); break;
   case 'approval-comment': await approvalComment(); break;
@@ -865,6 +906,6 @@ switch (command) {
   default:
     print({
       ok: false,
-      usage: 'divinity <init|run|status|approvals|approve|reject|approval-comment|approval-comments|capabilities|recipes|doctor|bug> [args]'
+      usage: 'divinity <init|run|status|approvals|approval|approve|reject|approval-comment|approval-comments|capabilities|recipes|doctor|bug> [args]'
     });
 }

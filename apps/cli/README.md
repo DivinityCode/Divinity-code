@@ -1,7 +1,7 @@
 # CLI App
 Owner: Builder Experience
 
-Commands: `init`, `run`, `status`, `approvals`, `approve`, `reject`, `approval-comment`, `approval-comments`, `capabilities`, `recipes`, `doctor`, `bug`.
+Commands: `init`, `run`, `status`, `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `capabilities`, `recipes`, `doctor`, `bug`.
 
 ## Current Behavior
 - `init` writes `.divinity.json` with the default `safe_exec` policy, budget caps, and org/project scope.
@@ -13,6 +13,7 @@ Commands: `init`, `run`, `status`, `approvals`, `approve`, `reject`, `approval-c
 - `run --criteria "All tests pass" --success-criteria "Docs updated" "Implement policy trace"` attaches explicit success criteria to the task payload and creates matching run `goals` records with evidence and budget allocation.
 - `status <run_id> --api http://127.0.0.1:3000` fetches a stored API run and returns its lifecycle status plus the run payload; without `--api`, `status` keeps the local queued placeholder for scripts.
 - `approvals --api http://127.0.0.1:3000` lists approval-required runs from the control-plane API.
+- `approval <run_id> --api http://127.0.0.1:3000` fetches approval state, approval comments, and the current run payload without mutating the run.
 - `approve <run_id> --api http://127.0.0.1:3000 --actor operator@example.com --reason "reviewed"` approves an API-backed run and returns the updated run payload.
 - `reject <run_id> --api http://127.0.0.1:3000 --actor operator@example.com --reason "unsafe"` rejects an API-backed run; without `--api`, `approve` and `reject` emit local structured decision payloads for scripts.
 - `approval-comment <run_id> --api http://127.0.0.1:3000 --actor operator@example.com --body "needs verifier output"` attaches an API-backed approval review comment; without `--api`, it emits a local structured comment payload for scripts.

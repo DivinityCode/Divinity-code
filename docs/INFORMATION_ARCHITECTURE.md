@@ -31,7 +31,7 @@ This document defines how Builder Mode and Operator Mode expose the shared Task/
 | `init` | Config path, policy, budget, scope, starter recipes | Confirm local setup and onboarding defaults |
 | `run` | Task payload, preflight, status, policy pack, orchestration, activity, memory, artifacts, events | Decide whether the run is safe to continue or needs approval |
 | `status` | Local queued placeholder or API-backed run status lookup | Check lifecycle state for a stored run |
-| `approvals` / `approve` / `reject` / `approval-comment` / `approval-comments` | API-backed approval queue, local structured approval decisions, and approval review comments | Exercise approval command surface, operator transitions, and review context |
+| `approvals` / `approval` / `approve` / `reject` / `approval-comment` / `approval-comments` | API-backed approval queue, per-run approval snapshots, local structured approval decisions, and approval review comments | Exercise approval command surface, operator transitions, and review context |
 | `capabilities` | Policy presets, adapters, isolation profiles, connectors, recipes | Discover supported extension points |
 | `recipes` | Starter recipe summaries | Select first-run workflows |
 | `doctor` | Local readiness checks | Diagnose setup before deeper work |
@@ -73,7 +73,7 @@ This document defines how Builder Mode and Operator Mode expose the shared Task/
 | Preflight | `run` output | `/preflight`, stored run preflight | decision panel and timeline |
 | Events | `run` output | `/runs/:id/events`, stream | timeline |
 | Artifacts | metadata in `run` output | `/runs/:id/artifacts`, `/artifacts/:id` | artifact panel |
-| Approvals | `approvals`, `approve`, `reject`, `approval-comment`, and `approval-comments` CLI commands | `/approvals`, `/runs/:id/approval`, `/runs/:id/approval/comments` | approval queue and action panel |
+| Approvals | `approvals`, `approval`, `approve`, `reject`, `approval-comment`, and `approval-comments` CLI commands | `/approvals`, `/runs/:id/approval`, `/runs/:id/approval/comments` | approval queue and action panel |
 | Observability | not primary | `/observability` | observability region |
 | Audit | not primary | `/audit` | audit metadata and export affordance |
 

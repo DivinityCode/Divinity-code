@@ -125,6 +125,7 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 
 ## Approval Flow
 - Runs in `awaiting_approval` appear in `GET /approvals`.
+- Operators can inspect one run's approval state with `GET /runs/:id/approval`.
 - Operators approve or reject a pending run with `POST /runs/:id/approval`.
 - Operators can attach review context with `POST /runs/:id/approval/comments` and list it with `GET /runs/:id/approval/comments`.
 - Approval moves the run back to `queued`; rejection marks the run `failed`.

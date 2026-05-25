@@ -26,6 +26,7 @@ Set `DIVINITY_API_KEY` or comma-separated `DIVINITY_API_KEYS` to require `Author
 - `POST /runs/:id/steps/:step_id/execute`
 - `POST /runs/:id/execution-locks/recover`
 - `POST /runs/:id/heartbeat`
+- `GET /runs/:id/approval`
 - `POST /runs/:id/approval`
 - `GET /runs/:id/approval/comments`
 - `POST /runs/:id/approval/comments`
@@ -39,6 +40,7 @@ Execution lock conflicts return `409` with the active lock payload so clients ca
 Execution lock recovery marks expired active locks as `stale`, clears `active_execution_lock`, and records recovery event/audit evidence.
 Run heartbeat posts append liveness records, update `last_heartbeat_at`, emit `heartbeat_recorded` events, and add `heartbeat_record` audit entries.
 Connector reference posts attach ticket, docs, or CI context to a run, emit `connector_reference_attached` events, and add `connector_reference` audit entries.
+Approval snapshot reads return approval-required state, the approval decision when present, approval comments, and the current run payload without mutating state.
 Approval comment posts attach review notes to a run, emit `approval_comment_added` events, and add `approval_comment` audit entries without changing approve/reject state.
 Capabilities expose the current policy presets, constrained execution adapters, runner isolation profiles, connector adapters, and starter recipe summaries for CLI/API/dashboard discovery.
 Observability summaries aggregate run counts, approval backlog, heartbeat liveness, estimated budget usage, org/project scope rollups, risk mix, and policy/budget/execution failure categories.

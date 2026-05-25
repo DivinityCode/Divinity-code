@@ -69,7 +69,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 | --- | --- | --- | --- |
 | Task, Run, Goals, Preflight | `run` output | `/tasks`, `/preflight`, `/runs/:id` | run queue and selected-run header/detail |
 | Policy and Capabilities | `capabilities`, `doctor` readiness context | `/capabilities` | capability-informed labels and operator context |
-| Events and Approvals | event array in `run`; `approvals`, `approve`, `reject`, `approval-comment`, `approval-comments` | `/runs/:id/events`, `/approvals`, `/runs/:id/approval`, `/runs/:id/approval/comments` | timeline and approval panel |
+| Events and Approvals | event array in `run`; `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments` | `/runs/:id/events`, `/approvals`, `/runs/:id/approval`, `/runs/:id/approval/comments` | timeline and approval panel |
 | Artifacts | artifact metadata in `run` | `/runs/:id/artifacts`, `/artifacts/:id` | artifact panel |
 | Execution and Verification | not directly executed by CLI bootstrap | `/runs/:id/steps`, `/runs/:id/steps/:step_id/execute` | execution and verification panels |
 | Audit and Observability | not primary in CLI bootstrap | `/audit`, `/observability` | audit metadata and observability region |
