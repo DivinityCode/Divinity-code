@@ -1,5 +1,9 @@
 # Contracts Changelog
 
+## v1.36.0
+- Added `ExecutionRecord.attempt`, `max_attempts`, and `retry_of` for bounded execution retry evidence.
+- Updated Step embedded execution records to carry the same retry metadata.
+
 ## v1.35.0
 - Added optional `GoalRecord.completed_at` for verifier-backed completion mutations.
 - Added `goal_completed` run events and `goal_record` audit entries for constrained goal completion evidence.

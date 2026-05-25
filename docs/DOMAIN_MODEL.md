@@ -25,7 +25,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 | ApprovalDecision | `packages/contracts/schemas/approval.v1.json` | API approval routes, dashboard approvals | Records approve/reject decisions, actor, reason, and decision time. |
 | ApprovalComment | `packages/contracts/schemas/approval-comment.v1.json` | Approval comments package, API approval routes, CLI approval comments | Records operator review comments attached to a run approval workflow. |
 | ApprovalRevision | `packages/contracts/schemas/approval-revision.v1.json` | Approval revisions package, API approval routes, CLI approval revision commands | Records requested changes and resubmission metadata for approval workflows that need more evidence before approve/reject. |
-| ExecutionRecord | `packages/contracts/schemas/execution.v1.json` | Execution package | Captures adapter, status, exit code, stdout, stderr, started time, and finished time for observed execution. |
+| ExecutionRecord | `packages/contracts/schemas/execution.v1.json` | Execution package | Captures adapter, status, exit code, retry attempt metadata, stdout, stderr, started time, and finished time for observed execution. |
 | VerificationRecord | `packages/contracts/schemas/verification.v1.json` | Verification package | Captures post-execution verifier checks derived from observed execution evidence. |
 | ExecutionLockRecord | `packages/contracts/schemas/execution-lock.v1.json` | Execution locks package | Tracks lock acquire/release/recovery state for run step execution ownership. |
 | HeartbeatRecord | `packages/contracts/schemas/heartbeat.v1.json` | Heartbeats package | Tracks liveness signals for runs and stale-run observability. |
@@ -43,7 +43,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 | Run -> GoalRecord | Zero or more goals | Each non-empty success criterion creates one goal record at run assembly time; passed verifier evidence can complete a pending goal. |
 | Run -> PreflightDecision | One required decision per run | Preflight determines lifecycle status before execution starts. |
 | Run -> Step | Zero or more steps | API `POST /runs/:id/steps` adds gated steps. |
-| Step -> ExecutionRecord | Zero or one execution in current bootstrap | Execution only occurs after policy gates allow the step. |
+| Step -> ExecutionRecord | Zero or more executions | Execution only occurs after policy gates allow the step; failed allowed steps can retry within the bounded attempt limit. |
 | ExecutionRecord -> VerificationRecord | Zero or one verifier record per execution | The verifier records observed status, exit-code, and output checks. |
 | Run -> Artifact | Zero or more artifacts | Patch, log, summary, and PR-summary artifacts are generated for CLI/API runs. |
 | Run -> BudgetIncident | Zero or more incidents | Soft and hard budget threshold events are attached to run state and audit records. |

@@ -4,6 +4,8 @@ import path from 'path';
 
 import { createContainerCommandPlan } from '../../runner-isolation/src/index.mjs';
 
+export const DEFAULT_MAX_EXECUTION_ATTEMPTS = 2;
+
 export const EXECUTION_ADAPTERS = [
   {
     adapter: 'file_read',
@@ -90,7 +92,20 @@ function ensureAllowedStep(step) {
   }
 }
 
-function executionEnvelope({ run, step, adapter, status, exit_code, stdout = '', stderr = '', target_path = null, started_at }) {
+function executionEnvelope({
+  run,
+  step,
+  adapter,
+  status,
+  exit_code,
+  stdout = '',
+  stderr = '',
+  target_path = null,
+  started_at,
+  attempt = 1,
+  max_attempts = DEFAULT_MAX_EXECUTION_ATTEMPTS,
+  retry_of = null
+}) {
   return {
     execution_id: `exec_${Date.now()}_${Math.random().toString(16).slice(2)}`,
     run_id: run.run_id,
@@ -98,6 +113,9 @@ function executionEnvelope({ run, step, adapter, status, exit_code, stdout = '',
     adapter,
     status,
     exit_code,
+    attempt,
+    max_attempts,
+    retry_of,
     target_path,
     stdout,
     stderr,
@@ -106,7 +124,7 @@ function executionEnvelope({ run, step, adapter, status, exit_code, stdout = '',
   };
 }
 
-function executeFileRead({ run, step, cwd, started_at }) {
+function executeFileRead({ run, step, cwd, started_at, attemptState }) {
   const root = workspacePath({ run, cwd });
   const targetPath = 'README.md';
   const absolutePath = path.join(root, targetPath);
@@ -119,7 +137,8 @@ function executeFileRead({ run, step, cwd, started_at }) {
       exit_code: 0,
       target_path: targetPath,
       stdout: fs.readFileSync(absolutePath, 'utf8'),
-      started_at
+      started_at,
+      ...attemptState
     });
   } catch (error) {
     return executionEnvelope({
@@ -130,12 +149,13 @@ function executeFileRead({ run, step, cwd, started_at }) {
       exit_code: 1,
       target_path: targetPath,
       stderr: error.message,
-      started_at
+      started_at,
+      ...attemptState
     });
   }
 }
 
-function executeGitStatus({ run, step, cwd, started_at }) {
+function executeGitStatus({ run, step, cwd, started_at, attemptState }) {
   const result = spawnConstrainedCommand({
     run,
     cwd,
@@ -150,7 +170,8 @@ function executeGitStatus({ run, step, cwd, started_at }) {
     exit_code: result.status ?? 1,
     stdout: result.stdout || '',
     stderr: result.stderr || result.error?.message || '',
-    started_at
+    started_at,
+    ...attemptState
   });
 }
 
@@ -195,7 +216,7 @@ function assertWorkspaceRelative(root, targetPath) {
   return relativePath;
 }
 
-function executePackageScript({ run, step, cwd, started_at }) {
+function executePackageScript({ run, step, cwd, started_at, attemptState }) {
   const root = workspacePath({ run, cwd });
   const scriptName = packageScriptNameForAction(step?.action);
   const targetPath = `package.json#scripts.${scriptName || 'unknown'}`;
@@ -226,7 +247,8 @@ function executePackageScript({ run, step, cwd, started_at }) {
           target_path: targetPath,
           stdout,
           stderr,
-          started_at
+          started_at,
+          ...attemptState
         });
       }
     }
@@ -240,7 +262,8 @@ function executePackageScript({ run, step, cwd, started_at }) {
       target_path: targetPath,
       stdout,
       stderr,
-      started_at
+      started_at,
+      ...attemptState
     });
   } catch (error) {
     return executionEnvelope({
@@ -251,12 +274,13 @@ function executePackageScript({ run, step, cwd, started_at }) {
       exit_code: 1,
       target_path: targetPath,
       stderr: error.message,
-      started_at
+      started_at,
+      ...attemptState
     });
   }
 }
 
-function executeNodeTest({ run, step, cwd, started_at }) {
+function executeNodeTest({ run, step, cwd, started_at, attemptState }) {
   const targetPath = nodeTestScriptForAction(step?.action);
   const result = spawnConstrainedCommand({
     run,
@@ -274,7 +298,8 @@ function executeNodeTest({ run, step, cwd, started_at }) {
     target_path: targetPath,
     stdout: result.stdout || '',
     stderr: result.stderr || result.error?.message || '',
-    started_at
+    started_at,
+    ...attemptState
   });
 }
 
@@ -294,25 +319,101 @@ export function publicExecutionAdapters() {
   }));
 }
 
-export function executeStep({ run, step, cwd }) {
+function executionsForStep(run, step) {
+  return (run?.executions || []).filter(execution => execution.step_id === step?.step_id);
+}
+
+export function createExecutionAttemptState({
+  run,
+  step,
+  retry = false,
+  max_attempts = DEFAULT_MAX_EXECUTION_ATTEMPTS
+} = {}) {
+  const attempts = executionsForStep(run, step);
+  const attempts_used = attempts.length;
+  const last = attempts[attempts.length - 1] || null;
+  const maxAttempts = Math.max(1, Number(max_attempts || DEFAULT_MAX_EXECUTION_ATTEMPTS));
+  const baseRetry = { attempts_used, max_attempts: maxAttempts };
+
+  if (attempts_used === 0) {
+    return {
+      allowed: true,
+      attempt: 1,
+      max_attempts: maxAttempts,
+      retry_of: null,
+      retry: baseRetry
+    };
+  }
+
+  if (!retry) {
+    return {
+      allowed: false,
+      error: 'step has already been executed; pass retry=true to retry failed execution',
+      retry: baseRetry
+    };
+  }
+
+  if (step?.status !== 'failed' || last?.status !== 'failed') {
+    return {
+      allowed: false,
+      error: 'execution retry requires failed previous execution',
+      retry: baseRetry
+    };
+  }
+
+  if (attempts_used >= maxAttempts) {
+    return {
+      allowed: false,
+      error: 'execution retry limit exceeded',
+      retry: baseRetry
+    };
+  }
+
+  return {
+    allowed: true,
+    attempt: attempts_used + 1,
+    max_attempts: maxAttempts,
+    retry_of: last.execution_id,
+    retry: baseRetry
+  };
+}
+
+function ensureExecutableStep(step, attemptState) {
+  if (attemptState?.attempt > 1) {
+    if (step?.status !== 'failed' || step?.pre_execution_check?.decision !== 'allow') {
+      throw new Error('execution retry requires a failed allowed step');
+    }
+    return;
+  }
   ensureAllowedStep(step);
+}
+
+export function executeStep({ run, step, cwd, attemptState }) {
+  const state = attemptState || createExecutionAttemptState({ run, step });
+  if (!state.allowed) throw new Error(state.error);
+  ensureExecutableStep(step, state);
   const started_at = new Date().toISOString();
   const adapter = resolveExecutionAdapter(step);
+  const envelopeState = {
+    attempt: state.attempt,
+    max_attempts: state.max_attempts,
+    retry_of: state.retry_of
+  };
 
   if (adapter === 'file_read') {
-    return executeFileRead({ run, step, cwd, started_at });
+    return executeFileRead({ run, step, cwd, started_at, attemptState: envelopeState });
   }
 
   if (adapter === 'git_status') {
-    return executeGitStatus({ run, step, cwd, started_at });
+    return executeGitStatus({ run, step, cwd, started_at, attemptState: envelopeState });
   }
 
   if (adapter === 'node_test') {
-    return executeNodeTest({ run, step, cwd, started_at });
+    return executeNodeTest({ run, step, cwd, started_at, attemptState: envelopeState });
   }
 
   if (adapter === 'package_script') {
-    return executePackageScript({ run, step, cwd, started_at });
+    return executePackageScript({ run, step, cwd, started_at, attemptState: envelopeState });
   }
 
   return executionEnvelope({
@@ -322,6 +423,7 @@ export function executeStep({ run, step, cwd }) {
     status: 'failed',
     exit_code: 1,
     stderr: `no execution adapter for step action: ${step.action || 'unknown'}`,
-    started_at
+    started_at,
+    ...envelopeState
   });
 }

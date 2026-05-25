@@ -113,6 +113,7 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 - Execution adapters include `file_read`, which reads `README.md` from the run workspace, `git_status`, which runs `git status --short`, `node_test`, which runs whitelisted Node test scripts, and `package_script`, which runs named Node-based package scripts without shell interpolation.
 - Blocked or approval-required steps cannot execute through the execution package; the package requires the step gate decision to be `allow`.
 - Before a step executes, the API acquires a per-run execution lock; active lock conflicts return `409` and stale expired locks no longer block execution.
+- Failed allowed steps can be retried with `POST /runs/:id/steps/:step_id/execute` using `{ "retry": true }`; execution records carry `attempt`, `max_attempts`, and `retry_of`, and retries stop at the bounded attempt limit.
 - Each execution produces a deterministic post-execution verifier record with observed status, exit-code, and output-capture checks.
 - Verifier records are attached to the step and run, emit `step_verified` timeline events, and write `verification_record` audit entries.
 - Execution locks emit `execution_lock_acquired`, `execution_lock_recovered`, and `execution_lock_released` timeline events and write `execution_lock_record` audit entries.

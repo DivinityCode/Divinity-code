@@ -9,7 +9,7 @@ import { createBudgetIncidents } from '../../../packages/budget-incidents/src/in
 import { createCapabilitiesCatalog } from '../../../packages/capabilities/src/index.mjs';
 import { createConnectorReference, createConnectorReferences } from '../../../packages/connectors/src/index.mjs';
 import { createInitialRunEvents, createRunEvent } from '../../../packages/events/src/index.mjs';
-import { executeStep } from '../../../packages/execution/src/index.mjs';
+import { createExecutionAttemptState, executeStep } from '../../../packages/execution/src/index.mjs';
 import {
   activeExecutionLock,
   createExecutionLock,
@@ -799,99 +799,113 @@ const server = http.createServer((req, res) => {
       return;
     }
 
-    run.execution_locks = run.execution_locks || [];
-    recoverRunExecutionLocks(run);
-    const activeLock = activeExecutionLock(run);
-    if (activeLock) {
-      run.active_execution_lock = activeLock;
-      sendJson(res, 409, { error: 'run has active execution lock', lock: activeLock });
-      return;
-    }
+    readJson(req, (body) => {
+      const attemptState = createExecutionAttemptState({
+        run,
+        step,
+        retry: Boolean(body.retry)
+      });
+      if (!attemptState.allowed) {
+        sendJson(res, 409, { error: attemptState.error, retry: attemptState.retry });
+        return;
+      }
 
-    run.active_execution_lock = null;
-    const lock = createExecutionLock({ run, step });
-    run.execution_locks.push(lock);
-    run.active_execution_lock = lock;
-    recordExecutionLock(run, lock, 'execution_lock_acquired', `Execution lock acquired for ${step.step_id}`);
-    persistRunStore();
-    broadcastRun(run);
+      run.execution_locks = run.execution_locks || [];
+      recoverRunExecutionLocks(run);
+      const activeLock = activeExecutionLock(run);
+      if (activeLock) {
+        run.active_execution_lock = activeLock;
+        sendJson(res, 409, { error: 'run has active execution lock', lock: activeLock });
+        return;
+      }
 
-    try {
-      const execution = executeStep({ run, step, cwd: executionCwdForRun(run) });
-      const verification = createExecutionVerification({ run, step, execution });
-      step.status = execution.status;
-      step.execution = execution;
-      step.verification = verification;
-      run.executions.push(execution);
-      run.verifications = run.verifications || [];
-      run.verifications.push(verification);
-      recordAudit({
-        type: 'execution_record',
-        run_id: run.run_id,
-        created_at: execution.completed_at,
-        payload: execution
-      });
-      recordAudit({
-        type: 'verification_record',
-        run_id: run.run_id,
-        created_at: verification.completed_at,
-        payload: verification
-      });
-
-      const event = createRunEvent({
-        run_id: run.run_id,
-        type: 'step_executed',
-        status: run.status,
-        message: `Step ${step.step_id} execution ${execution.status}`,
-        metadata: {
-          step_id: step.step_id,
-          execution_id: execution.execution_id,
-          adapter: execution.adapter,
-          exit_code: execution.exit_code
-        }
-      });
-      run.events.push(event);
-      const verificationEvent = createRunEvent({
-        run_id: run.run_id,
-        type: 'step_verified',
-        status: run.status,
-        message: `Step ${step.step_id} verification ${verification.result}`,
-        metadata: {
-          step_id: step.step_id,
-          execution_id: execution.execution_id,
-          verification_id: verification.verification_id,
-          result: verification.result
-        }
-      });
-      run.events.push(verificationEvent);
-      recordAudit({
-        type: 'run_event',
-        run_id: run.run_id,
-        created_at: event.created_at,
-        payload: event
-      });
-      recordAudit({
-        type: 'run_event',
-        run_id: run.run_id,
-        created_at: verificationEvent.created_at,
-        payload: verificationEvent
-      });
-      const releasedLock = releaseExecutionLock({ lock, status: 'released' });
-      Object.assign(lock, releasedLock);
       run.active_execution_lock = null;
-      recordExecutionLock(run, lock, 'execution_lock_released', `Execution lock released for ${step.step_id}`);
+      const lock = createExecutionLock({ run, step });
+      run.execution_locks.push(lock);
+      run.active_execution_lock = lock;
+      recordExecutionLock(run, lock, 'execution_lock_acquired', `Execution lock acquired for ${step.step_id}`);
       persistRunStore();
       broadcastRun(run);
-      sendJson(res, 200, { execution, verification, step, lock, run: publicRun(run) });
-    } catch (error) {
-      const failedLock = releaseExecutionLock({ lock, status: 'failed' });
-      Object.assign(lock, failedLock);
-      run.active_execution_lock = null;
-      recordExecutionLock(run, lock, 'execution_lock_released', `Execution lock failed for ${step.step_id}`);
-      persistRunStore();
-      broadcastRun(run);
-      sendJson(res, 409, { error: error.message, step });
-    }
+
+      try {
+        const execution = executeStep({ run, step, cwd: executionCwdForRun(run), attemptState });
+        const verification = createExecutionVerification({ run, step, execution });
+        step.status = execution.status;
+        step.execution = execution;
+        step.verification = verification;
+        run.executions.push(execution);
+        run.verifications = run.verifications || [];
+        run.verifications.push(verification);
+        recordAudit({
+          type: 'execution_record',
+          run_id: run.run_id,
+          created_at: execution.completed_at,
+          payload: execution
+        });
+        recordAudit({
+          type: 'verification_record',
+          run_id: run.run_id,
+          created_at: verification.completed_at,
+          payload: verification
+        });
+
+        const event = createRunEvent({
+          run_id: run.run_id,
+          type: 'step_executed',
+          status: run.status,
+          message: `Step ${step.step_id} execution ${execution.status}`,
+          metadata: {
+            step_id: step.step_id,
+            execution_id: execution.execution_id,
+            adapter: execution.adapter,
+            exit_code: execution.exit_code,
+            attempt: execution.attempt,
+            retry_of: execution.retry_of
+          }
+        });
+        run.events.push(event);
+        const verificationEvent = createRunEvent({
+          run_id: run.run_id,
+          type: 'step_verified',
+          status: run.status,
+          message: `Step ${step.step_id} verification ${verification.result}`,
+          metadata: {
+            step_id: step.step_id,
+            execution_id: execution.execution_id,
+            verification_id: verification.verification_id,
+            result: verification.result
+          }
+        });
+        run.events.push(verificationEvent);
+        recordAudit({
+          type: 'run_event',
+          run_id: run.run_id,
+          created_at: event.created_at,
+          payload: event
+        });
+        recordAudit({
+          type: 'run_event',
+          run_id: run.run_id,
+          created_at: verificationEvent.created_at,
+          payload: verificationEvent
+        });
+        const releasedLock = releaseExecutionLock({ lock, status: 'released' });
+        Object.assign(lock, releasedLock);
+        run.active_execution_lock = null;
+        recordExecutionLock(run, lock, 'execution_lock_released', `Execution lock released for ${step.step_id}`);
+        persistRunStore();
+        broadcastRun(run);
+        sendJson(res, 200, { execution, verification, step, lock, run: publicRun(run) });
+      } catch (error) {
+        const failedLock = releaseExecutionLock({ lock, status: 'failed' });
+        Object.assign(lock, failedLock);
+        run.active_execution_lock = null;
+        recordExecutionLock(run, lock, 'execution_lock_released', `Execution lock failed for ${step.step_id}`);
+        persistRunStore();
+        broadcastRun(run);
+        sendJson(res, 409, { error: error.message, step });
+      }
+    });
     return;
   }
 
