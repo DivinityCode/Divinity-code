@@ -1,10 +1,11 @@
 import assert from 'assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 
 const tmpRoot = mkdtempSync(path.join(tmpdir(), 'divinity-api-provider-proxy-route-'));
 const secretRefsPath = path.join(tmpRoot, 'provider-secret-refs.json');
+const secretStorePath = path.join(tmpRoot, 'provider-secret-store.json');
 const providerCatalogPath = path.join(tmpRoot, 'provider-catalog.json');
 const apiResolverSecret = 'api-route-resolver-secret';
 const apiResolverSecretRef = 'secret://divinity/providers/api-secret-ref-mock/api-key';
@@ -40,8 +41,10 @@ writeFileSync(providerCatalogPath, JSON.stringify({
 
 process.env.DIVINITY_API_AUTOSTART = '0';
 process.env.DIVINITY_PROVIDER_SECRET_REFS_PATH = secretRefsPath;
+process.env.DIVINITY_PROVIDER_SECRET_STORE_PATH = secretStorePath;
+process.env.DIVINITY_PROVIDER_SECRET_STORE_KEY = 'api-route-secret-store-key';
 process.env.DIVINITY_PROVIDER_CATALOG_PATH = providerCatalogPath;
-process.env.API_SECRET_REF_MOCK_API_KEY = apiResolverSecret;
+delete process.env.API_SECRET_REF_MOCK_API_KEY;
 process.env.OPENROUTER_API_KEY = 'openrouter-secret';
 process.env.GROQ_API_KEY = 'groq-secret';
 const { server } = await import('../apps/api/src/server.mjs');
@@ -59,17 +62,40 @@ try {
   const { port } = server.address();
   const baseUrl = `http://127.0.0.1:${port}`;
 
+  const { response: writeSecretResponse, body: writeSecretBody } = await requestJson(`${baseUrl}/provider-secrets/store`, {
+    method: 'POST',
+    body: JSON.stringify({
+      provider_id: 'api_secret_ref_mock',
+      secret_ref: apiResolverSecretRef,
+      credential_env_var: 'API_SECRET_REF_MOCK_API_KEY',
+      secret_value: apiResolverSecret,
+      actor: 'operator@example.com',
+      reason: 'Configure API provider secret store fixture'
+    })
+  });
+
+  assert.equal(writeSecretResponse.status, 201);
+  assert.equal(writeSecretBody.secret.format, 'divinity.provider_secret_store_record.v1');
+  assert.equal(writeSecretBody.secret.provider_id, 'api_secret_ref_mock');
+  assert.equal(writeSecretBody.secret.secret_ref, apiResolverSecretRef);
+  assert.equal(writeSecretBody.secret.updated_by, 'operator@example.com');
+  assert.equal(writeSecretBody.secret.reason, 'Configure API provider secret store fixture');
+  assert.equal(JSON.stringify(writeSecretBody).includes(apiResolverSecret), false);
+  assert.equal(readFileSync(secretStorePath, 'utf8').includes(apiResolverSecret), false);
+
   const { response: readinessResponse, body: readinessBody } = await requestJson(`${baseUrl}/provider-secrets/readiness`);
   assert.equal(readinessResponse.status, 200);
   assert.equal(readinessBody.readiness.format, 'divinity.provider_secret_readiness.v1');
   assert.equal(readinessBody.readiness.manifest_configured, true);
+  assert.equal(readinessBody.readiness.store_configured, true);
   assert.equal(readinessBody.readiness.any_configured, true);
   assert.deepEqual(readinessBody.readiness.providers, [
     {
       provider_id: 'api_secret_ref_mock',
       secret_ref: apiResolverSecretRef,
       credential_env_var: 'API_SECRET_REF_MOCK_API_KEY',
-      credential_configured: true
+      credential_configured: true,
+      credential_source: 'store'
     }
   ]);
   assert.equal(JSON.stringify(readinessBody).includes(apiResolverSecret), false);
@@ -91,6 +117,15 @@ try {
   assert.equal(JSON.stringify(secretRefBody).includes(apiResolverSecret), false);
 
   const { body: audit } = await requestJson(`${baseUrl}/audit`);
+  assert.ok(audit.records.some(record => (
+    record.type === 'provider_secret_write'
+      && record.run_id === 'control_plane'
+      && record.payload.format === 'divinity.provider_secret_write_audit.v1'
+      && record.payload.provider_id === 'api_secret_ref_mock'
+      && record.payload.secret_ref === apiResolverSecretRef
+      && record.payload.updated_by === 'operator@example.com'
+      && record.payload.reason === 'Configure API provider secret store fixture'
+  )));
   assert.ok(audit.records.some(record => (
     record.type === 'provider_secret_readiness'
       && record.run_id === 'control_plane'

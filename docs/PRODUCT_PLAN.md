@@ -93,7 +93,8 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: provider proxy route/chat helpers accept an injected `credential_resolver` for hosted runtimes, exposing only configured secret reference ids in route metadata while using resolver-returned secret values only for upstream transport headers.
    - Bootstrap status: API route, chat, and stream execution create that resolver from `DIVINITY_PROVIDER_SECRET_REFS_PATH`, whose `divinity.provider_secret_refs.v1` manifest stores provider ids, `secret://` references, and environment variable names only.
    - Bootstrap status: API `GET /provider-secrets/readiness` returns redacted `divinity.provider_secret_readiness.v1` metadata, and route/chat/stream operations record redacted `provider_secret_readiness` and `provider_secret_ref` audit records without resolved credential values.
-   - Next production slice: replace the API env-backed secret-reference manifest with an approved operator secret store and identity-aware write controls while preserving the same redacted route/readiness/audit metadata.
+   - Bootstrap status: API `POST /provider-secrets/store` can write AES-256-GCM encrypted local store records with required actor/reason metadata, returning and auditing only redacted `divinity.provider_secret_store_record.v1` metadata.
+   - Next production slice: replace the encrypted local secret-store bootstrap with an approved hosted operator secret store while preserving the same redacted route/readiness/write/audit metadata.
 2. Toolset governance.
    - Bootstrap status: public toolset metadata and default resolution are exposed through capabilities, CLI `toolsets`, API `/toolsets`, and `doctor`.
    - Bootstrap status: CLI/API task assembly carries toolset resolution metadata on task/run payloads.

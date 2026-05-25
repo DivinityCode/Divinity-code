@@ -1,12 +1,13 @@
 import assert from 'assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 
 import {
   createProviderCredentialResolver,
   loadProviderSecretRefs,
-  providerSecretReadiness
+  providerSecretReadiness,
+  storeProviderSecret
 } from '../packages/provider-secrets/src/index.mjs';
 
 const tmpRoot = mkdtempSync(path.join(tmpdir(), 'divinity-provider-secret-refs-'));
@@ -48,13 +49,15 @@ try {
   });
   assert.equal(readiness.format, 'divinity.provider_secret_readiness.v1');
   assert.equal(readiness.manifest_configured, true);
+  assert.equal(readiness.store_configured, false);
   assert.equal(readiness.any_configured, true);
   assert.deepEqual(readiness.providers, [
     {
       provider_id: 'hosted_secret_mock',
       secret_ref: secretRef,
       credential_env_var: 'HOSTED_SECRET_MOCK_API_KEY',
-      credential_configured: true
+      credential_configured: true,
+      credential_source: 'environment'
     }
   ]);
   assert.equal(JSON.stringify(readiness).includes('hosted-secret-value'), false);
@@ -62,15 +65,10 @@ try {
   const emptyReadiness = providerSecretReadiness({ env: {} });
   assert.equal(emptyReadiness.format, 'divinity.provider_secret_readiness.v1');
   assert.equal(emptyReadiness.manifest_configured, false);
+  assert.equal(emptyReadiness.store_configured, false);
   assert.equal(emptyReadiness.any_configured, false);
   assert.deepEqual(emptyReadiness.providers, []);
 
-  const resolver = createProviderCredentialResolver({
-    env: {
-      DIVINITY_PROVIDER_SECRET_REFS_PATH: manifestPath,
-      HOSTED_SECRET_MOCK_API_KEY: 'hosted-secret-value'
-    }
-  });
   const runtime = {
     provider_id: 'hosted_secret_mock',
     auth: {
@@ -78,6 +76,98 @@ try {
       configured_env_vars: []
     }
   };
+
+  const storePath = path.join(tmpRoot, 'provider-secret-store.json');
+  const storeKey = 'test-store-key-material';
+  const storeSecret = 'store-secret-value';
+  const storeRecord = storeProviderSecret({
+    env: {
+      DIVINITY_PROVIDER_SECRET_STORE_PATH: storePath,
+      DIVINITY_PROVIDER_SECRET_STORE_KEY: storeKey
+    },
+    provider_id: 'hosted_secret_mock',
+    secret_ref: secretRef,
+    credential_env_var: 'HOSTED_SECRET_MOCK_API_KEY',
+    secret_value: storeSecret,
+    actor: 'operator@example.com',
+    reason: 'Authorized provider onboarding',
+    updated_at: '2026-05-26T08:00:00.000Z'
+  });
+  assert.equal(storeRecord.format, 'divinity.provider_secret_store_record.v1');
+  assert.equal(storeRecord.provider_id, 'hosted_secret_mock');
+  assert.equal(storeRecord.secret_ref, secretRef);
+  assert.equal(storeRecord.credential_env_var, 'HOSTED_SECRET_MOCK_API_KEY');
+  assert.equal(storeRecord.encrypted, true);
+  assert.equal(storeRecord.updated_by, 'operator@example.com');
+  assert.equal(storeRecord.reason, 'Authorized provider onboarding');
+  assert.equal(JSON.stringify(storeRecord).includes(storeSecret), false);
+  assert.equal(readFileSync(storePath, 'utf8').includes(storeSecret), false);
+
+  const storeReadiness = providerSecretReadiness({
+    env: {
+      DIVINITY_PROVIDER_SECRET_REFS_PATH: manifestPath,
+      DIVINITY_PROVIDER_SECRET_STORE_PATH: storePath,
+      DIVINITY_PROVIDER_SECRET_STORE_KEY: storeKey
+    }
+  });
+  assert.equal(storeReadiness.store_configured, true);
+  assert.equal(storeReadiness.any_configured, true);
+  assert.deepEqual(storeReadiness.providers, [
+    {
+      provider_id: 'hosted_secret_mock',
+      secret_ref: secretRef,
+      credential_env_var: 'HOSTED_SECRET_MOCK_API_KEY',
+      credential_configured: true,
+      credential_source: 'store'
+    }
+  ]);
+  assert.equal(JSON.stringify(storeReadiness).includes(storeSecret), false);
+
+  const storeResolver = createProviderCredentialResolver({
+    env: {
+      DIVINITY_PROVIDER_SECRET_REFS_PATH: manifestPath,
+      DIVINITY_PROVIDER_SECRET_STORE_PATH: storePath,
+      DIVINITY_PROVIDER_SECRET_STORE_KEY: storeKey
+    }
+  });
+  assert.deepEqual(storeResolver.configuredSecretRefs(runtime), [secretRef]);
+  assert.equal(storeResolver.resolveCredential(runtime), storeSecret);
+
+  assert.throws(
+    () => storeProviderSecret({
+      env: {
+        DIVINITY_PROVIDER_SECRET_STORE_PATH: path.join(tmpRoot, 'missing-key-store.json')
+      },
+      provider_id: 'hosted_secret_mock',
+      secret_ref: secretRef,
+      credential_env_var: 'HOSTED_SECRET_MOCK_API_KEY',
+      secret_value: 'missing-key-secret',
+      actor: 'operator@example.com',
+      reason: 'Authorized provider onboarding'
+    }),
+    /provider secret store key is required/
+  );
+  assert.throws(
+    () => storeProviderSecret({
+      env: {
+        DIVINITY_PROVIDER_SECRET_STORE_PATH: path.join(tmpRoot, 'missing-actor-store.json'),
+        DIVINITY_PROVIDER_SECRET_STORE_KEY: storeKey
+      },
+      provider_id: 'hosted_secret_mock',
+      secret_ref: secretRef,
+      credential_env_var: 'HOSTED_SECRET_MOCK_API_KEY',
+      secret_value: 'missing-actor-secret',
+      reason: 'Authorized provider onboarding'
+    }),
+    /actor is required/
+  );
+
+  const resolver = createProviderCredentialResolver({
+    env: {
+      DIVINITY_PROVIDER_SECRET_REFS_PATH: manifestPath,
+      HOSTED_SECRET_MOCK_API_KEY: 'hosted-secret-value'
+    }
+  });
 
   assert.deepEqual(resolver.configuredSecretRefs(runtime), [secretRef]);
   assert.equal(resolver.resolveCredential(runtime), 'hosted-secret-value');

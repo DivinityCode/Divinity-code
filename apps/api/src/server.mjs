@@ -32,7 +32,8 @@ import {
 } from '../../../packages/provider-proxy/src/index.mjs';
 import {
   createProviderCredentialResolver,
-  providerSecretReadiness
+  providerSecretReadiness,
+  storeProviderSecret
 } from '../../../packages/provider-secrets/src/index.mjs';
 import { createProviderToolCallApproval } from '../../../packages/provider-tool-approvals/src/index.mjs';
 import { createProviderToolExecution } from '../../../packages/provider-tool-executions/src/index.mjs';
@@ -208,6 +209,25 @@ function recordProviderSecretReadinessAudit(readiness) {
     type: 'provider_secret_readiness',
     run_id: CONTROL_PLANE_AUDIT_RUN_ID,
     payload: redactedProviderSecretReadinessAuditPayload(readiness)
+  });
+}
+
+function recordProviderSecretWriteAudit(secret) {
+  recordAudit({
+    type: 'provider_secret_write',
+    run_id: CONTROL_PLANE_AUDIT_RUN_ID,
+    payload: {
+      format: 'divinity.provider_secret_write_audit.v1',
+      provider_id: secret.provider_id,
+      secret_ref: secret.secret_ref,
+      credential_env_var: secret.credential_env_var,
+      encrypted: secret.encrypted,
+      algorithm: secret.algorithm,
+      updated_at: secret.updated_at,
+      updated_by: secret.updated_by,
+      reason: secret.reason,
+      credential_value_returned: false
+    }
   });
 }
 
@@ -442,6 +462,27 @@ const server = http.createServer((req, res) => {
     } catch (error) {
       sendJson(res, 500, { error: error.message });
     }
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/provider-secrets/store') {
+    readJson(req, (body) => {
+      try {
+        const secret = storeProviderSecret({
+          env: process.env,
+          provider_id: body.provider_id,
+          secret_ref: body.secret_ref,
+          credential_env_var: body.credential_env_var,
+          secret_value: body.secret_value,
+          actor: body.actor,
+          reason: body.reason
+        });
+        recordProviderSecretWriteAudit(secret);
+        sendJson(res, 201, { secret });
+      } catch (error) {
+        sendJson(res, 400, { error: error.message });
+      }
+    });
     return;
   }
 

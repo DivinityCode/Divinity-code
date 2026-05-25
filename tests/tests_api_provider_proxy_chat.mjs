@@ -101,6 +101,7 @@ const repoFixture = path.join(tmpRoot, 'repo');
 const usageLedgerPath = path.join(tmpRoot, 'provider-usage-ledger.json');
 const providerCatalogPath = path.join(tmpRoot, 'provider-catalog.json');
 const secretRefsPath = path.join(tmpRoot, 'provider-secret-refs.json');
+const secretStorePath = path.join(tmpRoot, 'provider-secret-store.json');
 const apiResolverChatSecret = 'api-chat-resolver-secret';
 const apiResolverStreamSecret = 'api-stream-resolver-secret';
 const apiResolverChatSecretRef = 'secret://divinity/providers/api-secret-ref-chat-mock/api-key';
@@ -131,10 +132,31 @@ process.env.DIVINITY_API_AUTOSTART = '0';
 process.env.DIVINITY_WORKSPACE_ROOT = path.join(tmpRoot, 'workspaces');
 process.env.DIVINITY_PROVIDER_USAGE_LEDGER_PATH = usageLedgerPath;
 process.env.DIVINITY_PROVIDER_SECRET_REFS_PATH = secretRefsPath;
-process.env.API_PROVIDER_SECRET_REF_CHAT_KEY = apiResolverChatSecret;
-process.env.API_PROVIDER_SECRET_REF_STREAM_KEY = apiResolverStreamSecret;
+process.env.DIVINITY_PROVIDER_SECRET_STORE_PATH = secretStorePath;
+process.env.DIVINITY_PROVIDER_SECRET_STORE_KEY = 'api-chat-secret-store-key';
+delete process.env.API_PROVIDER_SECRET_REF_CHAT_KEY;
+delete process.env.API_PROVIDER_SECRET_REF_STREAM_KEY;
 process.env.OPENROUTER_API_KEY = apiSecret;
 process.env.CEREBRAS_API_KEY = 'cerebras-secret';
+const { storeProviderSecret } = await import('../packages/provider-secrets/src/index.mjs');
+storeProviderSecret({
+  env: process.env,
+  provider_id: 'api_secret_ref_chat_mock',
+  secret_ref: apiResolverChatSecretRef,
+  credential_env_var: 'API_PROVIDER_SECRET_REF_CHAT_KEY',
+  secret_value: apiResolverChatSecret,
+  actor: 'operator@example.com',
+  reason: 'Configure API chat provider secret store fixture'
+});
+storeProviderSecret({
+  env: process.env,
+  provider_id: 'api_secret_ref_stream_mock',
+  secret_ref: apiResolverStreamSecretRef,
+  credential_env_var: 'API_PROVIDER_SECRET_REF_STREAM_KEY',
+  secret_value: apiResolverStreamSecret,
+  actor: 'operator@example.com',
+  reason: 'Configure API stream provider secret store fixture'
+});
 const { server } = await import('../apps/api/src/server.mjs');
 const mock = await createMockChatServer();
 const ledgerLimitedMock = await createMockChatServer(({ res }) => {
