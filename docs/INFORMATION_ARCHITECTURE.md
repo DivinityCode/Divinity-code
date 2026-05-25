@@ -31,7 +31,7 @@ This document defines how Builder Mode and Operator Mode expose the shared Task/
 | `init` | Config path, policy, budget, scope, starter recipes | Confirm local setup and onboarding defaults |
 | `run` | Task payload, preflight, status, policy pack, orchestration, activity, memory, artifacts, events | Decide whether the run is safe to continue or needs approval |
 | `status` | Current lifecycle status placeholder | Check queued state in the bootstrap CLI |
-| `approve` | Approval status placeholder | Exercise approval command surface |
+| `approvals` / `approve` / `reject` | API-backed approval queue and local structured approval decisions | Exercise approval command surface and operator transitions |
 | `capabilities` | Policy presets, adapters, isolation profiles, connectors, recipes | Discover supported extension points |
 | `recipes` | Starter recipe summaries | Select first-run workflows |
 | `doctor` | Local readiness checks | Diagnose setup before deeper work |
@@ -71,7 +71,7 @@ This document defines how Builder Mode and Operator Mode expose the shared Task/
 | Preflight | `run` output | `/preflight`, stored run preflight | decision panel and timeline |
 | Events | `run` output | `/runs/:id/events`, stream | timeline |
 | Artifacts | metadata in `run` output | `/runs/:id/artifacts`, `/artifacts/:id` | artifact panel |
-| Approvals | placeholder CLI command | `/approvals`, `/runs/:id/approval` | approval queue and action panel |
+| Approvals | `approvals`, `approve`, and `reject` CLI commands | `/approvals`, `/runs/:id/approval` | approval queue and action panel |
 | Observability | not primary | `/observability` | observability region |
 | Audit | not primary | `/audit` | audit metadata and export affordance |
 

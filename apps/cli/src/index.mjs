@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { spawnSync } from 'child_process';
 import fs from 'fs';
+import http from 'http';
+import https from 'https';
 import path from 'path';
 import { createInterface } from 'readline/promises';
 
@@ -258,6 +260,122 @@ function parseRunArgs(values) {
   };
 }
 
+function parseApprovalArgs(values, defaultDecision = 'approve') {
+  const options = {
+    run_id: '',
+    api: '',
+    decision: defaultDecision,
+    actor: 'cli',
+    reason: ''
+  };
+
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    const next = values[index + 1];
+
+    if (value === '--api' || value === '--api-url') {
+      options.api = next;
+      index += 1;
+    } else if (value.startsWith('--api=')) {
+      options.api = value.slice('--api='.length);
+    } else if (value === '--decision') {
+      options.decision = next;
+      index += 1;
+    } else if (value.startsWith('--decision=')) {
+      options.decision = value.slice('--decision='.length);
+    } else if (value === '--actor') {
+      options.actor = next;
+      index += 1;
+    } else if (value.startsWith('--actor=')) {
+      options.actor = value.slice('--actor='.length);
+    } else if (value === '--reason') {
+      options.reason = next;
+      index += 1;
+    } else if (value.startsWith('--reason=')) {
+      options.reason = value.slice('--reason='.length);
+    } else if (value === '--reject') {
+      options.decision = 'reject';
+    } else if (!options.run_id) {
+      options.run_id = value;
+    } else {
+      throw new Error(`unknown approval option: ${value}`);
+    }
+  }
+
+  options.decision = String(options.decision || '').trim();
+  if (options.decision !== 'approve' && options.decision !== 'reject') {
+    throw new Error('approval decision must be approve or reject');
+  }
+
+  options.actor = String(options.actor || '').trim() || 'cli';
+  options.reason = String(options.reason || '').trim();
+  options.api = String(options.api || '').trim().replace(/\/+$/, '');
+  options.run_id = String(options.run_id || '').trim();
+
+  return options;
+}
+
+function parseApprovalsArgs(values) {
+  const options = { api: '' };
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    const next = values[index + 1];
+    if (value === '--api' || value === '--api-url') {
+      options.api = next;
+      index += 1;
+    } else if (value.startsWith('--api=')) {
+      options.api = value.slice('--api='.length);
+    } else {
+      throw new Error(`unknown approvals option: ${value}`);
+    }
+  }
+  options.api = String(options.api || '').trim().replace(/\/+$/, '');
+  return options;
+}
+
+async function fetchJson(url, options = {}) {
+  const parsedUrl = new URL(url);
+  const client = parsedUrl.protocol === 'https:' ? https : http;
+  const body = options.body || '';
+  const headers = {
+    'content-type': 'application/json',
+    connection: 'close',
+    ...(options.headers || {})
+  };
+  if (body) headers['content-length'] = Buffer.byteLength(body);
+
+  return await new Promise((resolve, reject) => {
+    const req = client.request(parsedUrl, {
+      method: options.method || 'GET',
+      headers,
+      agent: false
+    }, res => {
+      let rawBody = '';
+      res.setEncoding('utf8');
+      res.on('data', chunk => rawBody += chunk);
+      res.on('end', () => {
+        let responseBody = {};
+        try {
+          responseBody = rawBody ? JSON.parse(rawBody) : {};
+        } catch {
+          responseBody = { raw: rawBody };
+        }
+        resolve({
+          response: {
+            ok: res.statusCode >= 200 && res.statusCode < 300,
+            status: res.statusCode
+          },
+          body: responseBody
+        });
+      });
+    });
+
+    req.on('error', reject);
+    if (body) req.write(body);
+    req.end();
+  });
+}
+
 function asBudgetNumber(value, label) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) {
@@ -405,8 +523,91 @@ function status() {
   print({ ok: true, command: 'status', status: 'queued' });
 }
 
-function approve() {
-  print({ ok: true, command: 'approve', status: 'approved' });
+function localApprovalPayload(options, commandName) {
+  const approval = {
+    decision: options.decision,
+    actor: options.actor,
+    reason: options.reason,
+    decided_at: new Date().toISOString()
+  };
+  const status = options.decision === 'approve' ? 'queued' : 'failed';
+
+  return {
+    ok: true,
+    command: commandName,
+    run_id: options.run_id,
+    status,
+    approval
+  };
+}
+
+async function approvals() {
+  try {
+    const options = parseApprovalsArgs(args);
+    if (!options.api) {
+      print({
+        ok: true,
+        command: 'approvals',
+        runs: [],
+        note: 'pass --api <url> to read the API approval queue'
+      });
+      return;
+    }
+
+    const { response, body } = await fetchJson(`${options.api}/approvals`);
+    print({
+      ok: response.ok,
+      command: 'approvals',
+      api: options.api,
+      status_code: response.status,
+      runs: body.runs || [],
+      response: body
+    });
+    if (!response.ok) process.exitCode = 1;
+  } catch (error) {
+    print({ ok: false, command: 'approvals', error: error.message });
+    process.exitCode = 1;
+  }
+}
+
+async function approve(commandName = 'approve', defaultDecision = 'approve') {
+  try {
+    const options = parseApprovalArgs(args, defaultDecision);
+    if (!options.run_id && !options.api && commandName === 'approve') {
+      print({ ok: true, command: 'approve', status: 'approved' });
+      return;
+    }
+    if (!options.run_id) {
+      throw new Error(`${commandName} requires a run_id`);
+    }
+    if (!options.api) {
+      print(localApprovalPayload(options, commandName));
+      return;
+    }
+
+    const { response, body } = await fetchJson(`${options.api}/runs/${options.run_id}/approval`, {
+      method: 'POST',
+      body: JSON.stringify({
+        decision: options.decision,
+        actor: options.actor,
+        reason: options.reason
+      })
+    });
+    print({
+      ok: response.ok,
+      command: commandName,
+      api: options.api,
+      run_id: options.run_id,
+      status_code: response.status,
+      status: body.status,
+      approval: body.approval,
+      run: body
+    });
+    if (!response.ok) process.exitCode = 1;
+  } catch (error) {
+    print({ ok: false, command: commandName, error: error.message });
+    process.exitCode = 1;
+  }
 }
 
 function recipes() {
@@ -459,7 +660,9 @@ switch (command) {
   case 'init': await init(); break;
   case 'run': run(); break;
   case 'status': status(); break;
-  case 'approve': approve(); break;
+  case 'approvals': await approvals(); break;
+  case 'approve': await approve('approve', 'approve'); break;
+  case 'reject': await approve('reject', 'reject'); break;
   case 'capabilities': capabilities(); break;
   case 'recipes': recipes(); break;
   case 'doctor': doctor(); break;
@@ -467,6 +670,6 @@ switch (command) {
   default:
     print({
       ok: false,
-      usage: 'divinity <init|run|status|approve|capabilities|recipes|doctor|bug> [args]'
+      usage: 'divinity <init|run|status|approvals|approve|reject|capabilities|recipes|doctor|bug> [args]'
     });
 }
