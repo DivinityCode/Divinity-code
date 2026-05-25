@@ -75,15 +75,16 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 - If the primary candidate is marked limited, route planning can fail over to another configured candidate for reliability or cost policy and records `rotation_reason: "provider_limit_reached"`.
 - The policy fails closed for public shared-key sources, missing credentials, unknown providers, and explicit `rotation_intent: "bypass_limits"`.
 - `executeProviderProxyChat()`, CLI `provider-chat`, and API `POST /provider-proxy/chat` add controlled non-streaming execution paths behind the same route policy.
-- Chat execution supports OpenAI-compatible `chat_completions`, Anthropic `anthropic_messages`, and OpenAI `codex_responses` transports. Streaming, hosted secret stores, managed rate-limit ledgers, and approved live tool execution remain explicit future handlers.
+- Chat execution supports OpenAI-compatible `chat_completions`, Anthropic `anthropic_messages`, and OpenAI `codex_responses` transports. Streaming, hosted secret stores, and approved live tool execution remain explicit future handlers.
 - The Chat Completions path posts `{ model, messages, max_completion_tokens, temperature }` to `/chat/completions`.
 - The Anthropic Messages path posts `{ model, system, messages, max_tokens, temperature }` to `/v1/messages` with `anthropic-version: 2023-06-01` and `x-api-key` when credentials are required.
 - The OpenAI Responses path posts `{ model, instructions, input, max_output_tokens, temperature }` to `/responses`.
 - Credentialed provider `base_url` overrides are blocked during execution so operator-owned API keys cannot be redirected to caller-supplied endpoints; local no-key custom endpoints remain available for development and tests.
 - Provider chat execution resolves the selected toolsets before budget checks or upstream requests. Providers missing required `tool_calls` capability fail closed with `toolset_resolution` provider capability checks and `provider_capability_review` operator controls.
 - Provider-returned tool calls are governance events, not automatic executions. Chat Completions `message.tool_calls`, Anthropic Messages `tool_use` content blocks, and OpenAI Responses `function_call` output items return `status: "requires_action"`, redacted `tool_call_requests`, and a required `tool_call_review` operator control.
+- Provider retry windows are tracked through `createProviderLimitLedger()` as provider ids and timestamps only. API route/chat calls use an in-process ledger by default and can persist it via `DIVINITY_PROVIDER_LIMIT_LEDGER_PATH`; CLI route/chat calls use that file-backed ledger only when the env var is configured. No default repo-root state file is created.
 - Returned `divinity.provider_proxy_chat_result.v1` metadata includes provider, model, status, upstream status, response message, finish reason, usage, and toolset resolution, but it omits prompt messages, request bodies, credential values, and raw tool arguments.
-- Live upstream `429` responses return `status: "limited"` with retry-after metadata and do not automatically fail over to another provider, preventing hidden quota bypass.
+- Live upstream `429` responses return `status: "limited"` with retry-after metadata, record the provider retry window when a ledger is available, and do not automatically fail over to another provider in the same request, preventing hidden quota bypass.
 - OpenAI-compatible Chat Completions uses `max_completion_tokens`; OpenAI Responses uses `max_output_tokens`; Anthropic Messages uses its current `max_tokens` field.
 
 ## Connector References

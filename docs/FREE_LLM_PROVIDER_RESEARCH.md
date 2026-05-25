@@ -43,12 +43,13 @@ Excluded provider sources:
 - Provider-returned tool calls from Chat Completions, Anthropic Messages, and OpenAI Responses are detected but not executed. They return `status: "requires_action"`, redacted `tool_call_requests`, and a required `tool_call_review` operator control.
 - Provider chat execution enforces selected toolset compatibility before upstream calls; chat-only free-tier candidates cannot be used for toolsets that require provider `tool_calls` support.
 - Credentialed provider endpoint overrides fail closed during execution so operator-owned secrets are never forwarded to caller-supplied URLs.
-- A future live proxy should extend this with managed rate-limit stores, streaming, hosted secret integration, and approved tool execution loops while preserving fail-closed behavior.
+- Provider retry windows can now be tracked in a provider limit ledger. API chat execution uses an in-process ledger by default and optional `DIVINITY_PROVIDER_LIMIT_LEDGER_PATH` persistence; CLI route/chat commands use that file-backed ledger only when configured.
+- A future live proxy should extend this with fuller request/token budget ledgers, streaming, hosted secret integration, and approved tool execution loops while preserving fail-closed behavior.
 - Rotation is acceptable for reliability and cost policy across operator-owned credentials; it is not acceptable for evading limits.
 
 ## Next Safe Slice
 Extend controlled execution toward production operations:
-- persist per-provider request and token budgets in a managed store;
+- persist fuller per-provider request and token budgets in a managed store;
 - add streaming response support with redacted audit metadata;
 - integrate an approved secret store while keeping environment variables as the local development path;
 - keep returning clear `429` or policy errors when limits are reached instead of bypassing them.

@@ -1,6 +1,6 @@
 import assert from 'assert/strict';
 
-import { planProviderProxyRoute } from '../packages/provider-proxy/src/index.mjs';
+import { createProviderLimitLedger, planProviderProxyRoute } from '../packages/provider-proxy/src/index.mjs';
 
 const ready = planProviderProxyRoute({
   candidates: ['openrouter', 'groq'],
@@ -32,6 +32,58 @@ const rotated = planProviderProxyRoute({
 assert.equal(rotated.status, 'ready');
 assert.equal(rotated.selected_provider_runtime.provider_id, 'groq');
 assert.equal(rotated.rotation_reason, 'provider_limit_reached');
+
+const ledgerNow = new Date('2026-05-25T10:00:00.000Z');
+const activeLedger = createProviderLimitLedger({ now: () => ledgerNow });
+activeLedger.recordLimit({
+  provider_id: 'openrouter',
+  retry_after_seconds: 60,
+  observed_at: ledgerNow.toISOString()
+});
+
+const ledgerRotated = planProviderProxyRoute({
+  candidates: ['openrouter', 'groq'],
+  env: {
+    OPENROUTER_API_KEY: 'openrouter-secret',
+    GROQ_API_KEY: 'groq-secret'
+  },
+  limit_ledger: activeLedger
+});
+
+assert.equal(ledgerRotated.status, 'ready');
+assert.equal(ledgerRotated.selected_provider_runtime.provider_id, 'groq');
+assert.equal(ledgerRotated.rotation_reason, 'provider_limit_reached');
+assert.equal(ledgerRotated.candidate_results[0].status, 'limited');
+assert.equal(ledgerRotated.candidate_results[0].retry_after_seconds, 60);
+assert.equal(JSON.stringify(ledgerRotated).includes('openrouter-secret'), false);
+assert.equal(JSON.stringify(ledgerRotated).includes('groq-secret'), false);
+
+const expiredLedger = createProviderLimitLedger({
+  initial_state: {
+    providers: {
+      openrouter: {
+        provider_id: 'openrouter',
+        observed_at: '2026-05-25T09:00:00.000Z',
+        limited_until: '2026-05-25T09:01:00.000Z',
+        retry_after_seconds: 60,
+        source: 'upstream_429'
+      }
+    }
+  },
+  now: () => new Date('2026-05-25T10:00:00.000Z')
+});
+
+const expiredReady = planProviderProxyRoute({
+  candidates: ['openrouter', 'groq'],
+  env: {
+    OPENROUTER_API_KEY: 'openrouter-secret',
+    GROQ_API_KEY: 'groq-secret'
+  },
+  limit_ledger: expiredLedger
+});
+
+assert.equal(expiredReady.status, 'ready');
+assert.equal(expiredReady.selected_provider_runtime.provider_id, 'openrouter');
 
 const bypass = planProviderProxyRoute({
   candidates: ['openrouter', 'groq'],

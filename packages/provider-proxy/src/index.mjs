@@ -3,6 +3,15 @@ import https from 'https';
 
 import { resolveProviderRuntime } from '../../provider-runtime/src/index.mjs';
 import { resolveToolsets } from '../../toolsets/src/index.mjs';
+import {
+  createConfiguredProviderLimitLedger,
+  createProviderLimitLedger
+} from './limit-ledger.mjs';
+
+export {
+  createConfiguredProviderLimitLedger,
+  createProviderLimitLedger
+};
 
 export const PROVIDER_PROXY_POLICY = {
   allow_public_shared_keys: false,
@@ -40,8 +49,38 @@ function limitStateFor(limitState, providerId) {
     limit_reached: Boolean(state.limit_reached),
     retry_after_seconds: Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
       ? retryAfterSeconds
-      : 0
+      : 0,
+    limited_until: String(state.limited_until || '').trim(),
+    source: String(state.source || '').trim()
   };
+}
+
+function mergeLimitStates(...states) {
+  const merged = {};
+  for (const state of states) {
+    if (!state || typeof state !== 'object') continue;
+    for (const providerId of Object.keys(state)) {
+      const cleanProviderId = String(providerId || '').trim();
+      if (!cleanProviderId) continue;
+      const next = limitStateFor(state, providerId);
+      if (!next.limit_reached) continue;
+      const existing = limitStateFor(merged, cleanProviderId);
+      if (!existing.limit_reached || next.retry_after_seconds >= existing.retry_after_seconds) {
+        merged[cleanProviderId] = {
+          limit_reached: true,
+          retry_after_seconds: next.retry_after_seconds,
+          limited_until: next.limited_until,
+          source: next.source
+        };
+      }
+    }
+  }
+  return merged;
+}
+
+function activeLimitStateFromLedger(limitLedger) {
+  if (!limitLedger || typeof limitLedger.activeLimitState !== 'function') return {};
+  return limitLedger.activeLimitState();
 }
 
 function blockedRoute(base, error) {
@@ -61,7 +100,7 @@ function isPublicSharedKeySource(value) {
 }
 
 function publicCandidateResult({ candidate, runtime, limitState }) {
-  return {
+  const result = {
     provider_id: candidate.provider_id,
     source: candidate.source,
     status: limitState.limit_reached ? 'limited' : 'ready',
@@ -72,6 +111,9 @@ function publicCandidateResult({ candidate, runtime, limitState }) {
     limit_reached: limitState.limit_reached,
     retry_after_seconds: limitState.retry_after_seconds
   };
+  if (limitState.limited_until) result.limited_until = limitState.limited_until;
+  if (limitState.source) result.limit_source = limitState.source;
+  return result;
 }
 
 function promptCharacterCount(messages) {
@@ -485,10 +527,12 @@ export function planProviderProxyRoute({
   candidates = ['openrouter'],
   env = process.env,
   limit_state = {},
+  limit_ledger = null,
   rotation_intent = 'reliability',
   requested_model = ''
 } = {}) {
   const candidateList = normalizedCandidates(candidates);
+  const effectiveLimitState = mergeLimitStates(activeLimitStateFromLedger(limit_ledger), limit_state);
   const base = {
     format: 'divinity.provider_proxy_route.v1',
     status: 'blocked',
@@ -543,7 +587,7 @@ export function planProviderProxyRoute({
       continue;
     }
 
-    const limitState = limitStateFor(limit_state, candidate.provider_id);
+    const limitState = limitStateFor(effectiveLimitState, candidate.provider_id);
     if (limitState.limit_reached) {
       sawLimitedProvider = true;
       base.candidate_results.push(publicCandidateResult({ candidate, runtime, limitState }));
@@ -571,6 +615,7 @@ export async function executeProviderProxyChat({
   candidates = ['openrouter'],
   env = process.env,
   limit_state = {},
+  limit_ledger = null,
   rotation_intent = 'reliability',
   requested_model = '',
   messages = [],
@@ -587,6 +632,7 @@ export async function executeProviderProxyChat({
     candidates,
     env,
     limit_state,
+    limit_ledger,
     rotation_intent,
     requested_model
   });
@@ -667,16 +713,25 @@ export async function executeProviderProxyChat({
   }
 
   if (response.status === 429) {
-    return {
+    const retryAfter = retryAfterSeconds(response.headers);
+    const limitLedgerRecord = limit_ledger && typeof limit_ledger.recordLimit === 'function'
+      ? limit_ledger.recordLimit({
+        provider_id: runtime.provider_id,
+        retry_after_seconds: retryAfter
+      })
+      : null;
+    const result = {
       ...resultBase(route, toolsetResolution),
       status: 'limited',
       provider_id: runtime.provider_id,
       model: request.model,
       transport: runtime.transport,
       upstream_status: response.status,
-      retry_after_seconds: retryAfterSeconds(response.headers),
+      retry_after_seconds: retryAfter,
       error: upstreamErrorStatus(response.status)
     };
+    if (limitLedgerRecord) result.limit_ledger_record = limitLedgerRecord;
+    return result;
   }
 
   if (!response.ok) {
