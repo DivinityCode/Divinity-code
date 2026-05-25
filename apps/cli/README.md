@@ -1,7 +1,7 @@
 # CLI App
 Owner: Builder Experience
 
-Commands: `init`, `run`, `status`, `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `capabilities`, `recipes`, `doctor`, `bug`.
+Commands: `init`, `run`, `status`, `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `approval-revision`, `approval-resubmit`, `capabilities`, `recipes`, `doctor`, `bug`.
 
 ## Current Behavior
 - `init` writes `.divinity.json` with the default `safe_exec` policy, budget caps, and org/project scope.
@@ -13,11 +13,13 @@ Commands: `init`, `run`, `status`, `approvals`, `approval`, `approve`, `reject`,
 - `run --criteria "All tests pass" --success-criteria "Docs updated" "Implement policy trace"` attaches explicit success criteria to the task payload and creates matching run `goals` records with evidence and budget allocation.
 - `status <run_id> --api http://127.0.0.1:3000` fetches a stored API run and returns its lifecycle status plus the run payload; without `--api`, `status` keeps the local queued placeholder for scripts.
 - `approvals --api http://127.0.0.1:3000` lists approval-required runs from the control-plane API.
-- `approval <run_id> --api http://127.0.0.1:3000` fetches approval state, approval comments, and the current run payload without mutating the run.
+- `approval <run_id> --api http://127.0.0.1:3000` fetches approval state, latest approval revision, approval comments, and the current run payload without mutating the run.
 - `approve <run_id> --api http://127.0.0.1:3000 --actor operator@example.com --reason "reviewed"` approves an API-backed run and returns the updated run payload.
 - `reject <run_id> --api http://127.0.0.1:3000 --actor operator@example.com --reason "unsafe"` rejects an API-backed run; without `--api`, `approve` and `reject` emit local structured decision payloads for scripts.
 - `approval-comment <run_id> --api http://127.0.0.1:3000 --actor operator@example.com --body "needs verifier output"` attaches an API-backed approval review comment; without `--api`, it emits a local structured comment payload for scripts.
 - `approval-comments <run_id> --api http://127.0.0.1:3000` lists approval comments for an API-backed run.
+- `approval-revision <run_id> --api http://127.0.0.1:3000 --actor operator@example.com --reason "needs rollback evidence" --change "attach rollback plan"` requests revision on an API-backed approval run and moves it to `paused`; without `--api`, it emits a local structured revision payload for scripts.
+- `approval-resubmit <run_id> --api http://127.0.0.1:3000 --actor builder@example.com --reason "rollback evidence attached"` resubmits a paused approval revision back to `awaiting_approval`; without `--api`, it emits a local structured resubmission payload for scripts.
 - `capabilities` lists supported policy presets, execution adapters, runner isolation profiles, connector adapters, and starter recipe summaries as `divinity.capabilities.v1`.
 - `recipes` lists the built-in guided starter recipes.
 - `doctor` reports Node, optional npm, optional pnpm/Corepack fallback, aggregate package-manager readiness, optional Docker runtime readiness for container-sandbox execution, installed dependencies, AJV validator dependencies, git, package manifest, and API server source readiness as structured JSON.

@@ -1,5 +1,10 @@
 # Contracts Changelog
 
+## v1.34.0
+- Added `ApprovalRevision` schema and examples for approval revision request and resubmission records.
+- Added optional `approval_revision` payloads to Run records.
+- Added `approval_revision_requested` and `approval_resubmitted` run events plus `approval_revision` audit records.
+
 ## v1.33.0
 - Added `ApprovalComment` schema and examples for approval discussion records.
 - Added `approval_comment_added` run events and `approval_comment` audit records.

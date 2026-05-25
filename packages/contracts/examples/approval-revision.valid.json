@@ -1,0 +1,9 @@
+{
+  "revision_id": "approval_revision_run_1_001",
+  "run_id": "run_1",
+  "actor": "operator@example.com",
+  "reason": "Rollback evidence is missing.",
+  "requested_changes": ["Attach rollback plan", "Confirm maintenance window"],
+  "status": "requested",
+  "requested_at": "2026-05-25T00:00:01Z"
+}

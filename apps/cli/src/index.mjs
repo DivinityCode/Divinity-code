@@ -8,6 +8,7 @@ import { createInterface } from 'readline/promises';
 
 import { createAgentActivityRecords } from '../../../packages/agent-activity/src/index.mjs';
 import { createApprovalComment } from '../../../packages/approval-comments/src/index.mjs';
+import { createApprovalRevision, resubmitApprovalRevision } from '../../../packages/approval-revisions/src/index.mjs';
 import { createRunArtifacts, publicArtifactMetadata } from '../../../packages/artifacts/src/index.mjs';
 import { createBudgetIncidents } from '../../../packages/budget-incidents/src/index.mjs';
 import { createCapabilitiesCatalog } from '../../../packages/capabilities/src/index.mjs';
@@ -408,6 +409,56 @@ function parseApprovalCommentArgs(values) {
   return options;
 }
 
+function parseApprovalRevisionArgs(values) {
+  const options = {
+    run_id: '',
+    api: '',
+    actor: 'cli',
+    reason: '',
+    requested_changes: []
+  };
+
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    const next = values[index + 1];
+
+    if (value === '--api' || value === '--api-url') {
+      options.api = next;
+      index += 1;
+    } else if (value.startsWith('--api=')) {
+      options.api = value.slice('--api='.length);
+    } else if (value === '--actor') {
+      options.actor = next;
+      index += 1;
+    } else if (value.startsWith('--actor=')) {
+      options.actor = value.slice('--actor='.length);
+    } else if (value === '--reason') {
+      options.reason = next;
+      index += 1;
+    } else if (value.startsWith('--reason=')) {
+      options.reason = value.slice('--reason='.length);
+    } else if (value === '--change' || value === '--requested-change') {
+      options.requested_changes.push(next);
+      index += 1;
+    } else if (value.startsWith('--change=')) {
+      options.requested_changes.push(value.slice('--change='.length));
+    } else if (value.startsWith('--requested-change=')) {
+      options.requested_changes.push(value.slice('--requested-change='.length));
+    } else if (!options.run_id) {
+      options.run_id = value;
+    } else {
+      throw new Error(`unknown approval revision option: ${value}`);
+    }
+  }
+
+  options.api = String(options.api || '').trim().replace(/\/+$/, '');
+  options.actor = String(options.actor || '').trim() || 'cli';
+  options.reason = String(options.reason || '').trim();
+  options.requested_changes = options.requested_changes.map(value => String(value || '').trim()).filter(Boolean);
+  options.run_id = String(options.run_id || '').trim();
+  return options;
+}
+
 async function fetchJson(url, options = {}) {
   const parsedUrl = new URL(url);
   const client = parsedUrl.protocol === 'https:' ? https : http;
@@ -658,6 +709,44 @@ function localApprovalPayload(options, commandName) {
   };
 }
 
+function localApprovalRevisionPayload(options) {
+  const revision = createApprovalRevision({
+    run_id: options.run_id,
+    actor: options.actor,
+    reason: options.reason,
+    requested_changes: options.requested_changes
+  });
+
+  return {
+    ok: true,
+    command: 'approval-revision',
+    run_id: options.run_id,
+    status: 'paused',
+    revision
+  };
+}
+
+function localApprovalResubmitPayload(options) {
+  const requested = createApprovalRevision({
+    run_id: options.run_id,
+    actor: options.actor,
+    reason: options.reason || 'Resubmission requested',
+    requested_changes: []
+  });
+  const revision = resubmitApprovalRevision(requested, {
+    actor: options.actor,
+    reason: options.reason
+  });
+
+  return {
+    ok: true,
+    command: 'approval-resubmit',
+    run_id: options.run_id,
+    status: 'awaiting_approval',
+    revision
+  };
+}
+
 async function approvals() {
   try {
     const options = parseApprovalsArgs(args);
@@ -803,6 +892,81 @@ async function approvalComments() {
   }
 }
 
+async function approvalRevision() {
+  try {
+    const options = parseApprovalRevisionArgs(args);
+    if (!options.run_id) {
+      throw new Error('approval-revision requires a run_id');
+    }
+
+    if (!options.api) {
+      print(localApprovalRevisionPayload(options));
+      return;
+    }
+
+    const { response, body } = await fetchJson(`${options.api}/runs/${options.run_id}/approval/revision`, {
+      method: 'POST',
+      body: JSON.stringify({
+        actor: options.actor,
+        reason: options.reason,
+        requested_changes: options.requested_changes
+      })
+    });
+    print({
+      ok: response.ok,
+      command: 'approval-revision',
+      api: options.api,
+      run_id: options.run_id,
+      status_code: response.status,
+      status: body.status,
+      revision: body.approval_revision || null,
+      run: body,
+      response: body
+    });
+    if (!response.ok) process.exitCode = 1;
+  } catch (error) {
+    print({ ok: false, command: 'approval-revision', error: error.message });
+    process.exitCode = 1;
+  }
+}
+
+async function approvalResubmit() {
+  try {
+    const options = parseApprovalRevisionArgs(args);
+    if (!options.run_id) {
+      throw new Error('approval-resubmit requires a run_id');
+    }
+
+    if (!options.api) {
+      print(localApprovalResubmitPayload(options));
+      return;
+    }
+
+    const { response, body } = await fetchJson(`${options.api}/runs/${options.run_id}/approval/resubmit`, {
+      method: 'POST',
+      body: JSON.stringify({
+        actor: options.actor,
+        reason: options.reason
+      })
+    });
+    print({
+      ok: response.ok,
+      command: 'approval-resubmit',
+      api: options.api,
+      run_id: options.run_id,
+      status_code: response.status,
+      status: body.status,
+      revision: body.approval_revision || null,
+      run: body,
+      response: body
+    });
+    if (!response.ok) process.exitCode = 1;
+  } catch (error) {
+    print({ ok: false, command: 'approval-resubmit', error: error.message });
+    process.exitCode = 1;
+  }
+}
+
 async function approval() {
   try {
     const options = parseStatusArgs(args);
@@ -832,6 +996,7 @@ async function approval() {
       status: body.status,
       approval_required: Boolean(body.approval_required),
       approval: body.approval || null,
+      revision: body.revision || null,
       comments: body.comments || [],
       run: body.run,
       response: body
@@ -899,6 +1064,8 @@ switch (command) {
   case 'reject': await approve('reject', 'reject'); break;
   case 'approval-comment': await approvalComment(); break;
   case 'approval-comments': await approvalComments(); break;
+  case 'approval-revision': await approvalRevision(); break;
+  case 'approval-resubmit': await approvalResubmit(); break;
   case 'capabilities': capabilities(); break;
   case 'recipes': recipes(); break;
   case 'doctor': doctor(); break;
@@ -906,6 +1073,6 @@ switch (command) {
   default:
     print({
       ok: false,
-      usage: 'divinity <init|run|status|approvals|approval|approve|reject|approval-comment|approval-comments|capabilities|recipes|doctor|bug> [args]'
+      usage: 'divinity <init|run|status|approvals|approval|approve|reject|approval-comment|approval-comments|approval-revision|approval-resubmit|capabilities|recipes|doctor|bug> [args]'
     });
 }
