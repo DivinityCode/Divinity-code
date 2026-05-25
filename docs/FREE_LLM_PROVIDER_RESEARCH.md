@@ -33,7 +33,8 @@ Excluded provider sources:
 
 ## Implementation Implications
 - Provider endpoints now live in `packages/provider-runtime/providers.v1.json` instead of being embedded in code.
-- `packages/provider-runtime` loads and validates the local provider catalog at runtime.
+- `packages/provider-runtime` loads and validates the local provider catalog at runtime, and can merge a reviewed operator overlay from `DIVINITY_PROVIDER_CATALOG_PATH` for legitimate free-tier, trial, or local providers that are not yet in the built-in catalog.
+- Provider catalog overlays may add metadata and credential environment variable names only. They must not contain shared public keys, scraped credentials, no-registration key pools, or sources whose purpose is bypass, evasion, or circumvention.
 - Task payloads may carry `llm_provider`, `provider_runtime`, `toolsets`, and `toolset_resolution` so provider/tool decisions are visible before execution.
 - The provider catalog includes authorized free-tier candidates from the research, such as Groq, Cerebras, Mistral, and GitHub Models, but it stores only endpoint metadata and credential environment variable names.
 - `packages/provider-proxy` now plans safe provider routes from the trusted catalog and blocks public shared-key sources, missing credentials, unknown providers, and explicit limit-bypass intent.

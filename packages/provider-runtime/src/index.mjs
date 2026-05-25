@@ -6,7 +6,8 @@ export const PROVIDER_TRANSPORTS = [
   'codex_responses'
 ];
 
-const PROVIDER_CATALOG_URL = new URL('../providers.v1.json', import.meta.url);
+export const DEFAULT_PROVIDER_CATALOG_URL = new URL('../providers.v1.json', import.meta.url);
+const DANGEROUS_SOURCE_PATTERN = /public.*shared.*key|shared.*public.*key|shared_key|bypass|evade|circumvent/i;
 
 function assertProvider(provider) {
   const requiredFields = [
@@ -29,16 +30,47 @@ function assertProvider(provider) {
   if (!PROVIDER_TRANSPORTS.includes(provider.transport)) {
     throw new Error(`provider catalog entry has unsupported transport: ${provider.transport}`);
   }
+  if (DANGEROUS_SOURCE_PATTERN.test(String(provider.source || ''))) {
+    throw new Error(`provider catalog entry ${provider.provider_id} uses a forbidden source: public shared keys and limit bypass sources are not allowed`);
+  }
 }
 
-export function loadProviderCatalog({ catalogUrl = PROVIDER_CATALOG_URL } = {}) {
-  const catalog = JSON.parse(readFileSync(catalogUrl, 'utf8'));
+function readCatalog(catalogRef, label) {
+  const catalog = JSON.parse(readFileSync(catalogRef, 'utf8'));
+  if (catalog.format !== 'divinity.llm_provider_catalog.v1') {
+    throw new Error(`${label} must use format divinity.llm_provider_catalog.v1`);
+  }
   const providers = Array.isArray(catalog.providers) ? catalog.providers : [];
   for (const provider of providers) assertProvider(provider);
   return providers;
 }
 
-export const LLM_PROVIDERS = loadProviderCatalog();
+function overlayPathFrom({ overlayPath = '', env = process.env } = {}) {
+  return String(overlayPath || env.DIVINITY_PROVIDER_CATALOG_PATH || '').trim();
+}
+
+function mergeProviders(baseProviders, overlayProviders) {
+  const byId = new Map();
+  for (const provider of baseProviders) byId.set(provider.provider_id, provider);
+  for (const provider of overlayProviders) byId.set(provider.provider_id, provider);
+  return [...byId.values()];
+}
+
+export function loadProviderCatalog({
+  catalogUrl = DEFAULT_PROVIDER_CATALOG_URL,
+  overlayPath = '',
+  env = process.env
+} = {}) {
+  const baseProviders = readCatalog(catalogUrl, 'provider catalog');
+  const configuredOverlayPath = overlayPathFrom({ overlayPath, env });
+  if (!configuredOverlayPath) return baseProviders;
+
+  const overlayProviders = readCatalog(configuredOverlayPath, 'provider overlay catalog');
+  return mergeProviders(baseProviders, overlayProviders);
+}
+
+export const BUILT_IN_LLM_PROVIDERS = loadProviderCatalog({ env: {} });
+export const LLM_PROVIDERS = BUILT_IN_LLM_PROVIDERS;
 
 function cloneProvider(provider) {
   return {
@@ -68,13 +100,17 @@ function isCustomLocalProvider(provider) {
   return String(provider?.provider_id || '').startsWith('custom_');
 }
 
-export function publicLlmProviders() {
-  return LLM_PROVIDERS.map(cloneProvider);
+function activeProviders(options = {}) {
+  return loadProviderCatalog(options);
 }
 
-export function providerById(providerId) {
+export function publicLlmProviders(options = {}) {
+  return activeProviders(options).map(cloneProvider);
+}
+
+export function providerById(providerId, options = {}) {
   const normalized = String(providerId || '').trim();
-  const provider = LLM_PROVIDERS.find(candidate => candidate.provider_id === normalized);
+  const provider = activeProviders(options).find(candidate => candidate.provider_id === normalized);
   return provider ? cloneProvider(provider) : null;
 }
 
@@ -82,9 +118,10 @@ export function resolveProviderRuntime({
   provider_id = 'openrouter',
   model = '',
   base_url = '',
-  env = process.env
+  env = process.env,
+  overlayPath = ''
 } = {}) {
-  const provider = LLM_PROVIDERS.find(candidate => candidate.provider_id === String(provider_id || '').trim());
+  const provider = activeProviders({ env, overlayPath }).find(candidate => candidate.provider_id === String(provider_id || '').trim());
   if (!provider) {
     throw new Error(`unknown LLM provider: ${provider_id}`);
   }
@@ -115,8 +152,8 @@ export function resolveProviderRuntime({
   };
 }
 
-export function providerCredentialReadiness({ env = process.env } = {}) {
-  const providers = LLM_PROVIDERS.map(provider => {
+export function providerCredentialReadiness({ env = process.env, overlayPath = '' } = {}) {
+  const providers = activeProviders({ env, overlayPath }).map(provider => {
     const configuredEnvVars = firstConfiguredEnv(provider, env);
     const credentialRequired = !isCustomLocalProvider(provider);
     return {

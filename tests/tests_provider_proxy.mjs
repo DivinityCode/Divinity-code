@@ -1,4 +1,7 @@
 import assert from 'assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import os from 'os';
+import path from 'path';
 
 import { createProviderLimitLedger, planProviderProxyRoute } from '../packages/provider-proxy/src/index.mjs';
 
@@ -124,5 +127,44 @@ const missingCredentials = planProviderProxyRoute({
 
 assert.equal(missingCredentials.status, 'blocked');
 assert.match(missingCredentials.error, /configured credentials/);
+
+const tmpDir = mkdtempSync(path.join(os.tmpdir(), 'divinity-provider-proxy-catalog-'));
+
+try {
+  const overlayPath = path.join(tmpDir, 'providers-overlay.json');
+  writeFileSync(overlayPath, JSON.stringify({
+    format: 'divinity.llm_provider_catalog.v1',
+    providers: [
+      {
+        provider_id: 'operator_free_tier_mock',
+        display_name: 'Operator Free-Tier Mock',
+        transport: 'chat_completions',
+        base_url: 'https://example.test/v1',
+        auth_modes: ['api_key'],
+        credential_env_vars: ['OPERATOR_FREE_TIER_API_KEY'],
+        supports_custom_base_url: false,
+        default_model: 'operator/free-tier-mock',
+        capabilities: ['chat', 'openai_compatible', 'free_tier_models'],
+        source: 'operator_config'
+      }
+    ]
+  }, null, 2));
+
+  const overlayRoute = planProviderProxyRoute({
+    candidates: ['operator_free_tier_mock'],
+    env: {
+      DIVINITY_PROVIDER_CATALOG_PATH: overlayPath,
+      OPERATOR_FREE_TIER_API_KEY: 'operator-secret'
+    }
+  });
+
+  assert.equal(overlayRoute.status, 'ready');
+  assert.equal(overlayRoute.selected_provider_runtime.provider_id, 'operator_free_tier_mock');
+  assert.equal(overlayRoute.selected_provider_runtime.base_url, 'https://example.test/v1');
+  assert.equal(overlayRoute.policy.rotation_mode, 'authorized_failover');
+  assert.equal(JSON.stringify(overlayRoute).includes('operator-secret'), false);
+} finally {
+  rmSync(tmpDir, { recursive: true, force: true });
+}
 
 console.log(JSON.stringify({ ok: true, test: 'provider-proxy' }));
