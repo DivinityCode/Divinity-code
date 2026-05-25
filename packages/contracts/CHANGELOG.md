@@ -1,5 +1,10 @@
 # Contracts Changelog
 
+## v1.39.0
+- Added `ProviderToolCallApproval` schema and examples for redacted provider tool-call approve/reject decisions.
+- Added optional `provider_tool_call_approvals` arrays to Run records.
+- Added `provider_tool_call_approval` audit records.
+
 ## v1.38.0
 - Added optional Task provider runtime and toolset resolution metadata for provider-aware run setup.
 - Expanded provider ids in capability/task metadata to include authorized free-tier provider candidates from public research lists.

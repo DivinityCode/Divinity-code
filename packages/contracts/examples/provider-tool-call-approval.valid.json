@@ -1,0 +1,15 @@
+{
+  "format": "divinity.provider_tool_call_approval.v1",
+  "approval_id": "provider_tool_call_approval_run_123_call_search_001",
+  "run_id": "run_123",
+  "tool_call_id": "call_search",
+  "provider_id": "custom_openai_compatible",
+  "transport": "chat_completions",
+  "name": "web_search",
+  "argument_keys": ["query"],
+  "arguments_redacted": true,
+  "decision": "approve",
+  "actor": "operator@example.com",
+  "reason": "Search query is scoped to public documentation.",
+  "decided_at": "2026-05-25T12:00:00Z"
+}

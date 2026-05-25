@@ -1,5 +1,8 @@
 import assert from 'assert/strict';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import http from 'http';
+import { tmpdir } from 'os';
+import path from 'path';
 
 async function createMockChatServer(handler) {
   const requests = [];
@@ -91,8 +94,13 @@ function parseSseEvents(body) {
 const apiSecret = 'openrouter-secret-value';
 const secretPrompt = 'secret prompt for api proxy';
 const toolSecret = 'secret tool argument for api proxy';
+const tmpRoot = mkdtempSync(path.join(tmpdir(), 'divinity-api-provider-proxy-chat-'));
+const repoFixture = path.join(tmpRoot, 'repo');
+mkdirSync(repoFixture);
+writeFileSync(path.join(repoFixture, 'README.md'), '# Provider Proxy API Fixture\n');
 
 process.env.DIVINITY_API_AUTOSTART = '0';
+process.env.DIVINITY_WORKSPACE_ROOT = path.join(tmpRoot, 'workspaces');
 process.env.OPENROUTER_API_KEY = apiSecret;
 process.env.CEREBRAS_API_KEY = 'cerebras-secret';
 const { server } = await import('../apps/api/src/server.mjs');
@@ -205,6 +213,17 @@ try {
   const { port } = server.address();
   const baseUrl = `http://127.0.0.1:${port}`;
 
+  const { body: approvalRun } = await requestJson(`${baseUrl}/tasks`, {
+    method: 'POST',
+    body: JSON.stringify({
+      task_id: 'task_api_provider_tool_approval',
+      objective: 'Review a provider tool call before execution',
+      repo: repoFixture,
+      policy_id: 'safe_exec',
+      created_at: '2026-05-25T12:00:00Z'
+    })
+  });
+
   const { response, body } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
     method: 'POST',
     body: JSON.stringify({
@@ -242,6 +261,33 @@ try {
   assert.equal(JSON.stringify(toolCallBody).includes(toolSecret), false);
   assert.equal(JSON.stringify(toolCallBody).includes(secretPrompt), false);
   assert.equal(JSON.stringify(toolCallBody).includes(apiSecret), false);
+
+  const { response: toolApprovalResponse, body: toolApprovalBody } = await requestJson(`${baseUrl}/runs/${approvalRun.run_id}/provider-tool-call-approvals`, {
+    method: 'POST',
+    body: JSON.stringify({
+      tool_call_request: toolCallBody.result.tool_call_requests[0],
+      decision: 'approve',
+      actor: 'operator@example.com',
+      reason: 'The provider requested a public web search only.',
+      decided_at: '2026-05-25T12:05:00Z'
+    })
+  });
+
+  assert.equal(toolApprovalResponse.status, 201);
+  assert.equal(toolApprovalBody.approval.format, 'divinity.provider_tool_call_approval.v1');
+  assert.equal(toolApprovalBody.approval.run_id, approvalRun.run_id);
+  assert.equal(toolApprovalBody.approval.tool_call_id, 'call_api_search');
+  assert.equal(toolApprovalBody.approval.name, 'web_search');
+  assert.deepEqual(toolApprovalBody.approval.argument_keys, ['query']);
+  assert.equal(toolApprovalBody.approval.arguments_redacted, true);
+  assert.equal(toolApprovalBody.approval.decision, 'approve');
+  assert.equal(toolApprovalBody.run.provider_tool_call_approvals.length, 1);
+  assert.equal(JSON.stringify(toolApprovalBody).includes(toolSecret), false);
+
+  const { response: toolApprovalListResponse, body: toolApprovalListBody } = await requestJson(`${baseUrl}/runs/${approvalRun.run_id}/provider-tool-call-approvals`);
+  assert.equal(toolApprovalListResponse.status, 200);
+  assert.equal(toolApprovalListBody.approvals.length, 1);
+  assert.equal(toolApprovalListBody.approvals[0].approval_id, toolApprovalBody.approval.approval_id);
 
   const { response: blockedResponse, body: blocked } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
     method: 'POST',
@@ -373,6 +419,13 @@ try {
   assert.equal(reroutedBody.result.route.candidate_results[0].status, 'limited');
   assert.equal(JSON.stringify(reroutedBody).includes(secretPrompt), false);
   assert.equal(JSON.stringify(reroutedBody).includes(apiSecret), false);
+
+  const { body: audit } = await requestJson(`${baseUrl}/audit`);
+  assert.ok(audit.records.some(record => (
+    record.type === 'provider_tool_call_approval'
+      && record.run_id === approvalRun.run_id
+      && record.payload.approval_id === toolApprovalBody.approval.approval_id
+  )));
 } finally {
   await mock.close();
   await ledgerLimitedMock.close();
@@ -385,6 +438,7 @@ try {
       server.close(error => error ? reject(error) : resolve());
     });
   }
+  rmSync(tmpRoot, { recursive: true, force: true });
 }
 
 console.log(JSON.stringify({ ok: true, test: 'api-provider-proxy-chat' }));
