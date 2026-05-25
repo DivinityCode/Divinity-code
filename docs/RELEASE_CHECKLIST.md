@@ -67,6 +67,14 @@ pnpm run release:artifacts
 pnpm run test:release-artifacts
 ```
 
+- [ ] Review release artifact integrity and signing readiness:
+
+```bash
+node -e "const a=require('./dist/release-artifacts.json'); console.log(a.artifact_integrity.algorithm, a.artifact_integrity.files.length, a.artifact_signing.status)"
+```
+
+- [ ] Do not publish package registry tarballs or signed binary downloads while `artifact_signing.status` is `blocked`.
+
 - [ ] Provider proxy and tool governance checks:
 
 ```bash
