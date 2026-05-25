@@ -79,7 +79,8 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 - The Anthropic Messages path posts `{ model, system, messages, max_tokens, temperature }` to `/v1/messages` with `anthropic-version: 2023-06-01` and `x-api-key` when credentials are required.
 - The OpenAI Responses path posts `{ model, instructions, input, max_output_tokens, temperature }` to `/responses`.
 - Credentialed provider `base_url` overrides are blocked during execution so operator-owned API keys cannot be redirected to caller-supplied endpoints; local no-key custom endpoints remain available for development and tests.
-- Returned `divinity.provider_proxy_chat_result.v1` metadata includes provider, model, status, upstream status, response message, finish reason, and usage, but it omits prompt messages, request bodies, and credential values.
+- Provider chat execution resolves the selected toolsets before budget checks or upstream requests. Providers missing required `tool_calls` capability fail closed with `toolset_resolution` provider capability checks and `provider_capability_review` operator controls.
+- Returned `divinity.provider_proxy_chat_result.v1` metadata includes provider, model, status, upstream status, response message, finish reason, usage, and toolset resolution, but it omits prompt messages, request bodies, and credential values.
 - Live upstream `429` responses return `status: "limited"` with retry-after metadata and do not automatically fail over to another provider, preventing hidden quota bypass.
 - OpenAI-compatible Chat Completions uses `max_completion_tokens`; OpenAI Responses uses `max_output_tokens`; Anthropic Messages uses its current `max_tokens` field.
 

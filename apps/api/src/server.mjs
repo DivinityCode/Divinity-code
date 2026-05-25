@@ -389,6 +389,9 @@ const server = http.createServer((req, res) => {
           max_completion_tokens: body.max_completion_tokens,
           max_output_tokens: body.max_output_tokens,
           request_budget: body.request_budget,
+          toolsets: body.toolsets,
+          enabled_toolsets: body.enabled_toolsets,
+          disabled_toolsets: body.disabled_toolsets,
           temperature: body.temperature
         });
         const statusCode = result.status === 'completed'

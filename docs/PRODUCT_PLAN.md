@@ -92,7 +92,8 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: public toolset metadata and default resolution are exposed through capabilities, CLI `toolsets`, API `/toolsets`, and `doctor`.
    - Bootstrap status: CLI/API task assembly carries toolset resolution metadata on task/run payloads.
    - Bootstrap status: toolset resolution now carries policy permission unions, risk summaries, provider `tool_calls` capability checks, and operator-control recommendations/requirements on task/run payloads.
-   - Next production slice: connect operator controls to dashboard controls and enforce provider/tool compatibility at execution time.
+   - Bootstrap status: provider chat execution enforces selected toolset compatibility before upstream calls and returns `toolset_resolution` metadata on completed or blocked proxy results.
+   - Next production slice: connect operator controls to dashboard controls and add live tool-call execution governance.
 3. Public onboarding and release packaging.
    - Next production slice: add install/upgrade docs, release artifacts, environment bootstrap checks, and a first-run quickstart that does not require repo internals.
 4. Hosted/identity/billing boundary.

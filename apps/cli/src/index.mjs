@@ -507,7 +507,11 @@ function parseProviderChatArgs(values) {
     requested_model: '',
     max_completion_tokens: 0,
     max_output_tokens: 0,
-    request_budget: {}
+    request_budget: {},
+    toolsets: {
+      enabled: null,
+      disabled: []
+    }
   };
 
   for (let index = 0; index < values.length; index += 1) {
@@ -549,6 +553,21 @@ function parseProviderChatArgs(values) {
       index += 1;
     } else if (value.startsWith('--max-prompt-chars=')) {
       options.request_budget.max_prompt_chars = value.slice('--max-prompt-chars='.length);
+    } else if (value === '--toolset' || value === '--enable-toolset') {
+      if (!Array.isArray(options.toolsets.enabled)) options.toolsets.enabled = [];
+      options.toolsets.enabled.push(next);
+      index += 1;
+    } else if (value.startsWith('--toolset=')) {
+      if (!Array.isArray(options.toolsets.enabled)) options.toolsets.enabled = [];
+      options.toolsets.enabled.push(value.slice('--toolset='.length));
+    } else if (value.startsWith('--enable-toolset=')) {
+      if (!Array.isArray(options.toolsets.enabled)) options.toolsets.enabled = [];
+      options.toolsets.enabled.push(value.slice('--enable-toolset='.length));
+    } else if (value === '--disable-toolset') {
+      options.toolsets.disabled.push(next);
+      index += 1;
+    } else if (value.startsWith('--disable-toolset=')) {
+      options.toolsets.disabled.push(value.slice('--disable-toolset='.length));
     } else {
       throw new Error(`unknown provider-chat option: ${value}`);
     }
@@ -567,6 +586,10 @@ function parseProviderChatArgs(values) {
   options.max_completion_tokens = Number(options.max_completion_tokens || 0);
   options.max_output_tokens = Number(options.max_output_tokens || 0);
   options.request_budget.max_prompt_chars = Number(options.request_budget.max_prompt_chars || 0);
+  if (Array.isArray(options.toolsets.enabled)) {
+    options.toolsets.enabled = options.toolsets.enabled.map(value => String(value || '').trim()).filter(Boolean);
+  }
+  options.toolsets.disabled = options.toolsets.disabled.map(value => String(value || '').trim()).filter(Boolean);
   return options;
 }
 
