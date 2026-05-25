@@ -129,7 +129,7 @@ test ! -e .divinity.json
 
 ### Task 4: Publish
 
-- [ ] Commit as `feat: add provider proxy transport handlers`, push, open a ready PR, wait for GitHub Actions, merge if green, sync `main`, delete the branch, rerun focused post-merge verification, and mark this publish step complete.
+- [x] Commit as `feat: add provider proxy transport handlers`, push, open a ready PR, wait for GitHub Actions, merge if green, sync `main`, delete the branch, rerun focused post-merge verification, and mark this publish step complete.
 
 ## Self-Review
 
