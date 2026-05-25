@@ -124,3 +124,4 @@ The 2026-05-25 refresh confirmed the latest observed releases above are still cu
 22. **Policy-hook bridge:** implemented policy-pack pre-execution hooks so CLI/API preflight and API step gates can block or warn from deterministic hook metadata before execution adapters run.
 23. **Budget incidents:** implemented `divinity.budget_incident.v1` records so soft/hard budget threshold events are attached to CLI/API runs and API audit exports.
 24. **Goal records:** implemented `divinity.goal.v1` records so task success criteria become durable run goals with initial status, evidence refs, and budget allocation.
+25. **Dashboard goal visibility:** implemented dashboard rendering for run goals so operators can inspect acceptance criteria, goal status, budget allocation, and evidence from static samples or API-loaded runs.

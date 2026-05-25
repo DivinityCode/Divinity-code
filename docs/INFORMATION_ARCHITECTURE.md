@@ -16,7 +16,7 @@ This document defines how Builder Mode and Operator Mode expose the shared Task/
 | Builder CLI | Builder | `divinity init`, `divinity run` | Config, Task, Run, Preflight, Artifact | Implemented |
 | Builder IDE | Builder | IDE command palette | Task submission, dashboard launch, diagnostics | Scaffolded |
 | Control Plane API | Operator, platform administrator | HTTP routes | Run store, approvals, steps, artifacts, audit, observability | Implemented |
-| Operator Dashboard | Operator | Static shell or `?api=<base-url>` | Run queue, selected run, approvals, evidence, artifacts | Implemented bootstrap |
+| Operator Dashboard | Operator | Static shell or `?api=<base-url>` | Run queue, selected run, goals, approvals, evidence, artifacts | Implemented bootstrap |
 
 ## Builder Mode IA
 ### Primary Navigation
@@ -47,7 +47,7 @@ This document defines how Builder Mode and Operator Mode expose the shared Task/
 ## Operator Mode IA
 ### Primary Regions
 1. **Run Queue:** status filters, approval backlog, risk, budget, and scope summary.
-2. **Run Detail:** selected task, success criteria, preflight decision, timeline, evidence, connector references, agent activity, execution records, verification records, artifacts, audit metadata, and workspace state.
+2. **Run Detail:** selected task, goal records, preflight decision, timeline, evidence, connector references, agent activity, execution records, verification records, artifacts, audit metadata, and workspace state.
 3. **Approvals:** approve/reject actions with actor and reason, visible only for approval-required runs.
 4. **Observability:** liveness, stale-run indicators, budget utilization, risk mix, failure taxonomy, and org/project rollups.
 5. **Artifacts:** patch, log, summary, and PR-summary metadata with retrievable payload routes.
@@ -57,6 +57,7 @@ This document defines how Builder Mode and Operator Mode expose the shared Task/
 | --- | --- | --- |
 | What needs attention? | Run Queue and Approvals | status, risk level, approval-required state |
 | Why is this run blocked or waiting? | Preflight and Decision Trace | blocked reasons, warnings, evidence references |
+| What must be true when this run is done? | Goals | status, success criterion source, budget allocation, evidence references |
 | What changed or will change? | Artifacts | patch/log/summary/PR-summary metadata and payloads |
 | Who or what acted? | Agent Activity and Timeline | actor id, action, reason, status, timestamps |
 | Did execution actually happen? | Execution and Verification | adapter, exit code, stdout/stderr summaries, verifier checks |
@@ -68,6 +69,7 @@ This document defines how Builder Mode and Operator Mode expose the shared Task/
 | --- | --- | --- | --- |
 | Task | `run` output | `POST /tasks`, stored run task | selected run header/detail |
 | Success criteria | `task.success_criteria` | stored run task | selected run detail |
+| Goal records | `goals` in run output | stored run goals | goals panel |
 | Preflight | `run` output | `/preflight`, stored run preflight | decision panel and timeline |
 | Events | `run` output | `/runs/:id/events`, stream | timeline |
 | Artifacts | metadata in `run` output | `/runs/:id/artifacts`, `/artifacts/:id` | artifact panel |
@@ -87,4 +89,4 @@ This document defines how Builder Mode and Operator Mode expose the shared Task/
 - README links the IA beside product plan, requirements, architecture, backlog, research, and execution plan.
 - Product Plan Phase 0 deliverable #3 points to this document.
 - Each implemented surface has a documented entry point, primary objects, and supported user decision.
-- Dashboard detail hierarchy includes success criteria, evidence, connector references, execution, verification, artifacts, audit, and liveness.
+- Dashboard detail hierarchy includes goal records, evidence, connector references, execution, verification, artifacts, audit, and liveness.
