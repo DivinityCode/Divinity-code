@@ -205,7 +205,7 @@ find . -maxdepth 1 -type f \( -name 'tests_*.mjs' -o -name 'scripts_*.mjs' \) -p
 test ! -e .divinity.json
 ```
 
-- [ ] Commit as `feat: enforce provider tool compatibility`, push, open a ready PR, wait for GitHub Actions, merge if green, sync `main`, delete the branch, rerun focused post-merge verification, and mark this publish step complete in a docs-only follow-up PR.
+- [x] Commit as `feat: enforce provider tool compatibility`, push, open a ready PR, wait for GitHub Actions, merge if green, sync `main`, delete the branch, rerun focused post-merge verification, and mark this publish step complete in a docs-only follow-up PR.
 
 ## Self-Review
 
