@@ -1,7 +1,7 @@
 # CLI App
 Owner: Builder Experience
 
-Commands: `init`, `run`, `status`, `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `approval-revision`, `approval-resubmit`, `goal-complete`, `capabilities`, `providers`, `provider-route`, `toolsets`, `recipes`, `doctor`, `bug`.
+Commands: `init`, `run`, `status`, `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `approval-revision`, `approval-resubmit`, `goal-complete`, `capabilities`, `providers`, `provider-route`, `provider-chat`, `toolsets`, `recipes`, `doctor`, `bug`.
 
 ## Current Behavior
 - `init` writes `.divinity.json` with the default `safe_exec` policy, budget caps, org/project scope, default LLM provider, and default toolset preferences.
@@ -24,6 +24,7 @@ Commands: `init`, `run`, `status`, `approvals`, `approval`, `approve`, `reject`,
 - `capabilities` lists supported policy presets, execution adapters, runner isolation profiles, connector adapters, LLM providers, toolsets, and starter recipe summaries as `divinity.capabilities.v1`.
 - `providers` lists contract-shaped LLM provider metadata loaded from `packages/provider-runtime/providers.v1.json` without resolving or printing secret values.
 - `provider-route --candidate openrouter --candidate groq` plans an authorized provider route as `divinity.provider_proxy_route.v1`, selecting only configured providers and blocking public shared-key or limit-bypass routing intent.
+- `provider-chat --provider openrouter --message "hello"` executes a non-streaming OpenAI-compatible chat-completions request only after provider route planning succeeds; output omits prompts, request bodies, and credential values. Credentialed providers use their catalog endpoint, while `--base-url` is reserved for no-key local `custom_openai_compatible` development endpoints in this slice.
 - `toolsets` lists public toolset metadata and the default tool resolution.
 - `recipes` lists the built-in guided starter recipes.
 - `doctor` reports Node, optional npm, optional pnpm/Corepack fallback, aggregate package-manager readiness, optional Docker runtime readiness for container-sandbox execution, installed dependencies, AJV validator dependencies, git, package manifest, provider and toolset catalog readiness, optional LLM provider credential readiness, and API server source readiness as structured JSON.

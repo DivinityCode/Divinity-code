@@ -1,7 +1,7 @@
 # API App
 Owner: Control Plane
 
-Control-plane endpoints for task creation, run retrieval, preflight checks, approvals, approval comments, approval revisions, step execution locks, verification, goal records, budget incidents, agent activity, run heartbeats, connector references, artifacts, capabilities, LLM provider and toolset catalogs, provider route planning, observability, and audit export.
+Control-plane endpoints for task creation, run retrieval, preflight checks, approvals, approval comments, approval revisions, step execution locks, verification, goal records, budget incidents, agent activity, run heartbeats, connector references, artifacts, capabilities, LLM provider and toolset catalogs, provider route planning, provider chat execution, observability, and audit export.
 
 ## Authentication
 Control-plane routes are public in local development when no API key is configured.
@@ -13,6 +13,7 @@ Set `DIVINITY_API_KEY` or comma-separated `DIVINITY_API_KEYS` to require `Author
 - `GET /providers`
 - `GET /toolsets`
 - `POST /provider-proxy/route`
+- `POST /provider-proxy/chat`
 - `GET /audit`
 - `GET /observability`
 - `POST /preflight`
@@ -55,4 +56,5 @@ Approval revision posts move an `awaiting_approval` run to `paused`, emit `appro
 Capabilities expose the current policy presets, constrained execution adapters, runner isolation profiles, connector adapters, LLM providers, toolsets, and starter recipe summaries for CLI/API/dashboard discovery.
 Provider and toolset routes expose public catalog metadata only. They do not call live LLM providers, store credentials, or return secret values.
 Provider route planning accepts candidate provider ids plus optional limit state, returns `divinity.provider_proxy_route.v1`, and selects only authorized configured providers. It does not proxy prompts, call live LLM providers, print secrets, consume public shared keys, or rotate to bypass limits.
+Provider chat execution accepts messages and provider candidates, reuses route planning, supports only non-streaming OpenAI-compatible `chat_completions`, and returns `divinity.provider_proxy_chat_result.v1` without echoing prompts, request bodies, or credential values. Unsupported transports, missing credentials, prompt-budget excess, credentialed `base_url` overrides, and live `429` responses fail closed with status metadata.
 Observability summaries aggregate run counts, approval backlog, heartbeat liveness, estimated budget usage, org/project scope rollups, risk mix, and policy/budget/execution failure categories.

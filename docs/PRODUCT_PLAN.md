@@ -86,7 +86,8 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: LLM provider metadata and side-effect-free credential readiness are exposed through capabilities, CLI `providers`, API `/providers`, and `doctor`.
    - Bootstrap status: CLI/API task assembly resolves provider runtime metadata from config or request input without printing or storing secret values.
    - Bootstrap status: provider route planning is exposed through CLI `provider-route`, API `POST /provider-proxy/route`, and `packages/provider-proxy`, with explicit blocks for public shared keys and limit-bypass intent.
-   - Next production slice: wire live provider invocation behind the route policy so execution enforces authorized credentials, provider terms, rate limits, and budget policy.
+   - Bootstrap status: non-streaming OpenAI-compatible chat-completions execution is exposed through CLI `provider-chat`, API `POST /provider-proxy/chat`, and `executeProviderProxyChat()`, with prompt/secret redaction, credentialed endpoint-override blocking, and fail-closed `429` handling.
+   - Next production slice: add Anthropic Messages and OpenAI Responses transport handlers, managed rate-limit storage, streaming, and approved hosted secret integration behind the same route policy.
 2. Toolset governance.
    - Bootstrap status: public toolset metadata and default resolution are exposed through capabilities, CLI `toolsets`, API `/toolsets`, and `doctor`.
    - Bootstrap status: CLI/API task assembly carries toolset resolution metadata on task/run payloads.
