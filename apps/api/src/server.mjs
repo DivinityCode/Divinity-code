@@ -25,6 +25,7 @@ import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/ind
 import { evaluatePreflight, evaluateStepGate } from '../../../packages/policy-engine/src/index.mjs';
 import {
   createConfiguredProviderLimitLedger,
+  createConfiguredProviderUsageLedger,
   executeProviderProxyChat,
   executeProviderProxyChatStream,
   planProviderProxyRoute
@@ -40,6 +41,7 @@ import { publicToolsets, resolveToolsets } from '../../../packages/toolsets/src/
 const runStore = createConfiguredRunStore();
 const { runs, artifacts, auditRecords } = runStore;
 const providerLimitLedger = createConfiguredProviderLimitLedger(process.env, { memoryFallback: true });
+const providerUsageLedger = createConfiguredProviderUsageLedger(process.env);
 const runSubscribers = new Map();
 const DEFAULT_SCOPE = { org_id: 'default-org', project_id: 'default-project' };
 const DEFAULT_ENABLED_TOOLSETS = resolveToolsets().toolsets.map(toolset => toolset.toolset_id);
@@ -393,12 +395,14 @@ const server = http.createServer((req, res) => {
           candidates: body.candidates,
           limit_state: body.limit_state,
           limit_ledger: providerLimitLedger,
+          usage_ledger: providerUsageLedger,
           rotation_intent: body.rotation_intent,
           requested_model: body.requested_model || body.model,
           messages: body.messages,
           max_completion_tokens: body.max_completion_tokens,
           max_output_tokens: body.max_output_tokens,
           request_budget: body.request_budget,
+          usage_budget: body.usage_budget,
           toolsets: body.toolsets,
           enabled_toolsets: body.enabled_toolsets,
           disabled_toolsets: body.disabled_toolsets,
@@ -477,12 +481,14 @@ const server = http.createServer((req, res) => {
           candidates: body.candidates,
           limit_state: body.limit_state,
           limit_ledger: providerLimitLedger,
+          usage_ledger: providerUsageLedger,
           rotation_intent: body.rotation_intent,
           requested_model: body.requested_model || body.model,
           messages: body.messages,
           max_completion_tokens: body.max_completion_tokens,
           max_output_tokens: body.max_output_tokens,
           request_budget: body.request_budget,
+          usage_budget: body.usage_budget,
           toolsets: body.toolsets,
           enabled_toolsets: body.enabled_toolsets,
           disabled_toolsets: body.disabled_toolsets,

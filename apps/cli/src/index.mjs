@@ -19,6 +19,7 @@ import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
 import {
   createConfiguredProviderLimitLedger,
+  createConfiguredProviderUsageLedger,
   executeProviderProxyChat,
   executeProviderProxyChatStream,
   planProviderProxyRoute
@@ -516,6 +517,7 @@ function parseProviderChatArgs(values) {
     max_output_tokens: 0,
     stream: false,
     request_budget: {},
+    usage_budget: {},
     toolsets: {
       enabled: null,
       disabled: []
@@ -563,6 +565,26 @@ function parseProviderChatArgs(values) {
       index += 1;
     } else if (value.startsWith('--max-prompt-chars=')) {
       options.request_budget.max_prompt_chars = value.slice('--max-prompt-chars='.length);
+    } else if (value === '--max-daily-requests') {
+      options.usage_budget.max_daily_requests = next;
+      index += 1;
+    } else if (value.startsWith('--max-daily-requests=')) {
+      options.usage_budget.max_daily_requests = value.slice('--max-daily-requests='.length);
+    } else if (value === '--max-daily-input-tokens') {
+      options.usage_budget.max_daily_input_tokens = next;
+      index += 1;
+    } else if (value.startsWith('--max-daily-input-tokens=')) {
+      options.usage_budget.max_daily_input_tokens = value.slice('--max-daily-input-tokens='.length);
+    } else if (value === '--max-daily-output-tokens') {
+      options.usage_budget.max_daily_output_tokens = next;
+      index += 1;
+    } else if (value.startsWith('--max-daily-output-tokens=')) {
+      options.usage_budget.max_daily_output_tokens = value.slice('--max-daily-output-tokens='.length);
+    } else if (value === '--max-daily-total-tokens') {
+      options.usage_budget.max_daily_total_tokens = next;
+      index += 1;
+    } else if (value.startsWith('--max-daily-total-tokens=')) {
+      options.usage_budget.max_daily_total_tokens = value.slice('--max-daily-total-tokens='.length);
     } else if (value === '--toolset' || value === '--enable-toolset') {
       if (!Array.isArray(options.toolsets.enabled)) options.toolsets.enabled = [];
       options.toolsets.enabled.push(next);
@@ -596,6 +618,10 @@ function parseProviderChatArgs(values) {
   options.max_completion_tokens = Number(options.max_completion_tokens || 0);
   options.max_output_tokens = Number(options.max_output_tokens || 0);
   options.request_budget.max_prompt_chars = Number(options.request_budget.max_prompt_chars || 0);
+  options.usage_budget.max_daily_requests = Number(options.usage_budget.max_daily_requests || 0);
+  options.usage_budget.max_daily_input_tokens = Number(options.usage_budget.max_daily_input_tokens || 0);
+  options.usage_budget.max_daily_output_tokens = Number(options.usage_budget.max_daily_output_tokens || 0);
+  options.usage_budget.max_daily_total_tokens = Number(options.usage_budget.max_daily_total_tokens || 0);
   if (Array.isArray(options.toolsets.enabled)) {
     options.toolsets.enabled = options.toolsets.enabled.map(value => String(value || '').trim()).filter(Boolean);
   }
@@ -1792,6 +1818,7 @@ async function providerChat() {
   try {
     const options = parseProviderChatArgs(args);
     options.limit_ledger = createConfiguredProviderLimitLedger(process.env);
+    options.usage_ledger = createConfiguredProviderUsageLedger(process.env);
     const executor = options.stream ? executeProviderProxyChatStream : executeProviderProxyChat;
     const result = await executor(options);
     print({ ok: result.status === 'completed', command: 'provider-chat', result });

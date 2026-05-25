@@ -7,10 +7,16 @@ import {
   createConfiguredProviderLimitLedger,
   createProviderLimitLedger
 } from './limit-ledger.mjs';
+import {
+  createConfiguredProviderUsageLedger,
+  createProviderUsageLedger
+} from './usage-ledger.mjs';
 
 export {
   createConfiguredProviderLimitLedger,
-  createProviderLimitLedger
+  createConfiguredProviderUsageLedger,
+  createProviderLimitLedger,
+  createProviderUsageLedger
 };
 
 export const PROVIDER_PROXY_POLICY = {
@@ -132,6 +138,40 @@ function positiveInteger(value) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) return 0;
   return Math.floor(parsed);
+}
+
+function hasUsageBudget(usageBudget = {}) {
+  return [
+    'max_daily_requests',
+    'max_daily_input_tokens',
+    'max_daily_output_tokens',
+    'max_daily_total_tokens'
+  ].some(key => positiveInteger(usageBudget?.[key]) > 0);
+}
+
+function usageBudgetEstimate({ requestedOutputTokens = 0, usageBudget = {} } = {}) {
+  const inputTokens = positiveInteger(usageBudget.estimated_input_tokens);
+  const outputTokens = positiveInteger(usageBudget.estimated_output_tokens) || positiveInteger(requestedOutputTokens);
+  const totalTokens = positiveInteger(usageBudget.estimated_total_tokens) || inputTokens + outputTokens;
+  return {
+    request_count: 1,
+    input_tokens: inputTokens,
+    output_tokens: outputTokens,
+    total_tokens: totalTokens
+  };
+}
+
+function attachUsageLedgerRecord(result, usageLedger) {
+  if (!usageLedger || typeof usageLedger.recordUsage !== 'function') return result;
+  if (!['completed', 'requires_action'].includes(result?.status)) return result;
+  const record = usageLedger.recordUsage({
+    provider_id: result.provider_id,
+    model: result.model,
+    transport: result.transport,
+    status: result.status,
+    usage: result.usage || {}
+  });
+  return record ? { ...result, usage_ledger_record: record } : result;
 }
 
 function retryAfterSeconds(headers) {
@@ -1049,6 +1089,8 @@ function prepareProviderProxyChat({
   max_completion_tokens = 0,
   max_output_tokens = 0,
   request_budget = {},
+  usage_budget = {},
+  usage_ledger = null,
   toolsets = null,
   enabled_toolsets = null,
   disabled_toolsets = [],
@@ -1151,6 +1193,39 @@ function prepareProviderProxyChat({
     };
   }
 
+  if (hasUsageBudget(usage_budget)) {
+    if (!usage_ledger || typeof usage_ledger.wouldExceedBudget !== 'function') {
+      return {
+        ok: false,
+        result: {
+          ...blockedChat(route, 'provider usage ledger is required for usage budgets', toolsetResolution, resultFormat),
+          provider_id: runtime.provider_id,
+          model: request.model,
+          transport: runtime.transport
+        }
+      };
+    }
+
+    const budgetCheck = usage_ledger.wouldExceedBudget({
+      provider_id: runtime.provider_id,
+      model: request.model,
+      usage_budget,
+      estimated_usage: usageBudgetEstimate({ requestedOutputTokens, usageBudget: usage_budget })
+    });
+    if (budgetCheck.exceeded) {
+      return {
+        ok: false,
+        result: {
+          ...blockedChat(route, budgetCheck.reason, toolsetResolution, resultFormat),
+          provider_id: runtime.provider_id,
+          model: request.model,
+          transport: runtime.transport,
+          usage_budget_check: budgetCheck
+        }
+      };
+    }
+  }
+
   return {
     ok: true,
     route,
@@ -1164,6 +1239,7 @@ function prepareProviderProxyChat({
 export async function executeProviderProxyChat(options = {}) {
   const {
     limit_ledger = null,
+    usage_ledger = null,
     signal
   } = options;
   const prepared = prepareProviderProxyChat(options);
@@ -1227,12 +1303,14 @@ export async function executeProviderProxyChat(options = {}) {
     };
   }
 
-  return normalizeTransportResult({ runtime, payload, response, model: request.model, route, toolsetResolution });
+  const result = normalizeTransportResult({ runtime, payload, response, model: request.model, route, toolsetResolution });
+  return attachUsageLedgerRecord(result, usage_ledger);
 }
 
 export async function executeProviderProxyChatStream(options = {}) {
   const {
     limit_ledger = null,
+    usage_ledger = null,
     signal,
     on_event = null
   } = options;
@@ -1312,7 +1390,7 @@ export async function executeProviderProxyChatStream(options = {}) {
   }
 
   const toolCallRequests = streamToolCallRequests(runtime, state);
-  return withToolCallGovernance({
+  const result = withToolCallGovernance({
     ...resultBase(route, toolsetResolution, STREAM_RESULT_FORMAT),
     status: 'completed',
     provider_id: runtime.provider_id,
@@ -1326,4 +1404,5 @@ export async function executeProviderProxyChatStream(options = {}) {
     stream_events: state.streamEvents,
     event_counts: state.eventCounts
   }, toolCallRequests);
+  return attachUsageLedgerRecord(result, usage_ledger);
 }

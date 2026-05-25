@@ -1,7 +1,11 @@
 import assert from 'assert/strict';
 import http from 'http';
 
-import { createProviderLimitLedger, executeProviderProxyChat } from '../packages/provider-proxy/src/index.mjs';
+import {
+  createProviderLimitLedger,
+  createProviderUsageLedger,
+  executeProviderProxyChat
+} from '../packages/provider-proxy/src/index.mjs';
 
 async function createMockChatServer(handler) {
   const requests = [];
@@ -63,13 +67,17 @@ const completedServer = await createMockChatServer(async ({ req, res, body }) =>
 });
 
 try {
+  const providerUsageLedger = createProviderUsageLedger({
+    now: () => new Date('2026-05-25T12:00:00.000Z')
+  });
   const completed = await executeProviderProxyChat({
     candidates: [{ provider_id: 'custom_openai_compatible', base_url: completedServer.base_url }],
     env: { CUSTOM_LLM_API_KEY: apiSecret },
     requested_model: 'mock-model',
     messages: [{ role: 'user', content: secretPrompt }],
     enabled_toolsets: ['web'],
-    max_completion_tokens: 32
+    max_completion_tokens: 32,
+    usage_ledger: providerUsageLedger
   });
 
   assert.equal(completed.format, 'divinity.provider_proxy_chat_result.v1');
@@ -79,9 +87,31 @@ try {
   assert.equal(completed.message.content, 'mock response');
   assert.equal(completed.finish_reason, 'stop');
   assert.equal(completed.usage.total_tokens, 7);
+  assert.equal(completed.usage_ledger_record.provider_id, 'custom_openai_compatible');
+  assert.equal(completed.usage_ledger_record.model, 'mock-model');
+  assert.equal(completed.usage_ledger_record.request_count, 1);
+  assert.equal(completed.usage_ledger_record.input_tokens, 4);
+  assert.equal(completed.usage_ledger_record.output_tokens, 3);
+  assert.equal(completed.usage_ledger_record.total_tokens, 7);
   assert.equal(completed.toolset_resolution.provider_capability_checks[0].status, 'supported');
   assert.equal(JSON.stringify(completed).includes(secretPrompt), false);
   assert.equal(JSON.stringify(completed).includes(apiSecret), false);
+
+  const blockedByUsageBudget = await executeProviderProxyChat({
+    candidates: [{ provider_id: 'custom_openai_compatible', base_url: completedServer.base_url }],
+    env: { CUSTOM_LLM_API_KEY: apiSecret },
+    requested_model: 'mock-model',
+    messages: [{ role: 'user', content: secretPrompt }],
+    max_completion_tokens: 32,
+    usage_ledger: providerUsageLedger,
+    usage_budget: { max_daily_requests: 1 }
+  });
+
+  assert.equal(blockedByUsageBudget.status, 'blocked');
+  assert.match(blockedByUsageBudget.error, /daily request budget/);
+  assert.equal(completedServer.requests.length, 1);
+  assert.equal(JSON.stringify(blockedByUsageBudget).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(blockedByUsageBudget).includes(apiSecret), false);
 } finally {
   await completedServer.close();
 }

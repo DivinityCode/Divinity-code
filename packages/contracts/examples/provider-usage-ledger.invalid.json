@@ -1,0 +1,23 @@
+{
+  "format": "divinity.provider_usage_ledger.v1",
+  "providers": {
+    "custom_openai_compatible": {
+      "provider_id": "custom_openai_compatible",
+      "models": {
+        "mock-model": {
+          "model": "mock-model",
+          "days": {
+            "2026-05-25": {
+              "date": "2026-05-25",
+              "request_count": -1,
+              "input_tokens": 8,
+              "output_tokens": 6,
+              "total_tokens": 14,
+              "last_recorded_at": "2026-05-25T12:00:00Z"
+            }
+          }
+        }
+      }
+    }
+  }
+}

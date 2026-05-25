@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.41.0
+- Added `ProviderUsageLedger` schema and examples for redacted provider/model request and token usage aggregates.
+
 ## v1.40.0
 - Added `ProviderToolExecution` schema and examples for approved, redacted provider tool execution records.
 - Added optional `provider_tool_executions` arrays to Run records.
