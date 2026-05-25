@@ -157,6 +157,8 @@ Run cached pnpm equivalents of:
 
 Record local `npm --version` status in the PR body if it remains unavailable.
 
-- [ ] **Step 3: Publish**
+- [x] **Step 3: Publish**
 
 Commit as `feat: add connector references`, push `codex/add-connector-references`, open a ready PR to `main`, wait for GitHub Actions, merge if green, sync `main`, delete the branch, and rerun post-merge verification.
+
+Completed on `main` in commit `cb9bb5e`.

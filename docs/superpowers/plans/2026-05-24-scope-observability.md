@@ -124,6 +124,8 @@ Run:
 
 Run syntax checks for changed JS/MJS files, parse all JSON, `git diff --check`, conflict-marker scan, root cleanup check, `pnpm run validate:contracts`, `pnpm run test:observability`, and `pnpm test`.
 
-- [ ] **Step 3: Publish**
+- [x] **Step 3: Publish**
 
 Commit as `feat: add scope observability rollups`, push `codex/add-scope-observability`, open a ready PR to `main`, wait for GitHub Actions, merge if green, sync `main`, delete the branch, and rerun post-merge verification.
+
+Completed on `main` in commit `4b3e392`.

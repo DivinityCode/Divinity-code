@@ -284,20 +284,22 @@ Expected: syntax checks and `git diff --check` exit 0; marker scan returns no ma
 **Files:**
 - All modified files from tasks 1-4
 
-- [ ] **Step 1: Commit**
+- [x] **Step 1: Commit**
 
 ```bash
 git add .
 git commit -m "feat: add runner isolation profiles"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 ```bash
 git push -u origin codex/add-runner-isolation-profiles
 ```
 
 Open a pull request against `main`, wait for GitHub Actions, and merge only after green checks.
+
+Completed on `main` in commit `8bf9f65`.
 
 ## Self-Review
 
