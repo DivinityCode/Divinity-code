@@ -1,16 +1,18 @@
 # Referenced Repository Code Examples
 
-_Last refreshed: 2026-05-25_
+_Last refreshed: 2026-05-26_
 
 ## Scope
 This appendix captures source-level examples from the referenced repositories behind the competitive research:
 
 - [`anthropics/claude-code`](https://github.com/anthropics/claude-code) at `39e853e4074d90f27afdfb7ea601e0fc378bd0c5`
-- [`openai/codex`](https://github.com/openai/codex) at `9f42c89c0112771dc29100a6f3fc904049b2655f`
-- [`NousResearch/hermes-agent`](https://github.com/NousResearch/hermes-agent) at `4117fc3645b59c5c0f9d623e0991fc9bc864c0e2` with release tag `v2026.5.16` observed at `a91a57fa5a13d516c38b07a141a9ce8a3daabeb0`
-- [`paperclipai/paperclip`](https://github.com/paperclipai/paperclip) at `96f0279e081ccc2745f3898a5aa9309b4d015def`
+- [`openai/codex`](https://github.com/openai/codex) at `9f42c89c0112771dc29100a6f3fc904049b2655f`; latest default-branch signal on 2026-05-26 was `8a94430bb273623be42b68f144f1ab1df343bb53`
+- [`NousResearch/hermes-agent`](https://github.com/NousResearch/hermes-agent) at `4117fc3645b59c5c0f9d623e0991fc9bc864c0e2` with release tag `v2026.5.16` observed at `a91a57fa5a13d516c38b07a141a9ce8a3daabeb0`; latest default-branch signal on 2026-05-26 was `2c6bbaf3529fbd7dca4330d53b5c819f3d223ba5`
+- [`paperclipai/paperclip`](https://github.com/paperclipai/paperclip) at `96f0279e081ccc2745f3898a5aa9309b4d015def`; latest default-branch signal on 2026-05-26 was `9aea3e3d35fe47a745857b91c392da5b3fc0ae17`
 
 The examples are not copied implementation recipes. They are commit-pinned references that show concrete product and architecture patterns Divinity Code can adopt or continue refining.
+
+The source-level examples remain pinned to the commits already inspected so the file/path analysis stays reproducible. Newer default-branch signals are recorded separately above and should be promoted into pinned source examples only after a focused follow-up inspection of changed files.
 
 ## Claude Code
 Claude Code's public repository is strongest as a plugin, workflow, policy, and support-example reference rather than a full CLI runtime source reference.

@@ -14,6 +14,7 @@ assert.equal(packageJson.packageManager, 'pnpm@9.15.4');
 assert.equal(packageJson.repository?.type, 'git');
 assert.equal(packageJson.repository?.url, 'git+https://github.com/DivinityCode/Divinity-code.git');
 assert.equal(packageJson.license, 'UNLICENSED');
+assert.equal(packageJson.scripts?.['test:package-tarball'], 'node tests/tests_package_tarball_smoke.mjs');
 assert.ok(packageJson.files.includes('apps'));
 assert.ok(packageJson.files.includes('packages'));
 assert.ok(packageJson.files.includes('docs'));

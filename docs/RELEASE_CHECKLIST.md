@@ -52,6 +52,7 @@ pnpm run validate:contracts
 
 ```bash
 pnpm run test:package
+pnpm run test:package-tarball
 ```
 
 - [ ] Deprecation/current-surface audit:
