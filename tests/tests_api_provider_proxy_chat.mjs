@@ -850,6 +850,24 @@ try {
       && record.run_id === approvalRun.run_id
       && record.payload.execution_id === toolExecutionBody.execution.execution_id
   )));
+  assert.ok(audit.records.some(record => (
+    record.type === 'provider_secret_ref'
+      && record.run_id === 'control_plane'
+      && record.payload.format === 'divinity.provider_secret_ref_audit.v1'
+      && record.payload.operation === 'chat'
+      && record.payload.provider_id === 'api_secret_ref_chat_mock'
+      && record.payload.configured_secret_refs.includes(apiResolverChatSecretRef)
+  )));
+  assert.ok(audit.records.some(record => (
+    record.type === 'provider_secret_ref'
+      && record.run_id === 'control_plane'
+      && record.payload.format === 'divinity.provider_secret_ref_audit.v1'
+      && record.payload.operation === 'stream'
+      && record.payload.provider_id === 'api_secret_ref_stream_mock'
+      && record.payload.configured_secret_refs.includes(apiResolverStreamSecretRef)
+  )));
+  assert.equal(JSON.stringify(audit).includes(apiResolverChatSecret), false);
+  assert.equal(JSON.stringify(audit).includes(apiResolverStreamSecret), false);
 } finally {
   await mock.close();
   await ledgerLimitedMock.close();
