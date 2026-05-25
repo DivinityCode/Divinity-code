@@ -10,6 +10,7 @@ Commands: `init`, `run`, `status`, `approve`, `capabilities`, `recipes`, `doctor
 - `init` output includes the built-in starter recipes for onboarding.
 - `run` emits a task payload, generated `run_id`, lifecycle status, preflight decision metadata, connector references, agent activity records, artifact metadata, and a structured event timeline; hard budget cap excess returns `paused`.
 - `run --connector ticket_reference:ticket:DIV-17:https://example.test/tickets/DIV-17 "Read the repository README"` attaches initial ticket/docs/CI context to the task and resolved run output.
+- `run --criteria "All tests pass" --success-criteria "Docs updated" "Implement policy trace"` attaches explicit success criteria to the task payload and downstream run context.
 - `capabilities` lists supported policy presets, execution adapters, runner isolation profiles, connector adapters, and starter recipe summaries as `divinity.capabilities.v1`.
 - `recipes` lists the built-in guided starter recipes.
 - `doctor` reports Node, optional npm, optional pnpm/Corepack fallback, aggregate package-manager readiness, optional Docker runtime readiness for container-sandbox execution, installed dependencies, AJV validator dependencies, git, package manifest, and API server source readiness as structured JSON.

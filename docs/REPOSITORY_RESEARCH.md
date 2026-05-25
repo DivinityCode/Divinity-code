@@ -92,6 +92,7 @@ The 2026-05-25 refresh confirmed the latest observed releases above are still cu
 4. Keep smoke tests local and deterministic by using temp workspaces.
 5. Keep documentation current with observed repo signals and implementation status.
 6. Emit structured bug reports from the CLI so support evidence is generated from the same local checks operators already run.
+7. Carry task success criteria in the shared Task contract so goal/subgoal-style acceptance signals survive across CLI, API, and run storage.
 
 ## Build Slices Adopted From Research
 1. **Approval queue:** implemented run storage with an in-memory default, opt-in file-backed persistence, approval-required runs, and approve/reject transitions.
@@ -112,3 +113,4 @@ The 2026-05-25 refresh confirmed the latest observed releases above are still cu
 16. **Scope observability rollups:** implemented org/project run counts, approval backlog, and budget utilization rollups in `divinity.observability.v1`, API output, and dashboard rendering.
 17. **Runner isolation profiles:** implemented workspace snapshot and Docker container-sandbox profile discovery, run workspace isolation metadata, deterministic Docker argv planning, and Docker-backed execution for constrained shell adapters.
 18. **Structured bug reports:** implemented `divinity.bug_report.v1` and CLI `bug` output with GitHub-ready Markdown, environment details, git context, and local setup diagnostics.
+19. **Task success criteria:** implemented optional Task `success_criteria` arrays plus CLI criteria flags and API persistence to make acceptance signals explicit alongside objectives.
