@@ -5,7 +5,8 @@ import path from 'path';
 
 import {
   createProviderCredentialResolver,
-  loadProviderSecretRefs
+  loadProviderSecretRefs,
+  providerSecretReadiness
 } from '../packages/provider-secrets/src/index.mjs';
 
 const tmpRoot = mkdtempSync(path.join(tmpdir(), 'divinity-provider-secret-refs-'));
@@ -38,6 +39,31 @@ try {
       credential_env_var: 'HOSTED_SECRET_MOCK_API_KEY'
     }
   ]);
+
+  const readiness = providerSecretReadiness({
+    env: {
+      DIVINITY_PROVIDER_SECRET_REFS_PATH: manifestPath,
+      HOSTED_SECRET_MOCK_API_KEY: 'hosted-secret-value'
+    }
+  });
+  assert.equal(readiness.format, 'divinity.provider_secret_readiness.v1');
+  assert.equal(readiness.manifest_configured, true);
+  assert.equal(readiness.any_configured, true);
+  assert.deepEqual(readiness.providers, [
+    {
+      provider_id: 'hosted_secret_mock',
+      secret_ref: secretRef,
+      credential_env_var: 'HOSTED_SECRET_MOCK_API_KEY',
+      credential_configured: true
+    }
+  ]);
+  assert.equal(JSON.stringify(readiness).includes('hosted-secret-value'), false);
+
+  const emptyReadiness = providerSecretReadiness({ env: {} });
+  assert.equal(emptyReadiness.format, 'divinity.provider_secret_readiness.v1');
+  assert.equal(emptyReadiness.manifest_configured, false);
+  assert.equal(emptyReadiness.any_configured, false);
+  assert.deepEqual(emptyReadiness.providers, []);
 
   const resolver = createProviderCredentialResolver({
     env: {

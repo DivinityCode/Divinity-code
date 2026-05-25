@@ -30,7 +30,10 @@ import {
   executeProviderProxyChatStream,
   planProviderProxyRoute
 } from '../../../packages/provider-proxy/src/index.mjs';
-import { createProviderCredentialResolver } from '../../../packages/provider-secrets/src/index.mjs';
+import {
+  createProviderCredentialResolver,
+  providerSecretReadiness
+} from '../../../packages/provider-secrets/src/index.mjs';
 import { createProviderToolCallApproval } from '../../../packages/provider-tool-approvals/src/index.mjs';
 import { createProviderToolExecution } from '../../../packages/provider-tool-executions/src/index.mjs';
 import { createConfiguredRunStore } from '../../../packages/run-store/src/index.mjs';
@@ -46,6 +49,7 @@ const providerUsageLedger = createConfiguredProviderUsageLedger(process.env);
 const providerCredentialResolver = createProviderCredentialResolver({ env: process.env });
 const runSubscribers = new Map();
 const DEFAULT_SCOPE = { org_id: 'default-org', project_id: 'default-project' };
+const CONTROL_PLANE_AUDIT_RUN_ID = 'control_plane';
 const DEFAULT_ENABLED_TOOLSETS = resolveToolsets().toolsets.map(toolset => toolset.toolset_id);
 const DEFAULT_RUNTIME_CONFIG = {
   llm_provider: {
@@ -183,6 +187,60 @@ function recordAudit(entry) {
   auditRecords.push(record);
   persistRunStore();
   return record;
+}
+
+function redactedProviderSecretReadinessAuditPayload(readiness) {
+  return {
+    format: 'divinity.provider_secret_readiness_audit.v1',
+    manifest_configured: readiness.manifest_configured,
+    any_configured: readiness.any_configured,
+    providers: readiness.providers.map(provider => ({
+      provider_id: provider.provider_id,
+      secret_ref: provider.secret_ref,
+      credential_env_var: provider.credential_env_var,
+      credential_configured: provider.credential_configured
+    }))
+  };
+}
+
+function recordProviderSecretReadinessAudit(readiness) {
+  recordAudit({
+    type: 'provider_secret_readiness',
+    run_id: CONTROL_PLANE_AUDIT_RUN_ID,
+    payload: redactedProviderSecretReadinessAuditPayload(readiness)
+  });
+}
+
+function selectedProviderRuntime(route) {
+  return route?.selected_provider_runtime || null;
+}
+
+function recordProviderSecretRefAudit({ operation, route }) {
+  const runtime = selectedProviderRuntime(route);
+  const configuredSecretRefs = Array.isArray(runtime?.auth?.configured_secret_refs)
+    ? runtime.auth.configured_secret_refs.filter(Boolean)
+    : [];
+  if (configuredSecretRefs.length === 0) return;
+
+  recordAudit({
+    type: 'provider_secret_ref',
+    run_id: CONTROL_PLANE_AUDIT_RUN_ID,
+    payload: {
+      format: 'divinity.provider_secret_ref_audit.v1',
+      operation,
+      provider_id: runtime.provider_id,
+      model: runtime.model,
+      transport: runtime.transport,
+      configured_secret_refs: [...configuredSecretRefs],
+      credential_env_vars: Array.isArray(runtime.auth?.credential_env_vars)
+        ? [...runtime.auth.credential_env_vars]
+        : [],
+      configured_env_vars: Array.isArray(runtime.auth?.configured_env_vars)
+        ? [...runtime.auth.configured_env_vars]
+        : [],
+      credential_value_returned: false
+    }
+  });
 }
 
 function persistRunStore() {
@@ -376,6 +434,17 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (req.method === 'GET' && req.url === '/provider-secrets/readiness') {
+    try {
+      const readiness = providerSecretReadiness({ env: process.env });
+      recordProviderSecretReadinessAudit(readiness);
+      sendJson(res, 200, { readiness });
+    } catch (error) {
+      sendJson(res, 500, { error: error.message });
+    }
+    return;
+  }
+
   if (req.method === 'POST' && req.url === '/provider-proxy/route') {
     readJson(req, (body) => {
       const route = planProviderProxyRoute({
@@ -386,6 +455,7 @@ const server = http.createServer((req, res) => {
         requested_model: body.requested_model || body.model,
         credential_resolver: providerCredentialResolver
       });
+      recordProviderSecretRefAudit({ operation: 'route', route });
       sendJson(res, route.status === 'ready' ? 200 : 400, { route });
     });
     return;
@@ -413,6 +483,7 @@ const server = http.createServer((req, res) => {
           temperature: body.temperature,
           credential_resolver: providerCredentialResolver
         });
+        recordProviderSecretRefAudit({ operation: 'chat', route: result.route });
         const statusCode = result.status === 'completed'
           ? 200
           : result.status === 'requires_action'
@@ -501,6 +572,7 @@ const server = http.createServer((req, res) => {
           credential_resolver: providerCredentialResolver,
           on_event: event => sendSse(res, 'provider_stream_event', { event })
         });
+        recordProviderSecretRefAudit({ operation: 'stream', route: result.route });
         const finalEvent = result.status === 'failed'
           ? 'provider_stream_failed'
           : 'provider_stream_completed';

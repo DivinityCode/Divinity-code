@@ -59,6 +59,21 @@ try {
   const { port } = server.address();
   const baseUrl = `http://127.0.0.1:${port}`;
 
+  const { response: readinessResponse, body: readinessBody } = await requestJson(`${baseUrl}/provider-secrets/readiness`);
+  assert.equal(readinessResponse.status, 200);
+  assert.equal(readinessBody.readiness.format, 'divinity.provider_secret_readiness.v1');
+  assert.equal(readinessBody.readiness.manifest_configured, true);
+  assert.equal(readinessBody.readiness.any_configured, true);
+  assert.deepEqual(readinessBody.readiness.providers, [
+    {
+      provider_id: 'api_secret_ref_mock',
+      secret_ref: apiResolverSecretRef,
+      credential_env_var: 'API_SECRET_REF_MOCK_API_KEY',
+      credential_configured: true
+    }
+  ]);
+  assert.equal(JSON.stringify(readinessBody).includes(apiResolverSecret), false);
+
   const { response: secretRefResponse, body: secretRefBody } = await requestJson(`${baseUrl}/provider-proxy/route`, {
     method: 'POST',
     body: JSON.stringify({
@@ -74,6 +89,28 @@ try {
   assert.deepEqual(secretRefBody.route.candidate_results[0].configured_env_vars, []);
   assert.deepEqual(secretRefBody.route.candidate_results[0].configured_secret_refs, [apiResolverSecretRef]);
   assert.equal(JSON.stringify(secretRefBody).includes(apiResolverSecret), false);
+
+  const { body: audit } = await requestJson(`${baseUrl}/audit`);
+  assert.ok(audit.records.some(record => (
+    record.type === 'provider_secret_readiness'
+      && record.run_id === 'control_plane'
+      && record.payload.format === 'divinity.provider_secret_readiness_audit.v1'
+      && record.payload.any_configured === true
+      && record.payload.providers.some(provider => (
+        provider.provider_id === 'api_secret_ref_mock'
+          && provider.secret_ref === apiResolverSecretRef
+          && provider.credential_configured === true
+      ))
+  )));
+  assert.ok(audit.records.some(record => (
+    record.type === 'provider_secret_ref'
+      && record.run_id === 'control_plane'
+      && record.payload.format === 'divinity.provider_secret_ref_audit.v1'
+      && record.payload.operation === 'route'
+      && record.payload.provider_id === 'api_secret_ref_mock'
+      && record.payload.configured_secret_refs.includes(apiResolverSecretRef)
+  )));
+  assert.equal(JSON.stringify(audit).includes(apiResolverSecret), false);
 
   const { response, body } = await requestJson(`${baseUrl}/provider-proxy/route`, {
     method: 'POST',

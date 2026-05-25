@@ -37,7 +37,7 @@ Excluded provider sources:
 - Provider catalog overlays may add metadata and credential environment variable names only. They must not contain shared public keys, scraped credentials, no-registration key pools, or sources whose purpose is bypass, evasion, or circumvention.
 - Task payloads may carry `llm_provider`, `provider_runtime`, `toolsets`, and `toolset_resolution` so provider/tool decisions, selected tool schemas, and operator controls are visible before execution.
 - The provider catalog includes authorized free-tier candidates from the research, such as Groq, Cerebras, Mistral, and GitHub Models, but it stores only endpoint metadata and credential environment variable names.
-- `packages/provider-secrets` and API `DIVINITY_PROVIDER_SECRET_REFS_PATH` now provide a reviewed secret-reference bridge for hosted runtime credentials. The manifest stores only provider ids, `secret://` reference ids, and environment variable names; credential values remain in environment-backed operator secret storage.
+- `packages/provider-secrets` and API `DIVINITY_PROVIDER_SECRET_REFS_PATH` now provide a reviewed secret-reference bridge for hosted runtime credentials. The manifest stores only provider ids, `secret://` reference ids, and environment variable names; credential values remain in environment-backed operator secret storage. `GET /provider-secrets/readiness` and provider proxy audit records expose operator readiness and usage evidence without resolved secret values.
 - `packages/provider-proxy` now plans safe provider routes from the trusted catalog and blocks public shared-key sources, missing credentials, unknown providers, and explicit limit-bypass intent.
 - CLI `provider-route` and API `POST /provider-proxy/route` expose route-plan metadata only. They do not send prompts, call providers, store credentials, or print secret values.
 - `executeProviderProxyChat()`, `executeProviderProxyChatStream()`, CLI `provider-chat`, API `POST /provider-proxy/chat`, and API `POST /provider-proxy/chat/stream` now support OpenAI-compatible Chat Completions, Anthropic Messages, and OpenAI Responses execution behind the same route policy. Tests use local mock servers, not external provider calls.
@@ -51,11 +51,11 @@ Excluded provider sources:
 - Credentialed provider endpoint overrides fail closed during execution so operator-owned secrets are never forwarded to caller-supplied URLs.
 - Provider retry windows can now be tracked in a provider limit ledger. API chat execution uses an in-process ledger by default and optional `DIVINITY_PROVIDER_LIMIT_LEDGER_PATH` persistence; CLI route/chat commands use that file-backed ledger only when configured.
 - Provider request/token usage can now be tracked in a provider usage ledger when `DIVINITY_PROVIDER_USAGE_LEDGER_PATH` is configured. The ledger stores daily provider/model request and token totals only; `usage_budget` can enforce daily request/input/output/total token caps before upstream calls.
-- A future live proxy should extend the API secret-reference manifest into a managed operator secret store, identity, and audit surface while preserving fail-closed behavior.
+- A future live proxy should extend the API secret-reference manifest into a managed operator secret store with identity-aware write controls while preserving fail-closed behavior and the current redacted readiness/audit surface.
 - Rotation is acceptable for reliability and cost policy across operator-owned credentials; it is not acceptable for evading limits.
 
 ## Next Safe Slice
 Extend controlled execution toward production operations:
-- wire the injected secret resolver to an approved hosted operator secret store while keeping environment variables as the local development path;
+- replace the env-backed secret-reference bridge with an approved hosted operator secret store and identity-aware write controls while keeping environment variables as the local development path;
 - add more approved tool adapters and richer operator-reviewed result handoff without weakening redaction guarantees;
 - keep returning clear `429` or policy errors when limits are reached instead of bypassing them.

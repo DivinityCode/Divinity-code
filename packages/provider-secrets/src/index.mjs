@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 
 export const PROVIDER_SECRET_REFS_FORMAT = 'divinity.provider_secret_refs.v1';
+export const PROVIDER_SECRET_READINESS_FORMAT = 'divinity.provider_secret_readiness.v1';
 export const PROVIDER_SECRET_REFS_PATH_ENV = 'DIVINITY_PROVIDER_SECRET_REFS_PATH';
 
 const RAW_CREDENTIAL_FIELD_NAMES = new Set([
@@ -153,6 +154,24 @@ export function loadProviderSecretRefs(options = {}) {
     };
   }
   return normalizedManifest(JSON.parse(readFileSync(configuredPath, 'utf8')));
+}
+
+export function providerSecretReadiness({ env = process.env, path = '', secretRefsPath = '' } = {}) {
+  const configuredPath = pathFrom({ path: secretRefsPath || path, env });
+  const manifest = loadProviderSecretRefs({ path: configuredPath, env });
+  const providers = manifest.providers.map(provider => ({
+    provider_id: provider.provider_id,
+    secret_ref: provider.secret_ref,
+    credential_env_var: provider.credential_env_var,
+    credential_configured: Boolean(cleanString(env[provider.credential_env_var]))
+  }));
+
+  return {
+    format: PROVIDER_SECRET_READINESS_FORMAT,
+    manifest_configured: Boolean(configuredPath),
+    any_configured: providers.some(provider => provider.credential_configured),
+    providers
+  };
 }
 
 export function createProviderCredentialResolver({ env = process.env, path = '', secretRefsPath = '' } = {}) {
