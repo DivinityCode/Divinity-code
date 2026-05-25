@@ -62,7 +62,7 @@ Paperclip is the strongest control-plane reference for organizational agent work
 ## Development Plan Implications
 The code examples reinforce the current bootstrap direction and add these concrete follow-on slices:
 
-1. **Approval command family:** keep existing `approve` behavior, then add list/get/reject/revision/comment subcommands once approval records need operator workflows beyond a single transition.
+1. **Approval command family:** implemented the first expansion with `approvals`, API-backed `approve`, API-backed `reject`, and local structured decision payloads. Future slices can add get/revision/comment subcommands once approval records need richer review workflows.
 2. **Runtime adapter registry:** extend `packages/capabilities` and execution adapter metadata before adding new runtime integrations so CLI/API/dashboard all expose the same adapter identity.
 3. **Policy-hook bridge:** model hook-like pre-execution checks as policy-pack extensions, preserving deterministic preflight output before any adapter runs.
 4. **Durable goal model:** promote task success criteria into optional durable goal state only after budget accounting, continuation behavior, and completion evidence are represented in contracts.

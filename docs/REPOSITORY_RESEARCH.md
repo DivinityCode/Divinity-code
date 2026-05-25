@@ -118,3 +118,4 @@ The 2026-05-25 refresh confirmed the latest observed releases above are still cu
 17. **Runner isolation profiles:** implemented workspace snapshot and Docker container-sandbox profile discovery, run workspace isolation metadata, deterministic Docker argv planning, and Docker-backed execution for constrained shell adapters.
 18. **Structured bug reports:** implemented `divinity.bug_report.v1` and CLI `bug` output with GitHub-ready Markdown, environment details, git context, and local setup diagnostics.
 19. **Task success criteria:** implemented optional Task `success_criteria` arrays plus CLI criteria flags and API persistence to make acceptance signals explicit alongside objectives.
+20. **Approval command family:** implemented CLI `approvals`, API-backed `approve`, API-backed `reject`, and local structured approval/rejection payloads so operator approval workflows are scriptable outside the dashboard.
