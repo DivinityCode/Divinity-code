@@ -349,11 +349,13 @@ function capabilities() {
 function doctor() {
   const npmCheck = optionalCommandCheck('npm', 'npm', ['--version']);
   const pnpmCheck = cachedPnpmCheck();
+  const dockerCheck = optionalCommandCheck('docker', 'docker', ['--version']);
   const checks = [
     { check_id: 'node', ok: true, required: true, summary: process.version },
     npmCheck,
     pnpmCheck,
     packageManagerCheck(npmCheck, pnpmCheck),
+    dockerCheck,
     commandCheck('git', 'git', ['--version']),
     fileCheck('package_json', path.join(cwd, 'package.json')),
     directoryCheck('node_modules', path.join(cwd, 'node_modules')),

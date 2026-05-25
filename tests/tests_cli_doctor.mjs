@@ -23,6 +23,7 @@ for (const checkId of [
   'npm',
   'pnpm',
   'package_manager',
+  'docker',
   'git',
   'package_json',
   'node_modules',
@@ -39,6 +40,7 @@ assert.equal(checksById.get('node').ok, true);
 assert.match(checksById.get('node').summary, /^v\d+\./);
 assert.equal(checksById.get('npm').required, false);
 assert.equal(checksById.get('pnpm').required, false);
+assert.equal(checksById.get('docker').required, false);
 assert.equal(checksById.get('package_manager').required, true);
 assert.equal(checksById.get('node_modules').ok, true);
 assert.equal(checksById.get('ajv_dependencies').ok, true);
