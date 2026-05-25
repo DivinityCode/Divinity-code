@@ -151,6 +151,9 @@ const sampleRuns = [
         adapter: 'file_read',
         status: 'completed',
         exit_code: 0,
+        attempt: 1,
+        max_attempts: 2,
+        retry_of: null,
         target_path: 'README.md',
         stdout: '# Divinity Code',
         stderr: '',
@@ -162,6 +165,9 @@ const sampleRuns = [
         adapter: 'git_status',
         status: 'completed',
         exit_code: 0,
+        attempt: 1,
+        max_attempts: 2,
+        retry_of: null,
         target_path: null,
         stdout: ' M apps/api/src/server.mjs',
         stderr: '',
@@ -173,6 +179,9 @@ const sampleRuns = [
         adapter: 'node_test',
         status: 'completed',
         exit_code: 0,
+        attempt: 1,
+        max_attempts: 2,
+        retry_of: null,
         target_path: 'tests/tests_dashboard_static.mjs',
         stdout: '{"ok":true,"dashboard":"static-shell","runs":6}',
         stderr: '',
@@ -184,6 +193,9 @@ const sampleRuns = [
         adapter: 'package_script',
         status: 'completed',
         exit_code: 0,
+        attempt: 1,
+        max_attempts: 2,
+        retry_of: null,
         target_path: 'package.json#scripts.validate:contracts',
         stdout: 'PASS packages/contracts/examples/task.valid.json expected=true',
         stderr: '',
@@ -229,6 +241,40 @@ const sampleRuns = [
     artifacts: [
       artifact('artifact_log_0009', 'log', 'artifact://run_2026_05_24_0009/run.log'),
       artifact('artifact_summary_0009', 'summary', 'artifact://run_2026_05_24_0009/summary.md')
+    ],
+    executions: [
+      {
+        execution_id: 'exec_0009_readme_first',
+        step_id: 'step_retry_readme',
+        adapter: 'file_read',
+        status: 'failed',
+        exit_code: 1,
+        attempt: 1,
+        max_attempts: 2,
+        retry_of: null,
+        target_path: 'README.md',
+        stdout: '',
+        stderr: 'ENOENT: no such file or directory',
+        completed_at: '2026-05-24T07:59:11.000Z'
+      },
+      {
+        execution_id: 'exec_0009_readme_retry',
+        step_id: 'step_retry_readme',
+        adapter: 'file_read',
+        status: 'failed',
+        exit_code: 1,
+        attempt: 2,
+        max_attempts: 2,
+        retry_of: 'exec_0009_readme_first',
+        target_path: 'README.md',
+        stdout: '',
+        stderr: 'Retry limit reached; operator checkpoint required.',
+        completed_at: '2026-05-24T08:00:04.000Z'
+      }
+    ],
+    verifications: [
+      verification('verify_exec_0009_first', 'exec_0009_readme_first', 'step_retry_readme', 'failed'),
+      verification('verify_exec_0009_retry', 'exec_0009_readme_retry', 'step_retry_readme', 'failed')
     ],
     audit: {
       hash: 'da8f3c7e2b6a1d9f4c8e3b7a2d6f1c9e5b0a4d8f2c6e1b9a3d7f0c4e8b2a6d1a',
@@ -1210,9 +1256,22 @@ function renderExecutions(run) {
       <span class="status-pill ${item.status === 'completed' ? 'status-completed' : 'status-failed'}">${item.status}</span>
       ${renderVerificationResult(verificationsByExecution.get(item.execution_id))}
       <span class="execution-meta">exit ${item.exit_code}${item.target_path ? ` - ${item.target_path}` : ''}</span>
+      ${renderRetryMetadata(item)}
       <code class="execution-output">${(item.stdout || item.stderr || '').split('\n')[0] || '-'}</code>
     </li>
   `).join('');
+}
+
+function renderRetryMetadata(item) {
+  const attempt = Number(item.attempt || 1);
+  const maxAttempts = Number(item.max_attempts || 1);
+  const retryOf = item.retry_of || '';
+  const retryText = retryOf ? `retry of ${retryOf}` : 'first attempt';
+  return `
+    <span class="retry-chip">
+      attempt ${attempt}/${maxAttempts} - ${retryText}
+    </span>
+  `;
 }
 
 function renderVerificationResult(record) {
