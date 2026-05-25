@@ -968,7 +968,8 @@ function parseProviderToolExecutionArgs(values) {
     argument_values: Object.create(null),
     workspace_root: cwd,
     actor: 'cli',
-    reason: ''
+    reason: '',
+    operator_summary: ''
   };
 
   for (let index = 0; index < values.length; index += 1) {
@@ -1048,6 +1049,11 @@ function parseProviderToolExecutionArgs(values) {
       index += 1;
     } else if (value.startsWith('--reason=')) {
       options.reason = value.slice('--reason='.length);
+    } else if (value === '--operator-summary') {
+      options.operator_summary = next;
+      index += 1;
+    } else if (value.startsWith('--operator-summary=')) {
+      options.operator_summary = value.slice('--operator-summary='.length);
     } else if (!options.run_id) {
       options.run_id = value;
     } else {
@@ -1067,6 +1073,7 @@ function parseProviderToolExecutionArgs(values) {
   options.workspace_root = String(options.workspace_root || '').trim() || cwd;
   options.actor = String(options.actor || '').trim() || 'cli';
   options.reason = String(options.reason || '').trim();
+  options.operator_summary = String(options.operator_summary || '').trim();
   return options;
 }
 
@@ -1828,7 +1835,8 @@ async function providerToolExecute() {
       approval_id: options.approval_id,
       argument_values: options.argument_values,
       actor: options.actor,
-      reason: options.reason
+      reason: options.reason,
+      operator_summary: options.operator_summary
     };
 
     if (!options.api) {
@@ -1853,7 +1861,8 @@ async function providerToolExecute() {
         argument_values: options.argument_values,
         workspace_root: options.workspace_root,
         actor: options.actor,
-        reason: options.reason
+        reason: options.reason,
+        operator_summary: options.operator_summary
       });
       print({ ok: true, command: 'provider-tool-execute', run_id: options.run_id, execution });
       return;

@@ -188,6 +188,7 @@ const continuationServer = await createMockChatServer(async ({ req, res, body })
   assert.match(continuation.content, /call_read_context/);
   assert.match(continuation.content, /read_file/);
   assert.match(continuation.content, /completed/);
+  assert.match(continuation.content, /Operator reviewed the read result/);
   assert.match(continuation.content, /bytes_read/);
   assert.match(continuation.content, /line_count/);
   assert.match(continuation.content, /search_files/);
@@ -244,6 +245,7 @@ try {
         adapter: 'read_file',
         actor: 'operator@example.com',
         reason: 'Approved read-only continuation context.',
+        operator_summary: 'Operator reviewed the read result: safe route configuration context is available.',
         started_at: '2026-05-25T12:10:00Z',
         completed_at: '2026-05-25T12:10:01Z',
         output_summary: 'read_file completed; content redacted',
@@ -273,6 +275,7 @@ try {
         adapter: 'search_files',
         actor: 'operator@example.com',
         reason: 'Approved redacted search continuation context.',
+        operator_summary: 'Operator reviewed the search result: two implementation references were found.',
         started_at: '2026-05-25T12:10:02Z',
         completed_at: '2026-05-25T12:10:03Z',
         output_summary: 'search_files completed; results redacted',

@@ -43,6 +43,7 @@ try {
     workspace_root: workspaceRoot,
     actor: 'operator@example.com',
     reason: 'Execute the approved read-only file request.',
+    operator_summary: 'Operator reviewed the file result: safe configuration context is available.',
     started_at: '2026-05-25T12:01:00Z',
     completed_at: '2026-05-25T12:01:01Z',
     index: 1
@@ -62,6 +63,8 @@ try {
   assert.equal(execution.adapter, 'read_file');
   assert.equal(execution.actor, 'operator@example.com');
   assert.equal(execution.reason, 'Execute the approved read-only file request.');
+  assert.equal(execution.operator_summary, 'Operator reviewed the file result: safe configuration context is available.');
+  assert.equal(execution.operator_summary_source, 'operator');
   assert.equal(execution.started_at, '2026-05-25T12:01:00Z');
   assert.equal(execution.completed_at, '2026-05-25T12:01:01Z');
   assert.equal(execution.output_redacted, true);
@@ -72,6 +75,15 @@ try {
   });
   assert.equal(JSON.stringify(execution).includes(secretPath), false);
   assert.equal(JSON.stringify(execution).includes(secretFileContents), false);
+
+  assert.throws(() => createProviderToolExecution({
+    run_id: 'run_tool_execution',
+    approval,
+    argument_values: { path: secretPath },
+    workspace_root: workspaceRoot,
+    reason: 'Raw argument values must not appear in operator summaries.',
+    operator_summary: `Operator reviewed ${secretPath}.`
+  }), /operator summary must not include raw argument values/);
 
   const unsupported = createProviderToolExecution({
     run_id: 'run_tool_execution',
@@ -149,6 +161,7 @@ try {
     workspace_root: workspaceRoot,
     actor: 'operator@example.com',
     reason: 'Execute the approved redacted repository search.',
+    operator_summary: 'Operator reviewed the search result: related implementation references were found.',
     started_at: '2026-05-25T12:02:01Z',
     completed_at: '2026-05-25T12:02:02Z',
     index: 4
@@ -156,6 +169,8 @@ try {
 
   assert.equal(searchExecution.status, 'completed');
   assert.equal(searchExecution.adapter, 'search_files');
+  assert.equal(searchExecution.operator_summary, 'Operator reviewed the search result: related implementation references were found.');
+  assert.equal(searchExecution.operator_summary_source, 'operator');
   assert.deepEqual(searchExecution.argument_keys, ['path', 'query']);
   assert.equal(searchExecution.output_redacted, true);
   assert.equal(searchExecution.output_metadata.files_scanned, 1);
