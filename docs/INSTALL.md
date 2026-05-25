@@ -34,9 +34,27 @@ node ~/.cache/node/corepack/v1/pnpm/9.15.4/bin/pnpm.cjs install
 
 If `npm` is available, `npm install` can also install the same package-lock based dependency set, but it is not required for local verification.
 
+## Link The Local CLI
+
+The package manifest exposes a `divinity` bin target at `apps/cli/src/index.mjs`. For source-checkout evaluation, either call the CLI directly:
+
+```bash
+node apps/cli/src/index.mjs doctor
+```
+
+or link the package with pnpm:
+
+```bash
+pnpm link --global
+divinity doctor
+```
+
+The package remains marked `private` while the non-production warning is active. Published package and binary install paths are future release work.
+
 ## Verify The Install
 
 ```bash
+pnpm run test:package
 pnpm run validate:contracts
 pnpm run test:smoke
 pnpm test

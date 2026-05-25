@@ -40,6 +40,12 @@ test ! -e .divinity-provider-usage.json
 pnpm run validate:contracts
 ```
 
+- [ ] Package manifest and CLI bin smoke:
+
+```bash
+pnpm run test:package
+```
+
 - [ ] Provider proxy and tool governance checks:
 
 ```bash

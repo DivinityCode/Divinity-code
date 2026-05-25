@@ -105,7 +105,8 @@ Build a best-in-class AI engineering platform that combines:
    - Next production slice: add more approved tool adapters and richer operator-reviewed result handoff behind the same route policy.
 3. Public onboarding and release packaging.
    - Bootstrap status: public install, quickstart, upgrade, and release checklist docs are linked from the README and guarded by `test:public-docs`.
-   - Next production slice: add release artifacts, published package/binary installation paths, and environment bootstrap checks that do not require repo internals.
+   - Bootstrap status: package metadata declares the `divinity` CLI bin target, Node engine, pnpm package manager, repository, files allowlist, and package-lock root metadata, guarded by `test:package`.
+   - Next production slice: add generated release artifacts, published package/binary installation paths, and environment bootstrap checks that do not require repo internals.
 4. Hosted/identity/billing boundary.
    - Non-goal for the current bootstrap: hosted identity, billing, and managed secrets are not implemented until local provider/tool/runtime behavior is stable.
 

@@ -70,6 +70,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - Run `corepack enable` and `pnpm install`
 - If `pnpm` is unavailable but cached Corepack pnpm is present, run scripts with `node ~/.cache/node/corepack/v1/pnpm/<version>/bin/pnpm.cjs <script>`.
 - Run `pnpm run validate:contracts` to validate schema examples and CI contract checks.
+- Run `pnpm run test:package` to validate package metadata and the `divinity` CLI bin target.
 - Run `pnpm run test:public-docs` to validate public install, quickstart, upgrade, and release checklist docs.
 - Run `pnpm run test:smoke` for the local MVP demo flow plus CLI/API smoke path.
 - Run `pnpm run test:providers` for focused LLM provider catalog coverage.

@@ -22,9 +22,12 @@ node apps/cli/src/index.mjs init
 The installed binary name is `divinity`; from a source checkout, use `node apps/cli/src/index.mjs` for the same commands.
 
 ```bash
+pnpm link --global
 divinity init
 divinity doctor
 ```
+
+If you do not want to link the checkout globally, replace `divinity` with `node apps/cli/src/index.mjs` in the commands below.
 
 `divinity doctor` reports Node, package-manager readiness, dependencies, provider catalog readiness, optional Docker readiness, and provider credential readiness without printing secret values.
 
@@ -77,6 +80,7 @@ Do not use public shared keys, no-signup key pools, or rotation intended to bypa
 
 ```bash
 pnpm run validate:contracts
+pnpm run test:package
 pnpm run test:providers
 pnpm run test:smoke
 pnpm test
