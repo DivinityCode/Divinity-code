@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProviderToolCallApproval",
+  "type": "object",
+  "required": [
+    "format",
+    "approval_id",
+    "run_id",
+    "tool_call_id",
+    "provider_id",
+    "transport",
+    "name",
+    "argument_keys",
+    "arguments_redacted",
+    "decision",
+    "actor",
+    "reason",
+    "decided_at"
+  ],
+  "properties": {
+    "format": {
+      "type": "string",
+      "const": "divinity.provider_tool_call_approval.v1"
+    },
+    "approval_id": { "type": "string", "minLength": 1 },
+    "run_id": { "type": "string", "minLength": 1 },
+    "tool_call_id": { "type": "string", "minLength": 1 },
+    "provider_id": { "type": "string", "minLength": 1 },
+    "transport": {
+      "type": "string",
+      "enum": ["chat_completions", "anthropic_messages", "codex_responses"]
+    },
+    "name": { "type": "string", "minLength": 1 },
+    "argument_keys": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "arguments_redacted": { "const": true },
+    "decision": {
+      "type": "string",
+      "enum": ["approve", "reject"]
+    },
+    "actor": { "type": "string", "minLength": 1 },
+    "reason": { "type": "string", "minLength": 1 },
+    "decided_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

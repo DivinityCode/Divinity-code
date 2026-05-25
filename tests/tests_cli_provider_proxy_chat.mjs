@@ -1,8 +1,19 @@
 import assert from 'assert/strict';
 import { execFile } from 'child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import http from 'http';
+import { tmpdir } from 'os';
 import path from 'path';
 import { promisify } from 'util';
+
+const tmpRoot = mkdtempSync(path.join(tmpdir(), 'divinity-cli-provider-proxy-chat-'));
+const repoFixture = path.join(tmpRoot, 'repo');
+mkdirSync(repoFixture);
+writeFileSync(path.join(repoFixture, 'README.md'), '# Provider Proxy CLI Fixture\n');
+
+process.env.DIVINITY_API_AUTOSTART = '0';
+process.env.DIVINITY_WORKSPACE_ROOT = path.join(tmpRoot, 'workspaces');
+const { server: apiServer } = await import('../apps/api/src/server.mjs');
 
 const execFileAsync = promisify(execFile);
 
@@ -66,6 +77,14 @@ async function runCli(args, env = {}) {
     }
   );
   return JSON.parse(stdout);
+}
+
+async function requestJson(url, options = {}) {
+  const response = await fetch(url, {
+    headers: { 'content-type': 'application/json', ...options.headers },
+    ...options
+  });
+  return { response, body: await response.json() };
 }
 
 function writeSse(res, events) {
@@ -169,6 +188,20 @@ const streamServer = await createMockChatServer(({ req, res, body }) => {
 });
 
 try {
+  await new Promise(resolve => apiServer.listen(0, '127.0.0.1', resolve));
+  const { port } = apiServer.address();
+  const baseUrl = `http://127.0.0.1:${port}`;
+  const { body: approvalRun } = await requestJson(`${baseUrl}/tasks`, {
+    method: 'POST',
+    body: JSON.stringify({
+      task_id: 'task_cli_provider_tool_approval',
+      objective: 'Review a CLI provider tool approval',
+      repo: repoFixture,
+      policy_id: 'safe_exec',
+      created_at: '2026-05-25T12:00:00Z'
+    })
+  });
+
   const completed = await runCli([
     'provider-chat',
     '--provider', 'custom_openai_compatible',
@@ -303,11 +336,57 @@ try {
   assert.equal(streamServer.requests.length, 1);
   assert.equal(JSON.stringify(streamCompleted).includes(secretPrompt), false);
   assert.equal(JSON.stringify(streamCompleted).includes(apiSecret), false);
+
+  const localToolApproval = await runCli([
+    'provider-tool-approval',
+    'run_cli_tool_approval',
+    '--tool-call-id', 'call_cli_search',
+    '--provider', 'custom_openai_compatible',
+    '--transport', 'chat_completions',
+    '--name', 'web_search',
+    '--argument-key', 'query',
+    '--decision', 'approve',
+    '--actor', 'cli@example.com',
+    '--reason', 'Public search approved.'
+  ]);
+
+  assert.equal(localToolApproval.ok, true);
+  assert.equal(localToolApproval.command, 'provider-tool-approval');
+  assert.equal(localToolApproval.approval.format, 'divinity.provider_tool_call_approval.v1');
+  assert.equal(localToolApproval.approval.tool_call_id, 'call_cli_search');
+  assert.deepEqual(localToolApproval.approval.argument_keys, ['query']);
+  assert.equal(localToolApproval.approval.arguments_redacted, true);
+
+  const apiToolApproval = await runCli([
+    'provider-tool-approval',
+    approvalRun.run_id,
+    '--api', baseUrl,
+    '--tool-call-id', 'call_cli_api_search',
+    '--provider', 'custom_openai_compatible',
+    '--transport', 'chat_completions',
+    '--name', 'web_search',
+    '--argument-key', 'query',
+    '--decision', 'reject',
+    '--actor', 'cli@example.com',
+    '--reason', 'Reject provider tool execution from CLI test.'
+  ]);
+
+  assert.equal(apiToolApproval.ok, true);
+  assert.equal(apiToolApproval.status_code, 201);
+  assert.equal(apiToolApproval.approval.run_id, approvalRun.run_id);
+  assert.equal(apiToolApproval.approval.decision, 'reject');
+  assert.equal(apiToolApproval.run.provider_tool_call_approvals.length, 1);
 } finally {
   await server.close();
   await toolCallServer.close();
   await responsesServer.close();
   await streamServer.close();
+  if (apiServer.listening) {
+    await new Promise((resolve, reject) => {
+      apiServer.close(error => error ? reject(error) : resolve());
+    });
+  }
+  rmSync(tmpRoot, { recursive: true, force: true });
 }
 
 console.log(JSON.stringify({ ok: true, test: 'cli-provider-proxy-chat' }));

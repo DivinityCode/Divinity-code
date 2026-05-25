@@ -29,6 +29,7 @@ import {
   executeProviderProxyChatStream,
   planProviderProxyRoute
 } from '../../../packages/provider-proxy/src/index.mjs';
+import { createProviderToolCallApproval } from '../../../packages/provider-tool-approvals/src/index.mjs';
 import { createConfiguredRunStore } from '../../../packages/run-store/src/index.mjs';
 import { createExecutionVerification } from '../../../packages/verification/src/index.mjs';
 import { cleanupRunWorkspace, createRunWorkspace, executionCwdForRun } from '../../../packages/workspaces/src/index.mjs';
@@ -572,6 +573,7 @@ const server = http.createServer((req, res) => {
         executions: [],
         verifications: [],
         approval_comments: [],
+        provider_tool_call_approvals: [],
         steps: [],
         workspace: createRunWorkspace({ runId, repoPath: scopedTask.repo })
       };
@@ -711,6 +713,51 @@ const server = http.createServer((req, res) => {
           persistRunStore();
           broadcastRun(run);
           sendJson(res, 201, { comment, run: publicRun(run) });
+        } catch (error) {
+          sendJson(res, 400, { error: error.message });
+        }
+      });
+      return;
+    }
+  }
+
+  const providerToolCallApprovalsMatch = req.url.match(/^\/runs\/([^/]+)\/provider-tool-call-approvals$/);
+  if (providerToolCallApprovalsMatch) {
+    const run = runs.get(providerToolCallApprovalsMatch[1]);
+    if (!run) {
+      sendJson(res, 404, { error: 'run not found' });
+      return;
+    }
+
+    if (req.method === 'GET') {
+      sendJson(res, 200, {
+        run_id: run.run_id,
+        approvals: run.provider_tool_call_approvals || []
+      });
+      return;
+    }
+
+    if (req.method === 'POST') {
+      readJson(req, (body) => {
+        try {
+          const approvals = run.provider_tool_call_approvals || [];
+          const approval = createProviderToolCallApproval({
+            ...body,
+            run_id: run.run_id,
+            index: approvals.length + 1
+          });
+          run.provider_tool_call_approvals = approvals;
+          run.provider_tool_call_approvals.push(approval);
+          recordAudit({
+            type: 'provider_tool_call_approval',
+            run_id: run.run_id,
+            created_at: approval.decided_at,
+            payload: approval
+          });
+
+          persistRunStore();
+          broadcastRun(run);
+          sendJson(res, 201, { approval, run: publicRun(run) });
         } catch (error) {
           sendJson(res, 400, { error: error.message });
         }
