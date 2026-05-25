@@ -396,11 +396,13 @@ const server = http.createServer((req, res) => {
         });
         const statusCode = result.status === 'completed'
           ? 200
-          : result.status === 'limited'
-            ? 429
-            : result.status === 'failed'
-              ? 502
-              : 400;
+          : result.status === 'requires_action'
+            ? 202
+            : result.status === 'limited'
+              ? 429
+              : result.status === 'failed'
+                ? 502
+                : 400;
         sendJson(res, statusCode, { result });
       } catch (error) {
         sendJson(res, 500, { error: error.message });
