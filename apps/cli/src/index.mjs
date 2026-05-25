@@ -336,6 +336,33 @@ function parseApprovalsArgs(values) {
   return options;
 }
 
+function parseStatusArgs(values) {
+  const options = {
+    run_id: '',
+    api: ''
+  };
+
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    const next = values[index + 1];
+
+    if (value === '--api' || value === '--api-url') {
+      options.api = next;
+      index += 1;
+    } else if (value.startsWith('--api=')) {
+      options.api = value.slice('--api='.length);
+    } else if (!options.run_id) {
+      options.run_id = value;
+    } else {
+      throw new Error(`unknown status option: ${value}`);
+    }
+  }
+
+  options.api = String(options.api || '').trim().replace(/\/+$/, '');
+  options.run_id = String(options.run_id || '').trim();
+  return options;
+}
+
 function parseApprovalCommentArgs(values) {
   const options = {
     run_id: '',
@@ -584,8 +611,33 @@ function run() {
   });
 }
 
-function status() {
-  print({ ok: true, command: 'status', status: 'queued' });
+async function status() {
+  try {
+    const options = parseStatusArgs(args);
+    if (!options.api) {
+      print({ ok: true, command: 'status', status: 'queued' });
+      return;
+    }
+    if (!options.run_id) {
+      throw new Error('status requires a run_id when --api is supplied');
+    }
+
+    const { response, body } = await fetchJson(`${options.api}/runs/${options.run_id}`);
+    print({
+      ok: response.ok,
+      command: 'status',
+      api: options.api,
+      run_id: options.run_id,
+      status_code: response.status,
+      status: body.status,
+      run: body,
+      response: body
+    });
+    if (!response.ok) process.exitCode = 1;
+  } catch (error) {
+    print({ ok: false, command: 'status', error: error.message });
+    process.exitCode = 1;
+  }
 }
 
 function localApprovalPayload(options, commandName) {
@@ -800,7 +852,7 @@ function bug() {
 switch (command) {
   case 'init': await init(); break;
   case 'run': run(); break;
-  case 'status': status(); break;
+  case 'status': await status(); break;
   case 'approvals': await approvals(); break;
   case 'approve': await approve('approve', 'approve'); break;
   case 'reject': await approve('reject', 'reject'); break;
