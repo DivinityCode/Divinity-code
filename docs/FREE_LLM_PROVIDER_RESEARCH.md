@@ -39,18 +39,17 @@ Excluded provider sources:
 - The provider catalog includes authorized free-tier candidates from the research, such as Groq, Cerebras, Mistral, and GitHub Models, but it stores only endpoint metadata and credential environment variable names.
 - `packages/provider-proxy` now plans safe provider routes from the trusted catalog and blocks public shared-key sources, missing credentials, unknown providers, and explicit limit-bypass intent.
 - CLI `provider-route` and API `POST /provider-proxy/route` expose route-plan metadata only. They do not send prompts, call providers, store credentials, or print secret values.
-- `executeProviderProxyChat()`, CLI `provider-chat`, and API `POST /provider-proxy/chat` now support non-streaming OpenAI-compatible Chat Completions, Anthropic Messages, and OpenAI Responses execution behind the same route policy. Tests use local mock servers, not external provider calls.
-- Provider chat results include upstream status, selected provider/model, assistant message, finish reason, usage metadata, and toolset compatibility metadata while omitting prompts, request bodies, credential values, and raw tool arguments.
+- `executeProviderProxyChat()`, `executeProviderProxyChatStream()`, CLI `provider-chat`, API `POST /provider-proxy/chat`, and API `POST /provider-proxy/chat/stream` now support OpenAI-compatible Chat Completions, Anthropic Messages, and OpenAI Responses execution behind the same route policy. Tests use local mock servers, not external provider calls.
+- Provider chat results include upstream status, selected provider/model, assistant message or accumulated stream text, finish reason, usage metadata, normalized stream event counts, and toolset compatibility metadata while omitting prompts, request bodies, credential values, raw tool arguments, and Anthropic thinking/signature content.
 - Provider-returned tool calls from Chat Completions, Anthropic Messages, and OpenAI Responses are detected but not executed. They return `status: "requires_action"`, redacted `tool_call_requests`, and a required `tool_call_review` operator control.
 - Provider chat execution enforces selected toolset compatibility before upstream calls; chat-only free-tier candidates cannot be used for toolsets that require provider `tool_calls` support.
 - Credentialed provider endpoint overrides fail closed during execution so operator-owned secrets are never forwarded to caller-supplied URLs.
 - Provider retry windows can now be tracked in a provider limit ledger. API chat execution uses an in-process ledger by default and optional `DIVINITY_PROVIDER_LIMIT_LEDGER_PATH` persistence; CLI route/chat commands use that file-backed ledger only when configured.
-- A future live proxy should extend this with fuller request/token budget ledgers, streaming, hosted secret integration, and approved tool execution loops while preserving fail-closed behavior.
+- A future live proxy should extend this with fuller request/token budget ledgers, hosted secret integration, and approved tool execution loops while preserving fail-closed behavior.
 - Rotation is acceptable for reliability and cost policy across operator-owned credentials; it is not acceptable for evading limits.
 
 ## Next Safe Slice
 Extend controlled execution toward production operations:
 - persist fuller per-provider request and token budgets in a managed store;
-- add streaming response support with redacted audit metadata;
 - integrate an approved secret store while keeping environment variables as the local development path;
 - keep returning clear `429` or policy errors when limits are reached instead of bypassing them.

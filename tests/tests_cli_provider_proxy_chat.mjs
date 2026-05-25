@@ -68,6 +68,16 @@ async function runCli(args, env = {}) {
   return JSON.parse(stdout);
 }
 
+function writeSse(res, events) {
+  res.statusCode = 200;
+  res.setHeader('content-type', 'text/event-stream');
+  for (const event of events) {
+    if (event.event) res.write(`event: ${event.event}\n`);
+    res.write(`data: ${typeof event.data === 'string' ? event.data : JSON.stringify(event.data)}\n\n`);
+  }
+  res.end();
+}
+
 const apiSecret = 'openrouter-secret-value';
 const secretPrompt = 'secret prompt for cli proxy';
 const toolSecret = 'secret tool argument for cli proxy';
@@ -132,6 +142,30 @@ const responsesServer = await createMockChatServer(({ req, res, body }) => {
       total_tokens: 7
     }
   }));
+});
+const streamServer = await createMockChatServer(({ req, res, body }) => {
+  assert.equal(req.url, '/chat/completions');
+  assert.equal(body.stream, true);
+  assert.equal(body.max_completion_tokens, 16);
+  writeSse(res, [
+    {
+      data: {
+        id: 'chatcmpl_cli_stream',
+        object: 'chat.completion.chunk',
+        model: body.model,
+        choices: [{ index: 0, delta: { content: 'cli ' }, finish_reason: null }]
+      }
+    },
+    {
+      data: {
+        id: 'chatcmpl_cli_stream',
+        object: 'chat.completion.chunk',
+        model: body.model,
+        choices: [{ index: 0, delta: { content: 'stream' }, finish_reason: 'stop' }]
+      }
+    },
+    { data: '[DONE]' }
+  ]);
 });
 
 try {
@@ -248,10 +282,32 @@ try {
   assert.equal(responsesServer.requests.length, 1);
   assert.equal(JSON.stringify(responsesCompleted).includes(secretPrompt), false);
   assert.equal(JSON.stringify(responsesCompleted).includes(apiSecret), false);
+
+  const streamCompleted = await runCli([
+    'provider-chat',
+    '--provider', 'custom_openai_compatible',
+    '--base-url', streamServer.base_url,
+    '--model', 'mock-model',
+    '--message', secretPrompt,
+    '--max-completion-tokens', '16',
+    '--stream'
+  ], {
+    CUSTOM_LLM_API_KEY: apiSecret
+  });
+
+  assert.equal(streamCompleted.ok, true);
+  assert.equal(streamCompleted.result.format, 'divinity.provider_proxy_stream_result.v1');
+  assert.equal(streamCompleted.result.status, 'completed');
+  assert.equal(streamCompleted.result.output_text, 'cli stream');
+  assert.equal(streamCompleted.result.event_counts.text_delta, 2);
+  assert.equal(streamServer.requests.length, 1);
+  assert.equal(JSON.stringify(streamCompleted).includes(secretPrompt), false);
+  assert.equal(JSON.stringify(streamCompleted).includes(apiSecret), false);
 } finally {
   await server.close();
   await toolCallServer.close();
   await responsesServer.close();
+  await streamServer.close();
 }
 
 console.log(JSON.stringify({ ok: true, test: 'cli-provider-proxy-chat' }));
