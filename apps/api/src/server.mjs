@@ -125,7 +125,8 @@ function taskWithRuntimeConfig(task, config = DEFAULT_RUNTIME_CONFIG) {
   });
   const toolsetResolution = resolveToolsets({
     enabled_toolsets: toolsets.enabled,
-    disabled_toolsets: toolsets.disabled
+    disabled_toolsets: toolsets.disabled,
+    provider_runtime: providerRuntime
   });
 
   return {

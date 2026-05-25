@@ -47,10 +47,22 @@ try {
   assert.equal(run.task.provider_runtime.auth.mode, 'none');
   assert.equal(run.task.provider_runtime.auth.credential_configured, true);
   assert.deepEqual(run.task.toolset_resolution.tools, ['web_extract', 'web_search']);
+  assert.deepEqual(run.task.toolset_resolution.policy_permissions, ['network:read']);
+  assert.equal(run.task.toolset_resolution.risk_summary.highest_risk_level, 'low');
+  assert.deepEqual(run.task.toolset_resolution.provider_capability_checks, [
+    {
+      provider_id: 'custom_openai_compatible',
+      capability: 'tool_calls',
+      status: 'supported',
+      required_by_toolsets: ['web']
+    }
+  ]);
+  assert.deepEqual(run.task.toolset_resolution.operator_controls, []);
 
   const { body: storedRun } = await requestJson(`${baseUrl}/runs/${run.run_id}`);
   assert.equal(storedRun.task.provider_runtime.provider_id, 'custom_openai_compatible');
   assert.deepEqual(storedRun.task.toolset_resolution.tools, ['web_extract', 'web_search']);
+  assert.deepEqual(storedRun.task.toolset_resolution.policy_permissions, ['network:read']);
 
   const { response: badProviderResponse, body: badProvider } = await requestJson(`${baseUrl}/tasks`, {
     method: 'POST',
