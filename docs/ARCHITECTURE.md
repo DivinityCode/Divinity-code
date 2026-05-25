@@ -69,9 +69,10 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 
 ## Goal Records
 - CLI and API run assembly convert each task success criterion into a `divinity.goal.v1` record on the run payload.
-- Goal records carry run/task identity, org/project scope, initial lifecycle status, allocated preflight budget estimate, criterion evidence, budget evidence, and empty completion evidence for later verifier-backed updates.
-- The operator dashboard renders goal records from sample data and API-loaded runs so acceptance criteria are visible next to the decision trace before mutation routes exist.
-- This bootstrap slice is record-only; it does not add free-form goal mutation routes.
+- Goal records carry run/task identity, org/project scope, lifecycle status, allocated preflight budget estimate, criterion evidence, budget evidence, and completion evidence.
+- API `POST /runs/:id/goals/:goal_id/complete` completes a goal only when the caller supplies a passed verification record from the same run.
+- CLI `goal-complete <run_id> <goal_id> --api <base-url> --verification <verification_id>` exposes the same constrained completion path for scripts.
+- The operator dashboard renders goal records from sample data and API-loaded runs so acceptance criteria and completion state are visible next to the decision trace.
 
 ## Run Lifecycle
 1. Task created
@@ -167,7 +168,7 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 - API artifact lists are available from `GET /runs/:id/artifacts`; full artifact content is available from `GET /artifacts/:artifact_id`.
 
 ## Audit Export
-- API lifecycle actions create hash-backed audit records for run creation, run events, approval decisions, approval comments, approval revisions, budget incidents, execution lock records, execution records, verification records, heartbeat records, workspace cleanup, and artifact records.
+- API lifecycle actions create hash-backed audit records for run creation, run events, goal records, approval decisions, approval comments, approval revisions, budget incidents, execution lock records, execution records, verification records, heartbeat records, workspace cleanup, and artifact records.
 - Audit exports are available from `GET /audit`.
 - Optional `from` and `to` query parameters filter records by creation timestamp.
 

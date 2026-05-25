@@ -15,7 +15,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 | --- | --- | --- | --- |
 | Task | `packages/contracts/schemas/task.v1.json` | CLI/API request surfaces | Captures objective, success criteria, repo context, scope, policy, budget, connector requests, and creation time. |
 | Run | `packages/contracts/schemas/run.v1.json` | API run store, CLI run output | Tracks one execution attempt for a task, including lifecycle status and risk level. |
-| GoalRecord | `packages/contracts/schemas/goal.v1.json` | Goals package, CLI/API run output | Promotes task success criteria into durable run goals with status, scope, budget allocation, and evidence refs. |
+| GoalRecord | `packages/contracts/schemas/goal.v1.json` | Goals package, CLI/API run output, API goal routes | Promotes task success criteria into durable run goals with status, scope, budget allocation, and verifier-backed completion evidence refs. |
 | PreflightDecision | `packages/contracts/schemas/preflight.v1.json` | Policy engine | Explains risk, predicted actions, budget estimate, policy hook outcomes, warnings, blocked reasons, approval requirement, and run status before execution. |
 | Policy | `packages/contracts/schemas/policy.v1.json` | Policy engine and policy packs | Defines permissions and approval threshold used to gate work. |
 | Step | `packages/contracts/schemas/step.v1.json` | API step routes, execution package | Represents a proposed atomic action and its pre-execution gate result. |
@@ -40,7 +40,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 | Relationship | Cardinality | Notes |
 | --- | --- | --- |
 | Task -> Run | One task can create many runs | API `POST /tasks` creates a run from task input; CLI `run` emits one local run payload. |
-| Run -> GoalRecord | Zero or more goals | Each non-empty success criterion creates one goal record at run assembly time. |
+| Run -> GoalRecord | Zero or more goals | Each non-empty success criterion creates one goal record at run assembly time; passed verifier evidence can complete a pending goal. |
 | Run -> PreflightDecision | One required decision per run | Preflight determines lifecycle status before execution starts. |
 | Run -> Step | Zero or more steps | API `POST /runs/:id/steps` adds gated steps. |
 | Step -> ExecutionRecord | Zero or one execution in current bootstrap | Execution only occurs after policy gates allow the step. |
@@ -71,7 +71,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 | --- | --- | --- | --- |
 | Task, Run, Goals, Preflight | `run` output | `/tasks`, `/preflight`, `/runs/:id` | run queue and selected-run header/detail |
 | Policy and Capabilities | `capabilities`, `doctor` readiness context | `/capabilities` | capability-informed labels and operator context |
-| Events and Approvals | event array in `run`; `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `approval-revision`, `approval-resubmit` | `/runs/:id/events`, `/approvals`, `/runs/:id/approval`, `/runs/:id/approval/comments`, `/runs/:id/approval/revision`, `/runs/:id/approval/resubmit` | timeline and approval panel |
+| Events, Goals, and Approvals | event array in `run`; `goal-complete`, `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `approval-revision`, `approval-resubmit` | `/runs/:id/events`, `/runs/:id/goals/:goal_id/complete`, `/approvals`, `/runs/:id/approval`, `/runs/:id/approval/comments`, `/runs/:id/approval/revision`, `/runs/:id/approval/resubmit` | timeline, goal panel, and approval panel |
 | Artifacts | artifact metadata in `run` | `/runs/:id/artifacts`, `/artifacts/:id` | artifact panel |
 | Execution and Verification | not directly executed by CLI bootstrap | `/runs/:id/steps`, `/runs/:id/steps/:step_id/execute` | execution and verification panels |
 | Audit and Observability | not primary in CLI bootstrap | `/audit`, `/observability` | audit metadata and observability region |

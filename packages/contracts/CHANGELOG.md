@@ -1,5 +1,9 @@
 # Contracts Changelog
 
+## v1.35.0
+- Added optional `GoalRecord.completed_at` for verifier-backed completion mutations.
+- Added `goal_completed` run events and `goal_record` audit entries for constrained goal completion evidence.
+
 ## v1.34.0
 - Added `ApprovalRevision` schema and examples for approval revision request and resubmission records.
 - Added optional `approval_revision` payloads to Run records.

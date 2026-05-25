@@ -17,7 +17,7 @@ import {
   releaseExecutionLock
 } from '../../../packages/execution-locks/src/index.mjs';
 import { createRunHeartbeat, latestHeartbeatAt } from '../../../packages/heartbeats/src/index.mjs';
-import { createGoalRecords } from '../../../packages/goals/src/index.mjs';
+import { completeGoalRecord, createGoalRecords } from '../../../packages/goals/src/index.mjs';
 import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
 import { createObservabilitySummary } from '../../../packages/observability/src/index.mjs';
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
@@ -1022,6 +1022,76 @@ const server = http.createServer((req, res) => {
     }
 
     sendJson(res, 200, { run_id: run.run_id, events: run.events });
+    return;
+  }
+
+  const goalCompleteMatch = req.url.match(/^\/runs\/([^/]+)\/goals\/([^/]+)\/complete$/);
+  if (req.method === 'POST' && goalCompleteMatch) {
+    const run = runs.get(goalCompleteMatch[1]);
+    const goalId = goalCompleteMatch[2];
+    if (!run) {
+      sendJson(res, 404, { error: 'run not found' });
+      return;
+    }
+
+    const goalIndex = (run.goals || []).findIndex(goal => goal.goal_id === goalId);
+    if (goalIndex === -1) {
+      sendJson(res, 404, { error: 'goal not found' });
+      return;
+    }
+
+    if (run.goals[goalIndex].status === 'completed') {
+      sendJson(res, 409, { error: 'goal is already completed' });
+      return;
+    }
+
+    readJson(req, (body) => {
+      const verificationId = String(body.verification_id || '').trim();
+      if (!verificationId) {
+        sendJson(res, 400, { error: 'verification_id is required' });
+        return;
+      }
+
+      const verification = (run.verifications || []).find(record => record.verification_id === verificationId);
+      if (!verification) {
+        sendJson(res, 404, { error: 'verification not found' });
+        return;
+      }
+
+      try {
+        const goal = completeGoalRecord(run.goals[goalIndex], { verification });
+        run.goals[goalIndex] = goal;
+        recordAudit({
+          type: 'goal_record',
+          run_id: run.run_id,
+          created_at: goal.completed_at,
+          payload: goal
+        });
+        const event = createRunEvent({
+          run_id: run.run_id,
+          type: 'goal_completed',
+          status: run.status,
+          message: `Goal ${goal.goal_id} completed`,
+          metadata: {
+            goal_id: goal.goal_id,
+            verification_id: verification.verification_id
+          }
+        });
+        run.events.push(event);
+        recordAudit({
+          type: 'run_event',
+          run_id: run.run_id,
+          created_at: event.created_at,
+          payload: event
+        });
+        persistRunStore();
+        const payload = { goal, run: publicRun(run) };
+        broadcastRun(run);
+        sendJson(res, 200, payload);
+      } catch (error) {
+        sendJson(res, 409, { error: error.message });
+      }
+    });
     return;
   }
 

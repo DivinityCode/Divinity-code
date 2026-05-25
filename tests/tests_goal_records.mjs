@@ -1,6 +1,6 @@
 import assert from 'assert/strict';
 
-import { createGoalRecords } from '../packages/goals/src/index.mjs';
+import { completeGoalRecord, createGoalRecords } from '../packages/goals/src/index.mjs';
 import { evaluatePreflight, POLICY_PRESETS } from '../packages/policy-engine/src/index.mjs';
 
 const task = {
@@ -76,5 +76,37 @@ const task = {
 
   assert.deepEqual(goals, []);
 }
+
+{
+  const goals = createGoalRecords({
+    run_id: 'run_goal_complete',
+    task,
+    preflight: { budget: { estimated_cost_usd: 1 }, evidence_refs: [] },
+    status: 'queued',
+    created_at: '2026-05-25T00:00:04Z'
+  });
+  const completed = completeGoalRecord(goals[0], {
+    verification: {
+      verification_id: 'verify_exec_goal_complete',
+      result: 'passed',
+      completed_at: '2026-05-25T00:01:00Z'
+    },
+    completed_at: '2026-05-25T00:01:01Z'
+  });
+
+  assert.equal(completed.status, 'completed');
+  assert.equal(completed.completed_at, '2026-05-25T00:01:01Z');
+  assert.equal(completed.completion_evidence_refs.length, 1);
+  assert.equal(completed.completion_evidence_refs[0].source, 'verification.result');
+  assert.equal(completed.completion_evidence_refs[0].claim_type, 'observed');
+  assert.ok(completed.completion_evidence_refs[0].supports.includes('goal.status'));
+}
+
+assert.throws(() => completeGoalRecord({
+  goal_id: 'goal_run_goal_complete_001',
+  run_id: 'run_goal_complete'
+}, {
+  verification: { verification_id: 'verify_exec_goal_failed', result: 'failed' }
+}), /goal completion requires passed verification evidence/);
 
 console.log(JSON.stringify({ ok: true, test: 'goal-records' }));

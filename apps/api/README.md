@@ -24,6 +24,7 @@ Set `DIVINITY_API_KEY` or comma-separated `DIVINITY_API_KEYS` to require `Author
 - `POST /runs/:id/connectors`
 - `POST /runs/:id/steps`
 - `POST /runs/:id/steps/:step_id/execute`
+- `POST /runs/:id/goals/:goal_id/complete`
 - `POST /runs/:id/execution-locks/recover`
 - `POST /runs/:id/heartbeat`
 - `GET /runs/:id/approval`
@@ -35,6 +36,7 @@ Set `DIVINITY_API_KEY` or comma-separated `DIVINITY_API_KEYS` to require `Author
 
 Task creation normalizes missing scope to `default-org/default-project`; callers can pass `scope.org_id` and `scope.project_id` to associate a run with an org and project.
 Task creation converts submitted `success_criteria` into durable run `goals` records with initial status, evidence references, and budget estimate allocation.
+Goal completion requires a passed verification record from the same run; `POST /runs/:id/goals/:goal_id/complete` appends completion evidence, emits `goal_completed`, and writes a `goal_record` audit entry.
 Task creation includes deterministic planner, executor, and verifier activity records with actor, reason, evidence references, and budget estimates.
 Task creation and step gates add budget incident records when estimated cost exceeds soft or hard caps; these records are included on run payloads and audit exports.
 Step execution requires a pending step whose pre-execution check is allowed; execution lock, execution, and verifier records are written back to the run, event timeline, and audit export.

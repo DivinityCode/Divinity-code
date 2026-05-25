@@ -6,6 +6,7 @@ const EVENT_TYPES = new Set([
   'approval_comment_added',
   'approval_revision_requested',
   'approval_resubmitted',
+  'goal_completed',
   'execution_lock_acquired',
   'execution_lock_recovered',
   'execution_lock_released',

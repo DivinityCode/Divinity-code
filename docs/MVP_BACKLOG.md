@@ -40,6 +40,7 @@
 - CLI `run --connector adapter:resource_type:resource_id[:url]` attaches initial ticket/docs/CI context to task and run output.
 - CLI `run --criteria "..."` and `run --success-criteria "..."` attach explicit success criteria to the task payload.
 - CLI/API run payloads include durable goal records derived from success criteria, with evidence refs and budget allocation for each criterion.
+- CLI/API can complete a goal only with passed verifier evidence from the same run through `goal-complete` and `POST /runs/:id/goals/:goal_id/complete`.
 - CLI `status <run_id> --api <base-url>` fetches stored API run status while preserving the local queued placeholder without `--api`.
 - CLI `approval <run_id> --api <base-url>` fetches stored approval state, comments, and run payload without mutating the run.
 - CLI `approval-revision <run_id> --api <base-url>` requests changes on an approval run and moves it to `paused`; CLI `approval-resubmit <run_id> --api <base-url>` returns the run to `awaiting_approval`.
@@ -50,6 +51,7 @@
 - IDE extension scaffold contributes task run, dashboard launch, and doctor commands that delegate to the repo-local CLI.
 - API exposes `POST /preflight`; `POST /tasks` records preflight metadata and moves high-risk allowed work to `awaiting_approval`.
 - API `POST /tasks` preserves submitted task success criteria through run storage and retrieval.
+- API goal completion emits `goal_completed` events and `goal_record` audit entries.
 - API task creation normalizes missing org/project scope to `default-org/default-project`; configured API keys protect control-plane routes when `DIVINITY_API_KEY` or `DIVINITY_API_KEYS` is set.
 - Preflight and step-gate decisions evaluate policy-pack pre-execution hooks into deterministic hook outcomes, warnings, blocks, and observed evidence before execution adapters run.
 - CLI/API run payloads include budget incident records when soft or hard budget caps are exceeded, and API audit export records those incidents as immutable evidence.

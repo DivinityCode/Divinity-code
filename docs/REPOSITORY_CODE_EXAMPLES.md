@@ -65,7 +65,7 @@ The code examples reinforce the current bootstrap direction and add these concre
 1. **Approval command family:** implemented `approvals`, API-backed approval snapshots, API-backed `approve`, API-backed `reject`, API-backed approval comments, API-backed approval revision/resubmission, and local structured decision/comment/revision payloads.
 2. **Runtime adapter registry:** implemented a first catalog pass for Divinity, Claude, Codex, and generic process runtimes so CLI/API/dashboard expose the same adapter identity before runtime execution is wired in.
 3. **Policy-hook bridge:** implemented data-only policy-pack pre-execution hooks that preflight and step gates evaluate into hook outcomes, warnings, blocks, and evidence before any adapter runs.
-4. **Durable goal model:** implemented a first record-only pass that promotes task success criteria into run `goals` with budget allocation and evidence refs; future slices can add constrained mutation once completion evidence is produced by verifier flows.
+4. **Durable goal model:** implemented task success criteria promotion into run `goals`, budget allocation, evidence refs, dashboard visibility, and constrained completion from passed verifier evidence.
 5. **Budget incidents:** implemented soft/hard budget incident records on CLI/API run payloads and API audit exports so financial risk state is auditable before richer dashboard controls.
 6. **Worktree isolation hardening:** keep run workspace cleanup/quarantine evidence visible as runner isolation moves from local snapshots toward parallel or remote execution.
 
@@ -74,7 +74,7 @@ The code examples reinforce the current bootstrap direction and add these concre
 | --- | --- |
 | Plugin/skill/adapter catalogs | `packages/capabilities`, `packages/runtime-adapters`, `packages/connectors`, `packages/policy-packs` |
 | Preflight and hook-style checks | `packages/policy-engine`, `packages/execution`, API preflight and step gates |
-| Durable task/goal semantics | `packages/contracts/schemas/task.v1.json`, `packages/contracts/schemas/goal.v1.json`, `packages/goals`, CLI/API run `goals`, dashboard goal panel |
+| Durable task/goal semantics | `packages/contracts/schemas/task.v1.json`, `packages/contracts/schemas/goal.v1.json`, `packages/goals`, CLI/API run `goals`, API goal completion route, CLI `goal-complete`, dashboard goal panel |
 | Budget incidents and auditability | `packages/budget-incidents`, `packages/contracts/schemas/budget-incident.v1.json`, API audit export |
 | App/server schemas | `packages/contracts/schemas`, `packages/contracts/examples`, `tests/scripts_validate_contracts.mjs` |
 | Doctor/setup diagnostics | `apps/cli/src/index.mjs`, `tests/tests_cli_doctor.mjs` |

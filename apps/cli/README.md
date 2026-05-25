@@ -1,7 +1,7 @@
 # CLI App
 Owner: Builder Experience
 
-Commands: `init`, `run`, `status`, `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `approval-revision`, `approval-resubmit`, `capabilities`, `recipes`, `doctor`, `bug`.
+Commands: `init`, `run`, `status`, `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `approval-revision`, `approval-resubmit`, `goal-complete`, `capabilities`, `recipes`, `doctor`, `bug`.
 
 ## Current Behavior
 - `init` writes `.divinity.json` with the default `safe_exec` policy, budget caps, and org/project scope.
@@ -20,6 +20,7 @@ Commands: `init`, `run`, `status`, `approvals`, `approval`, `approve`, `reject`,
 - `approval-comments <run_id> --api http://127.0.0.1:3000` lists approval comments for an API-backed run.
 - `approval-revision <run_id> --api http://127.0.0.1:3000 --actor operator@example.com --reason "needs rollback evidence" --change "attach rollback plan"` requests revision on an API-backed approval run and moves it to `paused`; without `--api`, it emits a local structured revision payload for scripts.
 - `approval-resubmit <run_id> --api http://127.0.0.1:3000 --actor builder@example.com --reason "rollback evidence attached"` resubmits a paused approval revision back to `awaiting_approval`; without `--api`, it emits a local structured resubmission payload for scripts.
+- `goal-complete <run_id> <goal_id> --api http://127.0.0.1:3000 --verification <verification_id>` completes an API-backed run goal only when the verification record passed; without `--api`, it emits a local structured completion payload for scripts.
 - `capabilities` lists supported policy presets, execution adapters, runner isolation profiles, connector adapters, and starter recipe summaries as `divinity.capabilities.v1`.
 - `recipes` lists the built-in guided starter recipes.
 - `doctor` reports Node, optional npm, optional pnpm/Corepack fallback, aggregate package-manager readiness, optional Docker runtime readiness for container-sandbox execution, installed dependencies, AJV validator dependencies, git, package manifest, and API server source readiness as structured JSON.
