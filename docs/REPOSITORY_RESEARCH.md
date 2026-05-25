@@ -126,3 +126,4 @@ The 2026-05-25 refresh confirmed the latest observed releases above are still cu
 24. **Goal records:** implemented `divinity.goal.v1` records so task success criteria become durable run goals with initial status, evidence refs, and budget allocation.
 25. **Dashboard goal visibility:** implemented dashboard rendering for run goals so operators can inspect acceptance criteria, goal status, budget allocation, and evidence from static samples or API-loaded runs.
 26. **Approval comments:** implemented `divinity.approval_comment.v1` records, API attach/list routes, CLI comment/list commands, and timeline/audit evidence so approval review context is scriptable without changing approve/reject semantics.
+27. **Dashboard approval comment visibility:** implemented dashboard rendering for run approval comments from static samples and API-loaded runs so operator review context is visible beside goals and decision traces.

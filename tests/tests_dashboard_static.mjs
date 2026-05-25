@@ -15,6 +15,7 @@ for (const selector of [
   'data-event-timeline',
   'data-decision-trace',
   'data-goal-list',
+  'data-approval-comment-list',
   'data-connector-reference-list',
   'data-agent-activity-list',
   'data-execution-list',
@@ -128,6 +129,7 @@ assert(runs.every(run => run.budget && Number.isFinite(run.budget.soft) && Numbe
 assert(runs.every(run => Array.isArray(run.events) && run.events.length > 0), 'runs need timelines');
 assert(runs.every(run => run.decision_trace?.chosen_path && run.decision_trace?.rejected_alternative), 'runs need decision traces');
 assert(runs.some(run => Array.isArray(run.goals) && run.goals.length > 0), 'sample data should include goal records');
+assert(runs.some(run => Array.isArray(run.approval_comments) && run.approval_comments.length > 0), 'sample data should include approval comments');
 assert(runs.some(run => Array.isArray(run.agent_activity) && run.agent_activity.length > 0), 'sample data should include agent activity records');
 assert(runs.some(run => Array.isArray(run.executions) && run.executions.length > 0), 'sample data should include execution records');
 assert(runs.some(run => Array.isArray(run.verifications) && run.verifications.length > 0), 'sample data should include verification records');
@@ -137,6 +139,8 @@ assert(js.includes('claim_type'), 'dashboard sample data should include fact/inf
 assert(js.includes('renderEvidenceLabels'), 'dashboard should render evidence labels');
 assert(js.includes('renderDecisionTrace'), 'dashboard should render decision trace panel');
 assert(js.includes('renderGoals'), 'dashboard should render goal records');
+assert(js.includes('renderApprovalComments'), 'dashboard should render approval comments');
+assert(js.includes('approval_comments: run.approval_comments || []'), 'dashboard should preserve API approval comments');
 assert(js.includes('renderConnectorReferences'), 'dashboard should render connector references');
 assert(js.includes('renderAgentActivity'), 'dashboard should render agent activity records');
 assert(js.includes('renderExecutions'), 'dashboard should render execution records');
@@ -144,6 +148,7 @@ assert(js.includes('renderVerificationResult'), 'dashboard should render verific
 assert(js.includes('git_status') && js.includes('file_read') && js.includes('node_test') && js.includes('package_script'), 'dashboard should show execution adapter names');
 assert(css.includes('verification-chip'), 'dashboard should style verification chips');
 assert(css.includes('goal-item'), 'dashboard should style goal records');
+assert(css.includes('approval-comment-item'), 'dashboard should style approval comments');
 assert(css.includes('connector-reference-item'), 'dashboard should style connector reference items');
 assert(js.includes('Observed') && js.includes('Inferred'), 'dashboard should show observed/inferred label text');
 assert(runs.some(run => run.artifacts.length > 0), 'at least one run needs artifacts');

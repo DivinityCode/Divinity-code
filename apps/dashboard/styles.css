@@ -735,6 +735,7 @@ dd {
 }
 
 .goal-panel,
+.approval-comment-panel,
 .connector-panel,
 .agent-activity-panel,
 .execution-panel {
@@ -746,6 +747,7 @@ dd {
 }
 
 .goal-panel h3,
+.approval-comment-panel h3,
 .connector-panel h3,
 .agent-activity-panel h3,
 .execution-panel h3 {
@@ -755,6 +757,7 @@ dd {
 }
 
 .goal-panel ul,
+.approval-comment-panel ul,
 .connector-panel ul,
 .agent-activity-panel ul,
 .execution-panel ul {
@@ -799,6 +802,34 @@ dd {
 
 .goal-item .claim-list {
   grid-column: 1 / -1;
+}
+
+.approval-comment-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  align-items: start;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-alt);
+}
+
+.approval-comment-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.approval-comment-copy strong,
+.approval-comment-copy span {
+  overflow-wrap: anywhere;
+}
+
+.approval-comment-copy span,
+.approval-comment-item time {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .connector-reference-item {

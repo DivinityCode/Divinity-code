@@ -27,6 +27,15 @@ const sampleRuns = [
       goalRecord('goal_0012_001', 'All contract examples validate', 'pending', 0.75),
       goalRecord('goal_0012_002', 'Smoke path leaves no repo config behind', 'pending', 0.75)
     ],
+    approval_comments: [
+      {
+        comment_id: 'approval_comment_run_2026_05_24_0012_001',
+        run_id: 'run_2026_05_24_0012',
+        actor: 'operator@example.com',
+        body: 'Confirm rollback evidence before approving the pagination change.',
+        created_at: '2026-05-24T10:14:03.000Z'
+      }
+    ],
     connector_references: [
       connectorReference('ref_a11ce0000000001', 'ticket_reference', 'ticket', 'DIV-17', 'https://example.test/tickets/DIV-17', 'Pagination ticket'),
       connectorReference('ref_a11ce0000000002', 'docs_reference', 'document', 'SPEC-USERS-PAGING', 'https://example.test/docs/users-pagination', 'Pagination spec')
@@ -625,6 +634,7 @@ function normalizeApiRun(run) {
     events: (run.events || []).map(normalizeApiEvent),
     decision_trace: decisionTraceForRun(run),
     goals: run.goals || [],
+    approval_comments: run.approval_comments || [],
     agent_activity: run.agent_activity || [],
     executions: run.executions || stepExecutions,
     verifications: run.verifications || stepVerifications,
@@ -706,6 +716,7 @@ function hydrateRunReferences(sourceRuns) {
     for (const runArtifact of run.artifacts) runArtifact.run_id = run.run_id;
     for (const connector of run.connector_references || []) connector.run_id = run.run_id;
     for (const goal of run.goals || []) goal.run_id = run.run_id;
+    for (const comment of run.approval_comments || []) comment.run_id = run.run_id;
     for (const activity of run.agent_activity || []) activity.run_id = run.run_id;
     for (const runVerification of run.verifications || []) runVerification.run_id = run.run_id;
     for (const runHeartbeat of run.heartbeats || []) runHeartbeat.run_id = run.run_id;
@@ -958,6 +969,7 @@ function renderRunDetail() {
   document.querySelector('[data-event-timeline]').innerHTML = run.events.map(renderEvent).join('');
   document.querySelector('[data-decision-trace]').innerHTML = renderDecisionTrace(run.decision_trace);
   document.querySelector('[data-goal-list]').innerHTML = renderGoals(run);
+  document.querySelector('[data-approval-comment-list]').innerHTML = renderApprovalComments(run);
   document.querySelector('[data-connector-reference-list]').innerHTML = renderConnectorReferences(run);
   document.querySelector('[data-agent-activity-list]').innerHTML = renderAgentActivity(run);
   document.querySelector('[data-execution-list]').innerHTML = renderExecutions(run);
@@ -1066,6 +1078,23 @@ function renderGoals(run) {
       <span class="status-pill ${goalStatusClass(goal.status)}">${goal.status}</span>
       <span class="goal-budget">${formatCurrency(goal.budget_estimate_usd || 0)}</span>
       ${renderEvidenceLabels(goal.evidence_refs)}
+    </li>
+  `).join('');
+}
+
+function renderApprovalComments(run) {
+  const comments = run.approval_comments || [];
+  if (!comments.length) {
+    return '<li class="empty-state">Approval comments appear when operators add review context.</li>';
+  }
+
+  return comments.map(comment => `
+    <li class="approval-comment-item">
+      <span class="approval-comment-copy">
+        <strong>${comment.actor}</strong>
+        <span>${comment.body}</span>
+      </span>
+      <time datetime="${comment.created_at}">${formatDate(comment.created_at)}</time>
     </li>
   `).join('');
 }

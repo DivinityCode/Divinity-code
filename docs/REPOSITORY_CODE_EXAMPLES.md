@@ -79,5 +79,5 @@ The code examples reinforce the current bootstrap direction and add these concre
 | App/server schemas | `packages/contracts/schemas`, `packages/contracts/examples`, `tests/scripts_validate_contracts.mjs` |
 | Doctor/setup diagnostics | `apps/cli/src/index.mjs`, `tests/tests_cli_doctor.mjs` |
 | Runtime adapters and execution records | `packages/runtime-adapters`, `packages/execution`, `packages/runner-isolation`, API step execution routes |
-| Approval lifecycle | `packages/contracts/schemas/approval.v1.json`, `packages/contracts/schemas/approval-comment.v1.json`, `packages/approval-comments`, API approval routes, CLI approval commands, dashboard approval queue |
+| Approval lifecycle | `packages/contracts/schemas/approval.v1.json`, `packages/contracts/schemas/approval-comment.v1.json`, `packages/approval-comments`, API approval routes, CLI approval commands, dashboard approval queue and comment panel |
 | Heartbeats and liveness | `packages/heartbeats`, `packages/observability`, dashboard liveness card |
