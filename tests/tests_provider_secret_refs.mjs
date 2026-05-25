@@ -5,6 +5,7 @@ import path from 'path';
 
 import {
   createProviderCredentialResolver,
+  createHostedProviderSecretStoreAdapter,
   loadProviderSecretRefs,
   providerSecretReadiness,
   storeProviderSecret
@@ -50,6 +51,8 @@ try {
   assert.equal(readiness.format, 'divinity.provider_secret_readiness.v1');
   assert.equal(readiness.manifest_configured, true);
   assert.equal(readiness.store_configured, false);
+  assert.equal(readiness.store_backend_id, 'local_file');
+  assert.equal(readiness.store_backend_kind, 'local_file');
   assert.equal(readiness.any_configured, true);
   assert.deepEqual(readiness.providers, [
     {
@@ -66,6 +69,8 @@ try {
   assert.equal(emptyReadiness.format, 'divinity.provider_secret_readiness.v1');
   assert.equal(emptyReadiness.manifest_configured, false);
   assert.equal(emptyReadiness.store_configured, false);
+  assert.equal(emptyReadiness.store_backend_id, 'local_file');
+  assert.equal(emptyReadiness.store_backend_kind, 'local_file');
   assert.equal(emptyReadiness.any_configured, false);
   assert.deepEqual(emptyReadiness.providers, []);
 
@@ -98,6 +103,8 @@ try {
   assert.equal(storeRecord.secret_ref, secretRef);
   assert.equal(storeRecord.credential_env_var, 'HOSTED_SECRET_MOCK_API_KEY');
   assert.equal(storeRecord.encrypted, true);
+  assert.equal(storeRecord.store_backend_id, 'local_file');
+  assert.equal(storeRecord.store_backend_kind, 'local_file');
   assert.equal(storeRecord.updated_by, 'operator@example.com');
   assert.equal(storeRecord.reason, 'Authorized provider onboarding');
   assert.equal(JSON.stringify(storeRecord).includes(storeSecret), false);
@@ -111,6 +118,8 @@ try {
     }
   });
   assert.equal(storeReadiness.store_configured, true);
+  assert.equal(storeReadiness.store_backend_id, 'local_file');
+  assert.equal(storeReadiness.store_backend_kind, 'local_file');
   assert.equal(storeReadiness.any_configured, true);
   assert.deepEqual(storeReadiness.providers, [
     {
@@ -132,6 +141,42 @@ try {
   });
   assert.deepEqual(storeResolver.configuredSecretRefs(runtime), [secretRef]);
   assert.equal(storeResolver.resolveCredential(runtime), storeSecret);
+
+  const hostedAdapter = createHostedProviderSecretStoreAdapter({
+    backend_id: 'hosted_operator_mock'
+  });
+  const hostedRecord = storeProviderSecret({
+    env: {},
+    secret_store_adapter: hostedAdapter,
+    provider_id: 'hosted_secret_mock',
+    secret_ref: secretRef,
+    credential_env_var: 'HOSTED_SECRET_MOCK_API_KEY',
+    secret_value: 'hosted-adapter-secret',
+    actor: 'operator@example.com',
+    reason: 'Authorized hosted provider onboarding',
+    updated_at: '2026-05-26T09:00:00.000Z'
+  });
+  assert.equal(hostedRecord.format, 'divinity.provider_secret_store_record.v1');
+  assert.equal(hostedRecord.store_backend_id, 'hosted_operator_mock');
+  assert.equal(hostedRecord.store_backend_kind, 'hosted_operator');
+  assert.equal(hostedRecord.provider_id, 'hosted_secret_mock');
+  assert.equal(JSON.stringify(hostedRecord).includes('hosted-adapter-secret'), false);
+
+  const hostedReadiness = providerSecretReadiness({
+    env: { DIVINITY_PROVIDER_SECRET_REFS_PATH: manifestPath },
+    secret_store_adapter: hostedAdapter
+  });
+  assert.equal(hostedReadiness.store_configured, true);
+  assert.equal(hostedReadiness.store_backend_id, 'hosted_operator_mock');
+  assert.equal(hostedReadiness.store_backend_kind, 'hosted_operator');
+  assert.equal(hostedReadiness.providers[0].credential_source, 'store');
+
+  const hostedResolver = createProviderCredentialResolver({
+    env: { DIVINITY_PROVIDER_SECRET_REFS_PATH: manifestPath },
+    secret_store_adapter: hostedAdapter
+  });
+  assert.deepEqual(hostedResolver.configuredSecretRefs(runtime), [secretRef]);
+  assert.equal(hostedResolver.resolveCredential(runtime), 'hosted-adapter-secret');
 
   assert.throws(
     () => storeProviderSecret({
