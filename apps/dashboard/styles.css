@@ -735,6 +735,7 @@ dd {
 }
 
 .goal-panel,
+.approval-revision-panel,
 .approval-comment-panel,
 .connector-panel,
 .agent-activity-panel,
@@ -747,6 +748,7 @@ dd {
 }
 
 .goal-panel h3,
+.approval-revision-panel h3,
 .approval-comment-panel h3,
 .connector-panel h3,
 .agent-activity-panel h3,
@@ -758,6 +760,7 @@ dd {
 
 .goal-panel ul,
 .approval-comment-panel ul,
+.approval-revision-card ul,
 .connector-panel ul,
 .agent-activity-panel ul,
 .execution-panel ul {
@@ -813,6 +816,45 @@ dd {
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--surface-alt);
+}
+
+.approval-revision-card {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-alt);
+}
+
+.approval-revision-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.approval-revision-card strong,
+.approval-revision-card li,
+.approval-revision-card dd {
+  overflow-wrap: anywhere;
+}
+
+.approval-revision-card time,
+.approval-revision-card p,
+.approval-revision-card li {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.approval-revision-card dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.approval-revision-card ul {
+  gap: 6px;
 }
 
 .approval-comment-copy {

@@ -20,7 +20,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 1. Builder CLI: `init`, `run`, API-backed `status`, `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `approval-revision`, `approval-resubmit`, `capabilities`, `recipes`, `doctor`, and `bug`.
 2. IDE extension scaffold: task run, dashboard launch, and doctor commands delegated to the repo-local CLI.
 3. Control Plane API: health, preflight, task creation, run retrieval, approvals, approval comments, approval revisions, step gates and execution locks, verifier evidence, run heartbeats, connector references, artifacts, audit export, and live run streams.
-4. Operator dashboard: run queue, approvals, approval comments, run timeline, decision trace, goal records, connector references, agent activity, execution and verification evidence, liveness summary, artifacts, audit metadata, and API-backed live updates.
+4. Operator dashboard: run queue, approvals, approval comments, approval revisions, run timeline, decision trace, goal records, connector references, agent activity, execution and verification evidence, liveness summary, artifacts, audit metadata, and API-backed live updates.
 
 
 ## Repo Layout
@@ -61,6 +61,6 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - Run `npm run validate:contracts` to validate schema examples and CI contract checks.
 - Run `npm run test:smoke` for a local CLI+API smoke path.
 - Run `npm run test:goals` for focused success-criteria-to-goal coverage.
-- Run `npm run test:approval` for focused approval decision and approval comment coverage.
+- Run `npm run test:approval` for focused approval decision, approval comment, and approval revision coverage.
 - Run `npm test` for preflight engine, approval API, execution adapters, run events, artifacts, audit export, CLI, and smoke checks.
 - If `npm` is unavailable but cached Corepack pnpm is present, run scripts with `node ~/.cache/node/corepack/v1/pnpm/<version>/bin/pnpm.cjs <script>`.

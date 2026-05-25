@@ -134,6 +134,7 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 - Approval moves the run back to `queued`; rejection marks the run `failed`.
 - Approval comments record actor, body, timestamp, timeline event, and audit metadata without changing run status.
 - Approval revisions record actor, reason, requested changes, resubmission actor, resubmission reason, timeline events, and audit metadata.
+- The operator dashboard renders approval revision state from static sample data and API-loaded runs beside comments and goals.
 - Each approval transition records decision, actor, reason, and timestamp metadata.
 
 ## Run Event Timeline
