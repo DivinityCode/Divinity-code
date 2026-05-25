@@ -10,6 +10,55 @@ const sampleRuns = [
     created_at: '2026-05-24T10:12:43.000Z',
     budget: { spent: 12.43, soft: 50, hard: 100 },
     actor: 'ai-agent@divinity',
+    task: {
+      provider_runtime: {
+        provider_id: 'cerebras',
+        display_name: 'Cerebras',
+        transport: 'chat_completions',
+        capabilities: ['chat', 'free_tier_models', 'openai_compatible']
+      },
+      toolset_resolution: {
+        format: 'divinity.toolset_resolution.v1',
+        tools: ['read_file', 'search_files', 'web_extract', 'web_search'],
+        policy_permissions: ['file:read', 'network:read'],
+        risk_summary: {
+          highest_risk_level: 'medium',
+          high_risk_toolsets: [],
+          medium_risk_toolsets: ['file'],
+          low_risk_toolsets: ['web']
+        },
+        provider_capability_checks: [
+          {
+            provider_id: 'openrouter',
+            capability: 'tool_calls',
+            status: 'supported',
+            required_by_toolsets: ['file', 'web']
+          },
+          {
+            provider_id: 'cerebras',
+            capability: 'tool_calls',
+            status: 'missing',
+            required_by_toolsets: ['file', 'web']
+          }
+        ],
+        operator_controls: [
+          {
+            control_id: 'approval_required',
+            status: 'recommended',
+            reason: 'medium-risk file toolset selected for repository changes',
+            toolsets: ['file']
+          },
+          {
+            control_id: 'provider_capability_review',
+            status: 'required',
+            reason: 'provider missing required capability: tool_calls',
+            provider_id: 'cerebras',
+            capability: 'tool_calls',
+            toolsets: ['file', 'web']
+          }
+        ]
+      }
+    },
     events: [
       event('evt_001', 'task_created', 'queued', 'Task created', 'Task payload accepted by API.', '2026-05-24T10:12:43.000Z', '120ms'),
       event('evt_002', 'preflight_completed', 'awaiting_approval', 'Preflight requires approval', 'Predicted write and test execution actions.', '2026-05-24T10:12:58.000Z', '2.34s', [
@@ -717,6 +766,8 @@ function normalizeApiRun(run) {
     approval_revision: run.approval_revision || null,
     approval_comments: run.approval_comments || [],
     agent_activity: run.agent_activity || [],
+    toolset_resolution: run.task?.toolset_resolution || run.toolset_resolution || null,
+    provider_runtime: run.task?.provider_runtime || run.provider_runtime || null,
     executions: run.executions || stepExecutions,
     verifications: run.verifications || stepVerifications,
     artifacts: run.artifacts || [],
@@ -1053,6 +1104,7 @@ function renderRunDetail() {
 
   document.querySelector('[data-event-timeline]').innerHTML = run.events.map(renderEvent).join('');
   document.querySelector('[data-decision-trace]').innerHTML = renderDecisionTrace(run.decision_trace);
+  document.querySelector('[data-operator-control-list]').innerHTML = renderOperatorControls(run);
   document.querySelector('[data-goal-list]').innerHTML = renderGoals(run);
   document.querySelector('[data-approval-revision]').innerHTML = renderApprovalRevision(run);
   document.querySelector('[data-approval-comment-list]').innerHTML = renderApprovalComments(run);
@@ -1147,6 +1199,67 @@ function renderConnectorReferences(run) {
       ${reference.url ? `<a href="${reference.url}" target="_blank" rel="noreferrer">Open</a>` : '<span class="connector-missing-link">No link</span>'}
     </li>
   `).join('');
+}
+
+function runToolsetResolution(run) {
+  return run.toolset_resolution || run.task?.toolset_resolution || null;
+}
+
+function runOperatorControls(run) {
+  const resolution = runToolsetResolution(run);
+  return Array.isArray(resolution?.operator_controls) ? resolution.operator_controls : [];
+}
+
+function operatorControlStatusClass(control) {
+  if (control.status === 'required') return 'status-failed';
+  if (control.status === 'recommended') return 'status-awaiting_approval';
+  return 'status-queued';
+}
+
+function renderOperatorControlMeta(control) {
+  const parts = [];
+  if (control.provider_id) parts.push(`provider ${control.provider_id}`);
+  if (control.capability) parts.push(`capability ${control.capability}`);
+  if (Array.isArray(control.toolsets) && control.toolsets.length) parts.push(`toolsets ${control.toolsets.join(', ')}`);
+  return parts.map(part => `<span>${part}</span>`).join('');
+}
+
+function renderOperatorControls(run) {
+  const resolution = runToolsetResolution(run);
+  if (!resolution) {
+    return '<li class="empty-state">Operator controls appear when provider and toolset governance metadata is attached.</li>';
+  }
+
+  const controls = runOperatorControls(run);
+  const permissions = Array.isArray(resolution.policy_permissions) ? resolution.policy_permissions : [];
+  const checks = Array.isArray(resolution.provider_capability_checks) ? resolution.provider_capability_checks : [];
+  const renderedControls = controls.map(control => `
+    <li class="operator-control-item">
+      <span class="status-pill ${operatorControlStatusClass(control)}">${control.status}</span>
+      <span class="operator-control-copy">
+        <strong>${control.control_id}</strong>
+        <span>${control.reason || 'No reason recorded.'}</span>
+      </span>
+      <span class="operator-control-meta">${renderOperatorControlMeta(control)}</span>
+    </li>
+  `).join('');
+  const renderedChecks = checks.map(check => `
+    <li class="operator-control-item">
+      <span class="status-pill ${check.status === 'missing' ? 'status-failed' : 'status-completed'}">${check.status}</span>
+      <span class="operator-control-copy">
+        <strong>${check.provider_id} / ${check.capability}</strong>
+        <span>Required by ${(check.required_by_toolsets || []).join(', ') || 'no toolsets recorded'}</span>
+      </span>
+      <span class="operator-control-meta"><span>provider capability check</span></span>
+    </li>
+  `).join('');
+  const renderedPermissions = permissions.length
+    ? `<li class="operator-permissions"><strong>Policy permissions</strong><span>${permissions.join(', ')}</span></li>`
+    : '';
+
+  return renderedControls || renderedChecks || renderedPermissions
+    ? `${renderedControls}${renderedChecks}${renderedPermissions}`
+    : '<li class="empty-state">No operator controls are required for this run.</li>';
 }
 
 function renderGoals(run) {
@@ -1301,6 +1414,7 @@ function renderApprovalQueue() {
           <dd>${formatCurrency(run.budget.spent)} / ${formatCurrency(run.budget.soft)}</dd>
         </div>
       </dl>
+      ${renderApprovalControlSummary(run)}
       <div class="approval-actions">
         <button class="approve-button" type="button" data-decision="approve">Approve</button>
         <button class="reject-button" type="button" data-decision="reject">Reject</button>
@@ -1313,6 +1427,19 @@ function renderApprovalQueue() {
       button.addEventListener('click', () => decideApproval(card.dataset.approvalRun, button.dataset.decision));
     }
   }
+}
+
+function renderApprovalControlSummary(run) {
+  const controls = runOperatorControls(run);
+  if (!controls.length) return '';
+  const required = controls.filter(control => control.status === 'required').length;
+  const recommended = controls.filter(control => control.status === 'recommended').length;
+  return `
+    <div class="approval-control-summary">
+      <span>${required} required</span>
+      <span>${recommended} recommended</span>
+    </div>
+  `;
 }
 
 function selectRun(runId) {

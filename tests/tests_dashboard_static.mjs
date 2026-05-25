@@ -14,6 +14,7 @@ for (const selector of [
   'data-run-list',
   'data-event-timeline',
   'data-decision-trace',
+  'data-operator-control-list',
   'data-goal-list',
   'data-approval-revision',
   'data-approval-comment-list',
@@ -134,6 +135,7 @@ assert(runs.some(run => Array.isArray(run.approval_comments) && run.approval_com
 assert(runs.some(run => run.approval_revision?.status === 'requested'), 'sample data should include requested approval revision');
 assert(runs.some(run => Array.isArray(run.agent_activity) && run.agent_activity.length > 0), 'sample data should include agent activity records');
 assert(runs.some(run => Array.isArray(run.executions) && run.executions.length > 0), 'sample data should include execution records');
+assert(runs.some(run => run.task?.toolset_resolution?.operator_controls?.length > 0), 'sample data should include operator controls');
 assert(runs.some(run => (run.executions || []).some(execution => execution.attempt === 2 && execution.retry_of)), 'sample data should include retry execution metadata');
 assert(runs.some(run => Array.isArray(run.verifications) && run.verifications.length > 0), 'sample data should include verification records');
 assert(runs.some(run => Array.isArray(run.heartbeats) && run.heartbeats.length > 0), 'sample data should include heartbeat records');
@@ -141,6 +143,9 @@ assert(runs.some(run => Array.isArray(run.connector_references) && run.connector
 assert(js.includes('claim_type'), 'dashboard sample data should include fact/inference labels');
 assert(js.includes('renderEvidenceLabels'), 'dashboard should render evidence labels');
 assert(js.includes('renderDecisionTrace'), 'dashboard should render decision trace panel');
+assert(js.includes('toolset_resolution: run.task?.toolset_resolution || run.toolset_resolution || null'), 'dashboard should preserve API toolset resolution');
+assert(js.includes('renderOperatorControls'), 'dashboard should render operator controls');
+assert(js.includes('renderApprovalControlSummary'), 'approval cards should summarize operator controls');
 assert(js.includes('renderGoals'), 'dashboard should render goal records');
 assert(js.includes('renderApprovalComments'), 'dashboard should render approval comments');
 assert(js.includes('renderApprovalRevision'), 'dashboard should render approval revisions');
@@ -155,6 +160,8 @@ assert(js.includes('attempt') && js.includes('retry_of') && js.includes('max_att
 assert(js.includes('git_status') && js.includes('file_read') && js.includes('node_test') && js.includes('package_script'), 'dashboard should show execution adapter names');
 assert(css.includes('verification-chip'), 'dashboard should style verification chips');
 assert(css.includes('retry-chip'), 'dashboard should style retry metadata');
+assert(css.includes('operator-control-item'), 'dashboard should style operator controls');
+assert(css.includes('approval-control-summary'), 'dashboard should style approval control summary');
 assert(css.includes('goal-item'), 'dashboard should style goal records');
 assert(css.includes('approval-comment-item'), 'dashboard should style approval comments');
 assert(css.includes('approval-revision-card'), 'dashboard should style approval revisions');

@@ -16,14 +16,15 @@ Implemented views:
 - Connector reference panel for attached ticket, docs, and CI context.
 - Agent activity panel for planner, executor, and verifier actor/status/budget records.
 - Execution panel with post-execution verifier result chips.
+- Operator controls panel for provider/toolset capability reviews, approval recommendations, and policy permission summaries.
 
 Open `index.html` directly in a browser for local inspection. The shell uses
 sample data shaped after the current API contracts and does not require a build
 step. Run detail renders goal records, approval revisions, approval comments, connector references,
-agent activity, execution records, verification records, and liveness records from
+agent activity, operator controls, execution records, verification records, and liveness records from
 `run.goals`, `run.approval_revision`, `run.approval_comments`, `run.connector_references`, `run.agent_activity`,
-`run.executions`/`run.verifications`, `run.heartbeats`, or completed step
-payloads when API data is loaded.
+`run.task.toolset_resolution`, `run.executions`/`run.verifications`, `run.heartbeats`, or completed step
+payloads when API data is loaded. Approval cards summarize required and recommended operator controls before approve/reject actions.
 
 To load local API data instead, start the API and open:
 
