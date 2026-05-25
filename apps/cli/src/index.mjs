@@ -29,15 +29,19 @@ function print(obj) {
   process.stdout.write(`${JSON.stringify(obj, null, 2)}\n`);
 }
 
-function commandCheck(check_id, executable, values = []) {
+function commandCheck(check_id, executable, values = [], { required = true } = {}) {
   const result = spawnSync(executable, values, { encoding: 'utf8' });
   const output = `${result.stdout || ''}${result.stderr || ''}`.trim().split(/\r?\n/)[0];
   return {
     check_id,
     ok: result.status === 0,
-    required: true,
+    required,
     summary: output || result.error?.message || `command exited with ${result.status}`
   };
+}
+
+function optionalCommandCheck(check_id, executable, values = []) {
+  return commandCheck(check_id, executable, values, { required: false });
 }
 
 function fileCheck(check_id, filePath) {
@@ -46,6 +50,68 @@ function fileCheck(check_id, filePath) {
     ok: fs.existsSync(filePath),
     required: true,
     summary: filePath
+  };
+}
+
+function directoryCheck(check_id, directoryPath) {
+  let ok = false;
+  try {
+    ok = fs.existsSync(directoryPath) && fs.statSync(directoryPath).isDirectory();
+  } catch {
+    ok = false;
+  }
+
+  return {
+    check_id,
+    ok,
+    required: true,
+    summary: directoryPath
+  };
+}
+
+function dependencyCheck(check_id, packageNames) {
+  const missing = packageNames.filter(name => !fs.existsSync(path.join(cwd, 'node_modules', name)));
+  return {
+    check_id,
+    ok: missing.length === 0,
+    required: true,
+    summary: missing.length ? `missing: ${missing.join(', ')}` : `installed: ${packageNames.join(', ')}`
+  };
+}
+
+function cachedPnpmCheck() {
+  const home = process.env.HOME || '';
+  const corepackPnpmRoot = path.join(home, '.cache/node/corepack/v1/pnpm');
+  const candidates = [];
+  try {
+    for (const version of fs.readdirSync(corepackPnpmRoot)) {
+      candidates.push(path.join(corepackPnpmRoot, version, 'bin/pnpm.cjs'));
+      candidates.push(path.join(corepackPnpmRoot, version, 'dist/pnpm.cjs'));
+    }
+  } catch {
+    // Fall back to PATH lookup below when no Corepack cache is present.
+  }
+  const candidate = candidates.find(filePath => fs.existsSync(filePath));
+
+  if (!candidate) return optionalCommandCheck('pnpm', 'pnpm', ['--version']);
+
+  const result = spawnSync(process.execPath, [candidate, '--version'], { encoding: 'utf8' });
+  const output = `${result.stdout || ''}${result.stderr || ''}`.trim().split(/\r?\n/)[0];
+  return {
+    check_id: 'pnpm',
+    ok: result.status === 0,
+    required: false,
+    summary: `${candidate}${output ? ` ${output}` : ''}` || result.error?.message || `command exited with ${result.status}`
+  };
+}
+
+function packageManagerCheck(npmCheck, pnpmCheck) {
+  const available = [npmCheck, pnpmCheck].filter(check => check.ok);
+  return {
+    check_id: 'package_manager',
+    ok: available.length > 0,
+    required: true,
+    summary: available.length ? available.map(check => check.check_id).join(', ') : 'no npm or pnpm executable available'
   };
 }
 
@@ -281,16 +347,22 @@ function capabilities() {
 }
 
 function doctor() {
+  const npmCheck = optionalCommandCheck('npm', 'npm', ['--version']);
+  const pnpmCheck = cachedPnpmCheck();
   const checks = [
     { check_id: 'node', ok: true, required: true, summary: process.version },
-    commandCheck('npm', 'npm', ['--version']),
+    npmCheck,
+    pnpmCheck,
+    packageManagerCheck(npmCheck, pnpmCheck),
     commandCheck('git', 'git', ['--version']),
     fileCheck('package_json', path.join(cwd, 'package.json')),
+    directoryCheck('node_modules', path.join(cwd, 'node_modules')),
+    dependencyCheck('ajv_dependencies', ['ajv', 'ajv-cli', 'ajv-formats']),
     fileCheck('api_server_source', path.join(cwd, 'apps/api/src/server.mjs'))
   ];
 
   print({
-    ok: checks.every(check => check.ok),
+    ok: checks.every(check => !check.required || check.ok),
     command: 'doctor',
     checks
   });

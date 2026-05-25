@@ -52,3 +52,4 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - Run `npm run validate:contracts` to validate schema examples and CI contract checks.
 - Run `npm run test:smoke` for a local CLI+API smoke path.
 - Run `npm test` for preflight engine, approval API, execution adapters, run events, artifacts, audit export, CLI, and smoke checks.
+- If `npm` is unavailable but cached Corepack pnpm is present, run scripts with `node ~/.cache/node/corepack/v1/pnpm/<version>/bin/pnpm.cjs <script>`.
