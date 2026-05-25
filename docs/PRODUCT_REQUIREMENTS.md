@@ -60,6 +60,6 @@ This baseline defines who Divinity Code is for, what work it must help them comp
 - Replacing GitHub review workflows; Divinity should generate PR-ready evidence and artifacts that fit existing review systems.
 
 ## Acceptance Baseline
-- A new contributor can trace the product intent from this document to `docs/PRODUCT_PLAN.md`, `docs/MVP_BACKLOG.md`, and `docs/ARCHITECTURE.md`.
+- A new contributor can trace the product intent from this document to `docs/PRODUCT_PLAN.md`, `docs/INFORMATION_ARCHITECTURE.md`, `docs/MVP_BACKLOG.md`, and `docs/ARCHITECTURE.md`.
 - Every implemented bootstrap surface can be mapped to at least one persona job above.
 - Future feature proposals must state which persona and job they serve, which non-goal boundary they avoid, and which verification command proves the slice.

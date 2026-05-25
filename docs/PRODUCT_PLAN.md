@@ -17,6 +17,7 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: documented in [Product Requirements Baseline](PRODUCT_REQUIREMENTS.md).
 2. Domain model for tasks/runs/artifacts/policies.
 3. UI information architecture for Builder Mode and Operator Mode.
+   - Bootstrap status: documented in [UI Information Architecture](INFORMATION_ARCHITECTURE.md).
 4. MVP backlog with acceptance criteria.
 
 ## Phase 1: MVP (Weeks 3-8)
