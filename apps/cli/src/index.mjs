@@ -24,6 +24,7 @@ import {
   planProviderProxyRoute
 } from '../../../packages/provider-proxy/src/index.mjs';
 import { createProviderToolCallApproval } from '../../../packages/provider-tool-approvals/src/index.mjs';
+import { createProviderToolExecution } from '../../../packages/provider-tool-executions/src/index.mjs';
 import { providerCredentialReadiness, publicLlmProviders, resolveProviderRuntime } from '../../../packages/provider-runtime/src/index.mjs';
 import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
 import { evaluatePreflight, POLICY_PRESETS } from '../../../packages/policy-engine/src/index.mjs';
@@ -826,6 +827,134 @@ function parseProviderToolApprovalArgs(values) {
   return options;
 }
 
+function parseKeyValueArgument(value) {
+  const text = String(value || '');
+  const separator = text.indexOf('=');
+  if (separator <= 0) {
+    throw new Error('provider-tool-execute arguments must use key=value');
+  }
+  const key = text.slice(0, separator).trim();
+  if (!key) {
+    throw new Error('provider-tool-execute argument key must be non-empty');
+  }
+  return [key, text.slice(separator + 1)];
+}
+
+function parseProviderToolExecutionArgs(values) {
+  const options = {
+    run_id: '',
+    api: '',
+    approval_id: '',
+    tool_call_id: '',
+    provider_id: '',
+    transport: '',
+    name: '',
+    argument_keys: [],
+    argument_values: Object.create(null),
+    workspace_root: cwd,
+    actor: 'cli',
+    reason: ''
+  };
+
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    const next = values[index + 1];
+
+    if (value === '--api' || value === '--api-url') {
+      options.api = next;
+      index += 1;
+    } else if (value.startsWith('--api=')) {
+      options.api = value.slice('--api='.length);
+    } else if (value === '--approval-id' || value === '--approval') {
+      options.approval_id = next;
+      index += 1;
+    } else if (value.startsWith('--approval-id=')) {
+      options.approval_id = value.slice('--approval-id='.length);
+    } else if (value.startsWith('--approval=')) {
+      options.approval_id = value.slice('--approval='.length);
+    } else if (value === '--tool-call-id') {
+      options.tool_call_id = next;
+      index += 1;
+    } else if (value.startsWith('--tool-call-id=')) {
+      options.tool_call_id = value.slice('--tool-call-id='.length);
+    } else if (value === '--provider' || value === '--provider-id') {
+      options.provider_id = next;
+      index += 1;
+    } else if (value.startsWith('--provider=')) {
+      options.provider_id = value.slice('--provider='.length);
+    } else if (value.startsWith('--provider-id=')) {
+      options.provider_id = value.slice('--provider-id='.length);
+    } else if (value === '--transport') {
+      options.transport = next;
+      index += 1;
+    } else if (value.startsWith('--transport=')) {
+      options.transport = value.slice('--transport='.length);
+    } else if (value === '--name' || value === '--tool-name') {
+      options.name = next;
+      index += 1;
+    } else if (value.startsWith('--name=')) {
+      options.name = value.slice('--name='.length);
+    } else if (value.startsWith('--tool-name=')) {
+      options.name = value.slice('--tool-name='.length);
+    } else if (value === '--argument-key' || value === '--arg-key') {
+      options.argument_keys.push(next);
+      index += 1;
+    } else if (value.startsWith('--argument-key=')) {
+      options.argument_keys.push(value.slice('--argument-key='.length));
+    } else if (value.startsWith('--arg-key=')) {
+      options.argument_keys.push(value.slice('--arg-key='.length));
+    } else if (value === '--argument' || value === '--argument-value' || value === '--arg') {
+      const [key, parsedValue] = parseKeyValueArgument(next);
+      options.argument_values[key] = parsedValue;
+      index += 1;
+    } else if (value.startsWith('--argument=')) {
+      const [key, parsedValue] = parseKeyValueArgument(value.slice('--argument='.length));
+      options.argument_values[key] = parsedValue;
+    } else if (value.startsWith('--argument-value=')) {
+      const [key, parsedValue] = parseKeyValueArgument(value.slice('--argument-value='.length));
+      options.argument_values[key] = parsedValue;
+    } else if (value.startsWith('--arg=')) {
+      const [key, parsedValue] = parseKeyValueArgument(value.slice('--arg='.length));
+      options.argument_values[key] = parsedValue;
+    } else if (value === '--workspace' || value === '--workspace-root') {
+      options.workspace_root = next;
+      index += 1;
+    } else if (value.startsWith('--workspace=')) {
+      options.workspace_root = value.slice('--workspace='.length);
+    } else if (value.startsWith('--workspace-root=')) {
+      options.workspace_root = value.slice('--workspace-root='.length);
+    } else if (value === '--actor') {
+      options.actor = next;
+      index += 1;
+    } else if (value.startsWith('--actor=')) {
+      options.actor = value.slice('--actor='.length);
+    } else if (value === '--reason') {
+      options.reason = next;
+      index += 1;
+    } else if (value.startsWith('--reason=')) {
+      options.reason = value.slice('--reason='.length);
+    } else if (!options.run_id) {
+      options.run_id = value;
+    } else {
+      throw new Error(`unknown provider-tool-execute option: ${value}`);
+    }
+  }
+
+  options.api = String(options.api || '').trim().replace(/\/+$/, '');
+  options.run_id = String(options.run_id || '').trim();
+  options.approval_id = String(options.approval_id || '').trim();
+  options.tool_call_id = String(options.tool_call_id || '').trim();
+  options.provider_id = String(options.provider_id || '').trim();
+  options.transport = String(options.transport || '').trim();
+  options.name = String(options.name || '').trim();
+  options.argument_keys = options.argument_keys.map(value => String(value || '').trim()).filter(Boolean);
+  if (options.argument_keys.length === 0) options.argument_keys = Object.keys(options.argument_values).sort();
+  options.workspace_root = String(options.workspace_root || '').trim() || cwd;
+  options.actor = String(options.actor || '').trim() || 'cli';
+  options.reason = String(options.reason || '').trim();
+  return options;
+}
+
 async function fetchJson(url, options = {}) {
   const parsedUrl = new URL(url);
   const client = parsedUrl.protocol === 'https:' ? https : http;
@@ -1570,6 +1699,72 @@ async function providerToolApproval() {
   }
 }
 
+async function providerToolExecute() {
+  try {
+    const options = parseProviderToolExecutionArgs(args);
+    if (!options.run_id) {
+      throw new Error('provider-tool-execute requires a run_id');
+    }
+    if (!options.approval_id) {
+      throw new Error('provider-tool-execute requires an approval id');
+    }
+
+    const payload = {
+      approval_id: options.approval_id,
+      argument_values: options.argument_values,
+      actor: options.actor,
+      reason: options.reason
+    };
+
+    if (!options.api) {
+      const approval = {
+        format: 'divinity.provider_tool_call_approval.v1',
+        approval_id: options.approval_id,
+        run_id: options.run_id,
+        tool_call_id: options.tool_call_id,
+        provider_id: options.provider_id,
+        transport: options.transport,
+        name: options.name,
+        argument_keys: options.argument_keys,
+        arguments_redacted: true,
+        decision: 'approve',
+        actor: options.actor,
+        reason: options.reason,
+        decided_at: new Date().toISOString()
+      };
+      const execution = createProviderToolExecution({
+        run_id: options.run_id,
+        approval,
+        argument_values: options.argument_values,
+        workspace_root: options.workspace_root,
+        actor: options.actor,
+        reason: options.reason
+      });
+      print({ ok: true, command: 'provider-tool-execute', run_id: options.run_id, execution });
+      return;
+    }
+
+    const { response, body } = await fetchJson(`${options.api}/runs/${options.run_id}/provider-tool-executions`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    print({
+      ok: response.ok,
+      command: 'provider-tool-execute',
+      api: options.api,
+      run_id: options.run_id,
+      status_code: response.status,
+      execution: body.execution,
+      run: body.run,
+      response: body
+    });
+    if (!response.ok) process.exitCode = 1;
+  } catch (error) {
+    print({ ok: false, command: 'provider-tool-execute', error: error.message });
+    process.exitCode = 1;
+  }
+}
+
 function recipes() {
   print({ ok: true, command: 'recipes', recipes: publicStarterRecipes() });
 }
@@ -1665,6 +1860,7 @@ switch (command) {
   case 'provider-route': providerRoute(); break;
   case 'provider-chat': await providerChat(); break;
   case 'provider-tool-approval': await providerToolApproval(); break;
+  case 'provider-tool-execute': await providerToolExecute(); break;
   case 'toolsets': toolsets(); break;
   case 'recipes': recipes(); break;
   case 'doctor': doctor(); break;
@@ -1672,6 +1868,6 @@ switch (command) {
   default:
     print({
       ok: false,
-      usage: 'divinity <init|run|status|approvals|approval|approve|reject|approval-comment|approval-comments|approval-revision|approval-resubmit|goal-complete|capabilities|providers|provider-route|provider-chat|provider-tool-approval|toolsets|recipes|doctor|bug> [args]'
+      usage: 'divinity <init|run|status|approvals|approval|approve|reject|approval-comment|approval-comments|approval-revision|approval-resubmit|goal-complete|capabilities|providers|provider-route|provider-chat|provider-tool-approval|provider-tool-execute|toolsets|recipes|doctor|bug> [args]'
     });
 }

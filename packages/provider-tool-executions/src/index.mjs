@@ -1,0 +1,260 @@
+import fs from 'fs';
+import path from 'path';
+
+function stableIdPart(value) {
+  return String(value || '').replace(/[^\w-]+/g, '_');
+}
+
+function cleanString(value) {
+  return String(value || '').trim();
+}
+
+function assertRequired(value, label) {
+  if (!cleanString(value)) throw new Error(`${label} must be non-empty`);
+}
+
+function isPlainObject(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function uniqueSorted(values) {
+  return [...new Set((Array.isArray(values) ? values : [])
+    .map(cleanString)
+    .filter(Boolean))]
+    .sort();
+}
+
+function sameKeys(left, right) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function assertRedactedApproval(approval) {
+  if (!isPlainObject(approval)) {
+    throw new Error('provider tool execution requires an approved provider tool-call approval');
+  }
+  if (approval.format && approval.format !== 'divinity.provider_tool_call_approval.v1') {
+    throw new Error('provider tool execution requires an approved provider tool-call approval');
+  }
+  if (approval.decision !== 'approve') {
+    throw new Error('provider tool execution requires an approved provider tool-call approval');
+  }
+  if (approval.arguments_redacted !== true) {
+    throw new Error('provider tool execution requires redacted approval arguments');
+  }
+  for (const rawKey of ['arguments', 'input', 'argument_values']) {
+    if (Object.prototype.hasOwnProperty.call(approval, rawKey)) {
+      throw new Error('provider tool execution approval must not include raw arguments');
+    }
+  }
+}
+
+function assertArgumentValues({ approvalKeys, argumentValues }) {
+  if (!isPlainObject(argumentValues)) {
+    throw new Error('provider tool execution requires argument_values object');
+  }
+  const argumentKeys = Object.keys(argumentValues).map(cleanString).filter(Boolean).sort();
+  if (!sameKeys(approvalKeys, argumentKeys)) {
+    throw new Error('provider tool execution argument keys must exactly match approved keys');
+  }
+}
+
+function executionEnvelope({
+  run_id,
+  approval,
+  argument_keys,
+  status,
+  adapter,
+  actor,
+  reason,
+  started_at,
+  completed_at,
+  output_summary,
+  output_metadata,
+  error = null,
+  index
+}) {
+  const record = {
+    format: 'divinity.provider_tool_execution.v1',
+    execution_id: ['provider_tool_execution', run_id, approval.tool_call_id, String(index).padStart(3, '0')]
+      .map(stableIdPart)
+      .join('_'),
+    run_id,
+    approval_id: approval.approval_id,
+    tool_call_id: approval.tool_call_id,
+    provider_id: approval.provider_id,
+    transport: approval.transport,
+    name: approval.name,
+    argument_keys,
+    arguments_redacted: true,
+    status,
+    adapter,
+    actor,
+    reason,
+    started_at,
+    completed_at,
+    output_summary,
+    output_redacted: true,
+    output_metadata
+  };
+  if (error) record.error = error;
+  return record;
+}
+
+function isPathInside(childPath, parentPath) {
+  const relative = path.relative(parentPath, childPath);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+function readFileExecution({
+  run_id,
+  approval,
+  argument_values,
+  workspace_root,
+  argument_keys,
+  actor,
+  reason,
+  started_at,
+  completed_at,
+  index
+}) {
+  const root = path.resolve(cleanString(workspace_root) || process.cwd());
+  const target = path.resolve(root, cleanString(argument_values.path));
+  if (!isPathInside(target, root) || target === root) {
+    return executionEnvelope({
+      run_id,
+      approval,
+      argument_keys,
+      status: 'failed',
+      adapter: 'read_file',
+      actor,
+      reason,
+      started_at,
+      completed_at,
+      output_summary: 'read_file failed; content redacted',
+      output_metadata: { content_redacted: true },
+      error: 'read_file target must stay inside workspace',
+      index
+    });
+  }
+
+  try {
+    const content = fs.readFileSync(target, 'utf8');
+    return executionEnvelope({
+      run_id,
+      approval,
+      argument_keys,
+      status: 'completed',
+      adapter: 'read_file',
+      actor,
+      reason,
+      started_at,
+      completed_at,
+      output_summary: 'read_file completed; content redacted',
+      output_metadata: {
+        bytes_read: Buffer.byteLength(content, 'utf8'),
+        line_count: content.split(/\r?\n/).length,
+        content_redacted: true
+      },
+      index
+    });
+  } catch (error) {
+    return executionEnvelope({
+      run_id,
+      approval,
+      argument_keys,
+      status: 'failed',
+      adapter: 'read_file',
+      actor,
+      reason,
+      started_at,
+      completed_at,
+      output_summary: 'read_file failed; content redacted',
+      output_metadata: { content_redacted: true },
+      error: error?.code ? `read_file failed with ${error.code}` : 'read_file failed',
+      index
+    });
+  }
+}
+
+function unsupportedExecution({
+  run_id,
+  approval,
+  argument_keys,
+  actor,
+  reason,
+  started_at,
+  completed_at,
+  index
+}) {
+  return executionEnvelope({
+    run_id,
+    approval,
+    argument_keys,
+    status: 'blocked',
+    adapter: 'unsupported',
+    actor,
+    reason,
+    started_at,
+    completed_at,
+    output_summary: 'provider tool execution blocked; adapter unsupported',
+    output_metadata: {
+      adapter_configured: false,
+      output_redacted: true
+    },
+    error: 'unsupported provider tool execution adapter',
+    index
+  });
+}
+
+export function createProviderToolExecution(options = {}) {
+  const {
+    run_id,
+    approval,
+    argument_values = null,
+    workspace_root = '',
+    actor = 'operator',
+    reason,
+    started_at = new Date().toISOString(),
+    completed_at = new Date().toISOString(),
+    index = 1
+  } = options;
+
+  assertRedactedApproval(approval);
+  const normalizedRunId = cleanString(run_id) || cleanString(approval.run_id) || 'run_unknown';
+  assertRequired(approval.approval_id, 'provider tool-call approval id');
+  assertRequired(approval.tool_call_id, 'provider tool-call id');
+  assertRequired(approval.provider_id, 'provider id');
+  assertRequired(approval.transport, 'provider transport');
+  assertRequired(approval.name, 'provider tool name');
+
+  const argumentKeys = uniqueSorted(approval.argument_keys);
+  assertArgumentValues({ approvalKeys: argumentKeys, argumentValues: argument_values });
+  const normalizedActor = cleanString(actor) || 'operator';
+  const normalizedReason = cleanString(reason);
+  if (!normalizedReason) {
+    throw new Error('provider tool execution reason must be non-empty');
+  }
+
+  const common = {
+    run_id: normalizedRunId,
+    approval,
+    argument_keys: argumentKeys,
+    actor: normalizedActor,
+    reason: normalizedReason,
+    started_at,
+    completed_at,
+    index
+  };
+
+  if (approval.name === 'read_file') {
+    return readFileExecution({
+      ...common,
+      argument_values,
+      workspace_root
+    });
+  }
+
+  return unsupportedExecution(common);
+}
