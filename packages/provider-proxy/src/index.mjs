@@ -2,6 +2,7 @@ import http from 'http';
 import https from 'https';
 
 import { resolveProviderRuntime } from '../../provider-runtime/src/index.mjs';
+import { resolveToolsets } from '../../toolsets/src/index.mjs';
 
 export const PROVIDER_PROXY_POLICY = {
   allow_public_shared_keys: false,
@@ -94,16 +95,18 @@ function retryAfterSeconds(headers) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
-function resultBase(route) {
-  return {
+function resultBase(route, toolsetResolution = null) {
+  const base = {
     format: 'divinity.provider_proxy_chat_result.v1',
     route
   };
+  if (toolsetResolution) base.toolset_resolution = toolsetResolution;
+  return base;
 }
 
-function blockedChat(route, error) {
+function blockedChat(route, error, toolsetResolution = null) {
   return {
-    ...resultBase(route),
+    ...resultBase(route, toolsetResolution),
     status: 'blocked',
     error
   };
@@ -155,6 +158,31 @@ function resolveCredential(runtime, env) {
   if (!runtime.auth.credential_required) return '';
   const credentialName = runtime.auth.configured_env_vars[0];
   return String(env[credentialName] || '').trim();
+}
+
+function normalizedToolsetSelection({ toolsets = null, enabled_toolsets = null, disabled_toolsets = [] } = {}) {
+  const source = toolsets && typeof toolsets === 'object' ? toolsets : {};
+  return {
+    enabled_toolsets: Array.isArray(enabled_toolsets)
+      ? enabled_toolsets
+      : Array.isArray(source.enabled)
+        ? source.enabled
+        : null,
+    disabled_toolsets: Array.isArray(disabled_toolsets)
+      ? disabled_toolsets
+      : Array.isArray(source.disabled)
+        ? source.disabled
+        : []
+  };
+}
+
+function missingProviderCapabilityChecks(toolsetResolution) {
+  return toolsetResolution.provider_capability_checks.filter(check => check.status === 'missing');
+}
+
+function missingProviderCapabilityError(missingChecks) {
+  const capabilities = [...new Set(missingChecks.map(check => check.capability))].sort();
+  return `provider missing required tool capability: ${capabilities.join(', ')}`;
 }
 
 function transportHeaders(runtime, credential) {
@@ -228,12 +256,12 @@ function buildTransportRequest({ runtime, requestedModel, messages, outputTokens
   throw new Error(`unsupported transport for provider proxy chat execution: ${runtime.transport}`);
 }
 
-function normalizeTransportResult({ runtime, payload, response, model, route }) {
+function normalizeTransportResult({ runtime, payload, response, model, route, toolsetResolution }) {
   if (runtime.transport === 'chat_completions') {
     const choice = Array.isArray(payload.choices) ? payload.choices[0] : {};
     const message = choice?.message || null;
     return {
-      ...resultBase(route),
+      ...resultBase(route, toolsetResolution),
       status: 'completed',
       provider_id: runtime.provider_id,
       model: payload.model || model,
@@ -253,7 +281,7 @@ function normalizeTransportResult({ runtime, payload, response, model, route }) 
       content: Array.isArray(payload.content) ? payload.content : []
     };
     return {
-      ...resultBase(route),
+      ...resultBase(route, toolsetResolution),
       status: 'completed',
       provider_id: runtime.provider_id,
       model: payload.model || model,
@@ -275,7 +303,7 @@ function normalizeTransportResult({ runtime, payload, response, model, route }) 
       content: Array.isArray(outputMessage.content) ? outputMessage.content : []
     };
     return {
-      ...resultBase(route),
+      ...resultBase(route, toolsetResolution),
       status: 'completed',
       provider_id: runtime.provider_id,
       model: payload.model || model,
@@ -441,6 +469,9 @@ export async function executeProviderProxyChat({
   max_completion_tokens = 0,
   max_output_tokens = 0,
   request_budget = {},
+  toolsets = null,
+  enabled_toolsets = null,
+  disabled_toolsets = [],
   temperature,
   signal
 } = {}) {
@@ -465,20 +496,37 @@ export async function executeProviderProxyChat({
     return blockedChat(route, 'credentialed provider base_url overrides are not allowed for chat execution');
   }
 
+  let toolsetResolution;
+  try {
+    const toolsetSelection = normalizedToolsetSelection({ toolsets, enabled_toolsets, disabled_toolsets });
+    toolsetResolution = resolveToolsets({
+      enabled_toolsets: toolsetSelection.enabled_toolsets,
+      disabled_toolsets: toolsetSelection.disabled_toolsets,
+      provider_runtime: runtime
+    });
+  } catch (error) {
+    return blockedChat(route, error.message);
+  }
+
+  const missingChecks = missingProviderCapabilityChecks(toolsetResolution);
+  if (missingChecks.length > 0) {
+    return blockedChat(route, missingProviderCapabilityError(missingChecks), toolsetResolution);
+  }
+
   const maxPromptChars = positiveInteger(request_budget.max_prompt_chars);
   if (maxPromptChars && promptCharacterCount(messages) > maxPromptChars) {
-    return blockedChat(route, 'prompt budget exceeded');
+    return blockedChat(route, 'prompt budget exceeded', toolsetResolution);
   }
 
   const requestedOutputTokens = positiveInteger(max_output_tokens) || positiveInteger(max_completion_tokens);
   const budgetOutputTokens = positiveInteger(request_budget.max_output_tokens) || positiveInteger(request_budget.max_completion_tokens);
   if (budgetOutputTokens && requestedOutputTokens > budgetOutputTokens) {
-    return blockedChat(route, 'completion token budget exceeded');
+    return blockedChat(route, 'completion token budget exceeded', toolsetResolution);
   }
 
   const credential = resolveCredential(runtime, env);
   if (runtime.auth.credential_required && !credential) {
-    return blockedChat(route, 'configured credential is not available');
+    return blockedChat(route, 'configured credential is not available', toolsetResolution);
   }
 
   let request;
@@ -491,7 +539,7 @@ export async function executeProviderProxyChat({
       temperature
     });
   } catch (error) {
-    return blockedChat(route, error.message);
+    return blockedChat(route, error.message, toolsetResolution);
   }
 
   let response;
@@ -501,7 +549,7 @@ export async function executeProviderProxyChat({
     payload = response.payload;
   } catch (error) {
     return {
-      ...resultBase(route),
+      ...resultBase(route, toolsetResolution),
       status: 'failed',
       provider_id: runtime.provider_id,
       model: request.model,
@@ -512,7 +560,7 @@ export async function executeProviderProxyChat({
 
   if (response.status === 429) {
     return {
-      ...resultBase(route),
+      ...resultBase(route, toolsetResolution),
       status: 'limited',
       provider_id: runtime.provider_id,
       model: request.model,
@@ -525,7 +573,7 @@ export async function executeProviderProxyChat({
 
   if (!response.ok) {
     return {
-      ...resultBase(route),
+      ...resultBase(route, toolsetResolution),
       status: 'failed',
       provider_id: runtime.provider_id,
       model: request.model,
@@ -535,5 +583,5 @@ export async function executeProviderProxyChat({
     };
   }
 
-  return normalizeTransportResult({ runtime, payload, response, model: request.model, route });
+  return normalizeTransportResult({ runtime, payload, response, model: request.model, route, toolsetResolution });
 }

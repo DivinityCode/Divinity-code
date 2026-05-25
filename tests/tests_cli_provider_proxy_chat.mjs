@@ -151,6 +151,29 @@ try {
   assert.equal(server.requests.length, 1);
   assert.equal(JSON.stringify(exfilBlocked).includes(apiSecret), false);
 
+  const incompatiblePrompt = 'secret prompt for cli incompatible provider';
+  const incompatible = await runCli([
+    'provider-chat',
+    '--provider', 'cerebras',
+    '--toolset', 'web',
+    '--message', incompatiblePrompt,
+    '--max-prompt-chars', '1'
+  ], {
+    CEREBRAS_API_KEY: 'cerebras-secret'
+  });
+
+  assert.equal(incompatible.ok, false);
+  assert.equal(incompatible.error, undefined);
+  assert.equal(incompatible.result.status, 'blocked');
+  assert.match(incompatible.result.error, /provider missing required tool capability/);
+  assert.equal(incompatible.result.toolset_resolution.provider_capability_checks[0].status, 'missing');
+  assert.equal(
+    incompatible.result.toolset_resolution.operator_controls[0].control_id,
+    'provider_capability_review'
+  );
+  assert.equal(JSON.stringify(incompatible).includes(incompatiblePrompt), false);
+  assert.equal(JSON.stringify(incompatible).includes('cerebras-secret'), false);
+
   const responsesCompleted = await runCli([
     'provider-chat',
     '--provider', 'custom_openai_responses',

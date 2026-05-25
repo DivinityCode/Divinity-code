@@ -75,6 +75,7 @@ try {
   assert.equal(completed.message.content, 'mock response');
   assert.equal(completed.finish_reason, 'stop');
   assert.equal(completed.usage.total_tokens, 7);
+  assert.equal(completed.toolset_resolution.provider_capability_checks[0].status, 'supported');
   assert.equal(JSON.stringify(completed).includes(secretPrompt), false);
   assert.equal(JSON.stringify(completed).includes(apiSecret), false);
 } finally {
@@ -172,6 +173,27 @@ try {
 } finally {
   await responsesExfilServer.close();
 }
+
+const incompatiblePrompt = 'secret prompt for incompatible provider toolset';
+
+const incompatibleToolset = await executeProviderProxyChat({
+  candidates: ['cerebras'],
+  env: { CEREBRAS_API_KEY: 'cerebras-secret' },
+  requested_model: 'gpt-oss-120b',
+  messages: [{ role: 'user', content: incompatiblePrompt }],
+  enabled_toolsets: ['web'],
+  request_budget: { max_prompt_chars: 1 }
+});
+
+assert.equal(incompatibleToolset.status, 'blocked');
+assert.match(incompatibleToolset.error, /provider missing required tool capability/);
+assert.equal(incompatibleToolset.toolset_resolution.provider_capability_checks[0].status, 'missing');
+assert.equal(
+  incompatibleToolset.toolset_resolution.operator_controls[0].control_id,
+  'provider_capability_review'
+);
+assert.equal(JSON.stringify(incompatibleToolset).includes(incompatiblePrompt), false);
+assert.equal(JSON.stringify(incompatibleToolset).includes('cerebras-secret'), false);
 
 const anthropicServer = await createMockChatServer(async ({ req, res, body }) => {
   assert.equal(req.method, 'POST');

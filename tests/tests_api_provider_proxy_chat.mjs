@@ -60,6 +60,7 @@ const secretPrompt = 'secret prompt for api proxy';
 
 process.env.DIVINITY_API_AUTOSTART = '0';
 process.env.OPENROUTER_API_KEY = apiSecret;
+process.env.CEREBRAS_API_KEY = 'cerebras-secret';
 const { server } = await import('../apps/api/src/server.mjs');
 const mock = await createMockChatServer();
 const anthropicMock = await createMockChatServer(({ req, res, body }) => {
@@ -134,6 +135,27 @@ try {
   assert.match(exfilBlocked.result.error, /base_url overrides/);
   assert.equal(mock.requests.length, 1);
   assert.equal(JSON.stringify(exfilBlocked).includes(apiSecret), false);
+
+  const incompatiblePrompt = 'secret prompt for api incompatible provider';
+  const { response: incompatibleResponse, body: incompatibleBody } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
+    method: 'POST',
+    body: JSON.stringify({
+      candidates: ['cerebras'],
+      toolsets: { enabled: ['web'] },
+      messages: [{ role: 'user', content: incompatiblePrompt }],
+      request_budget: { max_prompt_chars: 1 }
+    })
+  });
+
+  assert.equal(incompatibleResponse.status, 400);
+  assert.equal(incompatibleBody.result.status, 'blocked');
+  assert.match(incompatibleBody.result.error, /provider missing required tool capability/);
+  assert.equal(incompatibleBody.result.toolset_resolution.provider_capability_checks[0].status, 'missing');
+  assert.equal(
+    incompatibleBody.result.toolset_resolution.operator_controls[0].control_id,
+    'provider_capability_review'
+  );
+  assert.equal(JSON.stringify(incompatibleBody).includes(incompatiblePrompt), false);
 
   const { response: anthropicResponse, body: anthropicBody } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
     method: 'POST',
