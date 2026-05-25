@@ -108,6 +108,35 @@ function isPublicSharedKeySource(value) {
   return /public.*shared.*key|shared.*public.*key|shared_key/i.test(String(value || ''));
 }
 
+function uniqueCleanStrings(values) {
+  return [...new Set((Array.isArray(values) ? values : [values])
+    .map(cleanString)
+    .filter(Boolean))]
+    .sort();
+}
+
+function configuredSecretRefs(runtime, credentialResolver = null) {
+  if (!credentialResolver || typeof credentialResolver.configuredSecretRefs !== 'function') return [];
+  try {
+    return uniqueCleanStrings(credentialResolver.configuredSecretRefs(runtime));
+  } catch {
+    return [];
+  }
+}
+
+function runtimeWithCredentialReadiness(runtime, credentialResolver = null) {
+  const secretRefs = configuredSecretRefs(runtime, credentialResolver);
+  const credentialConfigured = runtime.auth.credential_configured || secretRefs.length > 0;
+  return {
+    ...runtime,
+    auth: {
+      ...runtime.auth,
+      credential_configured: credentialConfigured,
+      configured_secret_refs: secretRefs
+    }
+  };
+}
+
 function publicCandidateResult({ candidate, runtime, limitState }) {
   const result = {
     provider_id: candidate.provider_id,
@@ -117,6 +146,7 @@ function publicCandidateResult({ candidate, runtime, limitState }) {
     credential_configured: runtime.auth.credential_configured,
     credential_env_vars: [...runtime.auth.credential_env_vars],
     configured_env_vars: [...runtime.auth.configured_env_vars],
+    configured_secret_refs: [...(runtime.auth.configured_secret_refs || [])],
     limit_reached: limitState.limit_reached,
     retry_after_seconds: limitState.retry_after_seconds
   };
@@ -409,10 +439,17 @@ function nonSystemMessages(messages) {
     }));
 }
 
-function resolveCredential(runtime, env) {
+function resolveCredential(runtime, env, credentialResolver = null) {
   if (!runtime.auth.credential_required) return '';
   const credentialName = runtime.auth.configured_env_vars[0];
-  return String(env[credentialName] || '').trim();
+  const envCredential = String(env[credentialName] || '').trim();
+  if (envCredential) return envCredential;
+  if (!credentialResolver || typeof credentialResolver.resolveCredential !== 'function') return '';
+  try {
+    return cleanString(credentialResolver.resolveCredential(runtime));
+  } catch {
+    return '';
+  }
 }
 
 function normalizedToolsetSelection({ toolsets = null, enabled_toolsets = null, disabled_toolsets = [] } = {}) {
@@ -1082,7 +1119,8 @@ export function planProviderProxyRoute({
   limit_state = {},
   limit_ledger = null,
   rotation_intent = 'reliability',
-  requested_model = ''
+  requested_model = '',
+  credential_resolver = null
 } = {}) {
   const candidateList = normalizedCandidates(candidates);
   const effectiveLimitState = mergeLimitStates(activeLimitStateFromLedger(limit_ledger), limit_state);
@@ -1114,6 +1152,7 @@ export function planProviderProxyRoute({
         base_url: candidate.base_url,
         env
       });
+      runtime = runtimeWithCredentialReadiness(runtime, credential_resolver);
     } catch (error) {
       base.candidate_results.push({
         provider_id: candidate.provider_id,
@@ -1134,6 +1173,7 @@ export function planProviderProxyRoute({
         credential_configured: false,
         credential_env_vars: [...runtime.auth.credential_env_vars],
         configured_env_vars: [],
+        configured_secret_refs: [...(runtime.auth.configured_secret_refs || [])],
         limit_reached: false,
         retry_after_seconds: 0
       });
@@ -1181,7 +1221,8 @@ function prepareProviderProxyChat({
   toolsets = null,
   enabled_toolsets = null,
   disabled_toolsets = [],
-  temperature
+  temperature,
+  credential_resolver = null
 } = {}, { stream = false, resultFormat = CHAT_RESULT_FORMAT } = {}) {
   const route = planProviderProxyRoute({
     candidates,
@@ -1189,7 +1230,8 @@ function prepareProviderProxyChat({
     limit_state,
     limit_ledger,
     rotation_intent,
-    requested_model
+    requested_model,
+    credential_resolver
   });
 
   if (route.status !== 'ready') {
@@ -1255,7 +1297,7 @@ function prepareProviderProxyChat({
     };
   }
 
-  const credential = resolveCredential(runtime, env);
+  const credential = resolveCredential(runtime, env, credential_resolver);
   if (runtime.auth.credential_required && !credential) {
     return {
       ok: false,

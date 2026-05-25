@@ -6,7 +6,7 @@ Provider route planning and guarded chat execution for LLM proxy flows.
 - Selects the first configured, authorized provider candidate from the provider runtime catalog.
 - Rotates to another configured candidate when the primary candidate is marked limited by caller state or by the managed provider limit ledger.
 - Returns route metadata only; it does not call an LLM provider or proxy request bodies.
-- Does not return secret values. Route plans include credential environment variable names and configured variable names only.
+- Does not return secret values. Route plans include credential environment variable names, configured variable names, and configured hosted secret reference ids only.
 - Blocks public shared-key candidates and explicit limit-bypass intent.
 - Executes OpenAI-compatible Chat Completions, Anthropic Messages, and OpenAI Responses requests through `executeProviderProxyChat()` or `executeProviderProxyChatStream()` after route planning succeeds.
 - Fails closed for unsupported future transports until dedicated handlers are implemented.
@@ -25,6 +25,27 @@ Provider route planning and guarded chat execution for LLM proxy flows.
 - `policy.rotation_mode: "authorized_failover"`
 
 Rotation is for authorized failover across operator-configured credentials. It is not a mechanism to bypass provider signup, quotas, rate limits, or terms.
+
+## Credential Sources
+
+Environment variables remain the local development credential source. Hosted runtimes can pass `credential_resolver` into `planProviderProxyRoute()`, `executeProviderProxyChat()`, or `executeProviderProxyChatStream()`:
+
+```js
+const credential_resolver = {
+  configuredSecretRefs(runtime) {
+    return runtime.provider_id === 'openrouter'
+      ? ['secret://divinity/providers/openrouter/api-key']
+      : [];
+  },
+  resolveCredential(runtime) {
+    return runtime.provider_id === 'openrouter'
+      ? hostedSecretStore.read('secret://divinity/providers/openrouter/api-key')
+      : '';
+  }
+};
+```
+
+Route metadata may include `configured_secret_refs`, but the resolver's secret value is used only to construct upstream provider transport headers during execution. CLI/API commands do not expose a resolver interface in this bootstrap; hosted deployments must inject the resolver inside the runtime process.
 
 ## Provider Limit Ledger
 

@@ -128,6 +128,36 @@ const missingCredentials = planProviderProxyRoute({
 assert.equal(missingCredentials.status, 'blocked');
 assert.match(missingCredentials.error, /configured credentials/);
 
+const hostedSecret = 'hosted-openrouter-secret';
+const hostedSecretRoute = planProviderProxyRoute({
+  candidates: ['openrouter'],
+  env: {},
+  credential_resolver: {
+    configuredSecretRefs(runtime) {
+      return runtime.provider_id === 'openrouter'
+        ? ['secret://divinity/providers/openrouter/api-key']
+        : [];
+    },
+    resolveCredential(runtime) {
+      return runtime.provider_id === 'openrouter' ? hostedSecret : '';
+    }
+  }
+});
+
+assert.equal(hostedSecretRoute.status, 'ready');
+assert.equal(hostedSecretRoute.selected_provider_runtime.provider_id, 'openrouter');
+assert.deepEqual(hostedSecretRoute.selected_provider_runtime.auth.configured_env_vars, []);
+assert.deepEqual(
+  hostedSecretRoute.selected_provider_runtime.auth.configured_secret_refs,
+  ['secret://divinity/providers/openrouter/api-key']
+);
+assert.deepEqual(hostedSecretRoute.candidate_results[0].configured_env_vars, []);
+assert.deepEqual(
+  hostedSecretRoute.candidate_results[0].configured_secret_refs,
+  ['secret://divinity/providers/openrouter/api-key']
+);
+assert.equal(JSON.stringify(hostedSecretRoute).includes(hostedSecret), false);
+
 const tmpDir = mkdtempSync(path.join(os.tmpdir(), 'divinity-provider-proxy-catalog-'));
 
 try {

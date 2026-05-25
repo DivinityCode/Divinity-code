@@ -90,7 +90,8 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: OpenAI-compatible Chat Completions, Anthropic Messages, and OpenAI Responses execution is exposed through CLI `provider-chat`, API `POST /provider-proxy/chat`, API `POST /provider-proxy/chat/stream`, `executeProviderProxyChat()`, and `executeProviderProxyChatStream()`, with prompt/secret redaction, raw tool-argument redaction, Anthropic thinking/signature redaction, credentialed endpoint-override blocking, transport-specific token fields, fail-closed `429` handling, managed provider retry-window tracking, and normalized stream metadata.
    - Bootstrap status: provider limit ledgers can be in-process for API runtime or file-backed through `DIVINITY_PROVIDER_LIMIT_LEDGER_PATH`, storing provider ids and retry timestamps without prompts, request bodies, credentials, or repo-root state pollution.
    - Bootstrap status: provider usage ledgers can be file-backed through `DIVINITY_PROVIDER_USAGE_LEDGER_PATH`, storing daily provider/model request and token totals without prompts, request bodies, credentials, response text, raw tool arguments, or repo-root state pollution. `usage_budget` can enforce daily request/input/output/total token caps before upstream calls.
-   - Next production slice: add approved hosted secret integration and more approved tool execution adapters behind the same route policy.
+   - Bootstrap status: provider proxy route/chat helpers accept an injected `credential_resolver` for hosted runtimes, exposing only configured secret reference ids in route metadata while using resolver-returned secret values only for upstream transport headers.
+   - Next production slice: wire the hosted secret resolver boundary to an approved operator secret store and continue adding approved tool execution adapters behind the same route policy.
 2. Toolset governance.
    - Bootstrap status: public toolset metadata and default resolution are exposed through capabilities, CLI `toolsets`, API `/toolsets`, and `doctor`.
    - Bootstrap status: CLI/API task assembly carries toolset resolution metadata on task/run payloads.
@@ -112,7 +113,7 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: release artifacts now include sha256 source integrity entries and explicit signing readiness metadata, blocked while the non-production warning and `private: true` gates remain active.
    - Next production slice: add actual published package and signed binary artifacts after the production warning and `private: true` release gates are cleared.
 4. Hosted/identity/billing boundary.
-   - Non-goal for the current bootstrap: hosted identity, billing, and managed secrets are not implemented until local provider/tool/runtime behavior is stable.
+   - Non-goal for the current bootstrap: hosted identity, billing, and managed secret-store operations are not implemented until local provider/tool/runtime behavior is stable.
 
 ## Success Metrics
 - Time-to-first-value: < 10 minutes from signup to first completed task.
