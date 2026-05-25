@@ -41,6 +41,25 @@ const resolved = resolveToolsets({
 });
 assert.deepEqual(resolved.toolsets.map(toolset => toolset.toolset_id), ['web']);
 assert.deepEqual(resolved.tools, ['web_extract', 'web_search']);
+assert.deepEqual(resolved.tool_schemas.map(tool => tool.name), ['web_extract', 'web_search']);
+assert.deepEqual(
+  resolved.tool_schemas.find(tool => tool.name === 'web_search'),
+  {
+    name: 'web_search',
+    description: 'Search public web results for a concise query and return source metadata for operator review.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search query to run against public web results.' }
+      },
+      required: ['query'],
+      additionalProperties: false
+    },
+    toolsets: ['web'],
+    risk_level: 'low',
+    policy_permissions: ['network:read']
+  }
+);
 assert.deepEqual(resolved.policy_permissions, ['network:read']);
 assert.equal(resolved.risk_summary.highest_risk_level, 'low');
 assert.deepEqual(resolved.risk_summary.low_risk_toolsets, ['web']);

@@ -47,13 +47,14 @@ Rotation is for authorized failover across operator-configured credentials. It i
 - `chat_completions`: `POST <base_url>/chat/completions` with `messages`, `model`, `max_completion_tokens`, and optional `temperature`.
 - `anthropic_messages`: `POST <base_url>/v1/messages` with `messages`, optional top-level `system`, `model`, `max_tokens`, optional `temperature`, `anthropic-version: 2023-06-01`, and `x-api-key` when credentials are required.
 - `codex_responses`: `POST <base_url>/responses` with `input`, optional `instructions`, `model`, `max_output_tokens`, and optional `temperature`.
+- Selected `toolset_resolution.tool_schemas` are projected into provider-specific `tools` request fields: Chat Completions uses nested function tools, Anthropic Messages uses `input_schema`, and OpenAI Responses uses top-level function tools with `parameters`.
 - OpenAI-compatible Chat Completions does not use deprecated `max_tokens`; OpenAI Responses uses `max_output_tokens`; Anthropic Messages uses its current `max_tokens` field.
 - A live upstream `429` returns `status: "limited"`, records a provider retry window when a ledger is supplied, and does not automatically retry through another provider in the same request.
 - Provider-returned tool calls are detected but not executed. Chat Completions `message.tool_calls`, Anthropic Messages `tool_use` content blocks, and OpenAI Responses `function_call` output items return `status: "requires_action"`, redacted `tool_call_requests`, and a required `tool_call_review` operator control.
 - Prompt and request-body data are sent only to the selected provider endpoint and are not included in the returned result metadata.
 - Local custom endpoints can be used without a credential for development and tests. Credentialed catalog providers execute only against their trusted catalog endpoint in this slice.
 
-`executeProviderProxyChatStream()` uses the same route, credential, endpoint override, toolset compatibility, prompt budget, output budget, and limit-ledger checks as non-streaming chat execution, then sets `stream: true` on the upstream request. It returns `format: "divinity.provider_proxy_stream_result.v1"` with accumulated `output_text`, redacted `stream_events`, `event_counts`, usage when available, and the same redacted tool-call governance metadata.
+`executeProviderProxyChatStream()` uses the same route, credential, endpoint override, toolset compatibility, selected tool schema projection, prompt budget, output budget, and limit-ledger checks as non-streaming chat execution, then sets `stream: true` on the upstream request. It returns `format: "divinity.provider_proxy_stream_result.v1"` with accumulated `output_text`, redacted `stream_events`, `event_counts`, usage when available, and the same redacted tool-call governance metadata.
 
 Streaming normalizes provider SSE events instead of forwarding raw provider events:
 
@@ -63,8 +64,8 @@ Streaming normalizes provider SSE events instead of forwarding raw provider even
 - Unknown SSE events are ignored. `[DONE]` terminators are not returned.
 
 Transport shapes are anchored to current official provider docs:
-- OpenAI Responses: https://developers.openai.com/api/reference/responses/create
-- OpenAI Chat Completions: https://developers.openai.com/api/reference/chat/create
-- Anthropic Messages: https://platform.claude.com/docs/en/build-with-claude/working-with-messages
+- OpenAI Responses: https://developers.openai.com/api/docs/guides/function-calling
+- OpenAI Chat Completions: https://api.openai.com/v1/chat/completions
+- Anthropic tool definitions: https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools
 - OpenAI Responses streaming events: https://developers.openai.com/api/reference/resources/responses/streaming-events
 - Anthropic Messages streaming: https://platform.claude.com/docs/en/api/messages-streaming

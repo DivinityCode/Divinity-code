@@ -335,7 +335,48 @@ function anthropicEndpoint(runtime) {
   return joinEndpoint(baseUrl, baseUrl.endsWith('/v1') ? '/messages' : '/v1/messages');
 }
 
-function buildTransportRequest({ runtime, requestedModel, messages, outputTokens, temperature, stream = false }) {
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function providerToolDefinitions(runtime, toolsetResolution) {
+  const schemas = Array.isArray(toolsetResolution?.tool_schemas) ? toolsetResolution.tool_schemas : [];
+  if (schemas.length === 0) return [];
+
+  if (runtime.transport === 'anthropic_messages') {
+    return schemas.map(tool => ({
+      name: tool.name,
+      description: tool.description,
+      input_schema: cloneJson(tool.input_schema)
+    }));
+  }
+
+  if (runtime.transport === 'codex_responses') {
+    return schemas.map(tool => ({
+      type: 'function',
+      name: tool.name,
+      description: tool.description,
+      parameters: cloneJson(tool.input_schema),
+      strict: true
+    }));
+  }
+
+  return schemas.map(tool => ({
+    type: 'function',
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: cloneJson(tool.input_schema)
+    }
+  }));
+}
+
+function attachProviderTools(body, runtime, toolsetResolution) {
+  const tools = providerToolDefinitions(runtime, toolsetResolution);
+  if (tools.length > 0) body.tools = tools;
+}
+
+function buildTransportRequest({ runtime, requestedModel, messages, outputTokens, temperature, toolsetResolution = null, stream = false }) {
   const model = String(requestedModel || runtime.model || '').trim();
   const numericTemperature = Number(temperature);
 
@@ -343,6 +384,7 @@ function buildTransportRequest({ runtime, requestedModel, messages, outputTokens
     const body = { model, messages };
     if (outputTokens) body.max_completion_tokens = outputTokens;
     if (Number.isFinite(numericTemperature)) body.temperature = numericTemperature;
+    attachProviderTools(body, runtime, toolsetResolution);
     if (stream) body.stream = true;
     return {
       endpoint: joinEndpoint(runtime.base_url, '/chat/completions'),
@@ -360,6 +402,7 @@ function buildTransportRequest({ runtime, requestedModel, messages, outputTokens
     const system = systemPrompt(messages);
     if (system) body.system = system;
     if (Number.isFinite(numericTemperature)) body.temperature = numericTemperature;
+    attachProviderTools(body, runtime, toolsetResolution);
     if (stream) body.stream = true;
     return {
       endpoint: anthropicEndpoint(runtime),
@@ -377,6 +420,7 @@ function buildTransportRequest({ runtime, requestedModel, messages, outputTokens
     if (instructions) body.instructions = instructions;
     if (outputTokens) body.max_output_tokens = outputTokens;
     if (Number.isFinite(numericTemperature)) body.temperature = numericTemperature;
+    attachProviderTools(body, runtime, toolsetResolution);
     if (stream) body.stream = true;
     return {
       endpoint: joinEndpoint(runtime.base_url, '/responses'),
@@ -1097,6 +1141,7 @@ function prepareProviderProxyChat({
       messages,
       outputTokens: requestedOutputTokens || budgetOutputTokens || 0,
       temperature,
+      toolsetResolution,
       stream
     });
   } catch (error) {

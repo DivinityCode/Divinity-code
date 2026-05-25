@@ -51,6 +51,9 @@ const chatStreamServer = await createMockStreamServer(async ({ req, res, body })
   assert.equal(body.stream, true);
   assert.equal(body.max_completion_tokens, 16);
   assert.deepEqual(body.messages, [{ role: 'user', content: secretPrompt }]);
+  assert.equal(body.tools[0].type, 'function');
+  assert.deepEqual(body.tools.map(tool => tool.function.name), ['web_extract', 'web_search']);
+  assert.equal(body.tools[1].function.parameters.properties.query.type, 'string');
 
   writeSse(res, [
     {
@@ -80,6 +83,7 @@ try {
     env: { CUSTOM_LLM_API_KEY: apiSecret },
     requested_model: 'mock-model',
     messages: [{ role: 'user', content: secretPrompt }],
+    enabled_toolsets: ['web'],
     max_completion_tokens: 16,
     on_event: event => observedEvents.push(event)
   });
