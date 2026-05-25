@@ -115,7 +115,7 @@
 - Policy engine decisions required before approval queue can be validated.
 
 ## Definition of Done (MVP)
-- End-to-end flow: create task -> run -> approval -> artifact output.
+- End-to-end flow: create task -> run -> approval -> artifact output. `[x]` Covered by `tests/tests_mvp_demo_flow.mjs`.
 - Reproducible logs for each run.
 - Budget and policy checks enforced in all execution paths.
 - Minimum 4 guided starter recipes in onboarding. `[x]`
@@ -126,3 +126,5 @@
 3. Observe run entering `awaiting_approval` for high-risk step.
 4. Approve from dashboard and watch run continue.
 5. Export patch/log/summary/PR-summary artifacts and audit record.
+
+Automated demo coverage lives in `tests/tests_mvp_demo_flow.mjs` and runs through `npm run test:mvp`, `npm run test:smoke`, and `npm test`.

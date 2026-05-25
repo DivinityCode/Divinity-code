@@ -65,7 +65,7 @@ The Week 1 vertical slice is implemented on `main` and has expanded beyond the o
 
 ## Current Validation Gates
 - `npm run validate:contracts` or cached-pnpm equivalent validates contract schemas and examples.
-- `npm run test:smoke` or cached-pnpm equivalent runs the deterministic CLI/API smoke path from a temp workspace.
+- `npm run test:smoke` or cached-pnpm equivalent runs the MVP demo flow plus deterministic CLI/API smoke path from temp workspaces.
 - `npm test` or cached-pnpm equivalent runs policy, API, CLI, execution, workspace, observability, dashboard, IDE, contract, and smoke coverage.
 - Hygiene gates before publish: conflict-marker scan, `git diff --check`, JSON parse check for manifests/contracts, and root cleanup check for stray `tests_*.mjs` or `scripts_*.mjs` files.
 
