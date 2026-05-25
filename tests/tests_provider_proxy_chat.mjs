@@ -190,8 +190,14 @@ const continuationServer = await createMockChatServer(async ({ req, res, body })
   assert.match(continuation.content, /completed/);
   assert.match(continuation.content, /bytes_read/);
   assert.match(continuation.content, /line_count/);
+  assert.match(continuation.content, /search_files/);
+  assert.match(continuation.content, /match_count/);
+  assert.match(continuation.content, /matching_files_count/);
+  assert.match(continuation.content, /files_scanned/);
   assert.equal(continuation.content.includes(continuationSecretPath), false);
   assert.equal(continuation.content.includes(continuationSecretOutput), false);
+  assert.equal(continuation.content.includes('secret continuation search query'), false);
+  assert.equal(continuation.content.includes('secret-continuation-search-result.md'), false);
 
   res.statusCode = 200;
   res.setHeader('content-type', 'application/json');
@@ -250,6 +256,37 @@ try {
           raw_output: continuationSecretOutput
         },
         output: continuationSecretOutput
+      },
+      {
+        format: 'divinity.provider_tool_execution.v1',
+        execution_id: 'provider_tool_execution_run_context_call_search_context_002',
+        run_id: 'run_context',
+        approval_id: 'provider_tool_call_approval_run_context_call_search_context_002',
+        tool_call_id: 'call_search_context',
+        provider_id: 'custom_openai_compatible',
+        transport: 'chat_completions',
+        name: 'search_files',
+        argument_keys: ['path', 'query'],
+        arguments_redacted: true,
+        argument_values: { path: 'secret-continuation-search-scope', query: 'secret continuation search query' },
+        status: 'completed',
+        adapter: 'search_files',
+        actor: 'operator@example.com',
+        reason: 'Approved redacted search continuation context.',
+        started_at: '2026-05-25T12:10:02Z',
+        completed_at: '2026-05-25T12:10:03Z',
+        output_summary: 'search_files completed; results redacted',
+        output_redacted: true,
+        output_metadata: {
+          files_scanned: 7,
+          match_count: 3,
+          matching_files_count: 2,
+          query_redacted: true,
+          paths_redacted: true,
+          content_redacted: true,
+          query: 'secret continuation search query',
+          matched_path: 'secret-continuation-search-result.md'
+        }
       }
     ]
   });
