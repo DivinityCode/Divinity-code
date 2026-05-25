@@ -26,7 +26,7 @@ This baseline defines who Divinity Code is for, what work it must help them comp
 ### Builder Mode
 1. Initialize a repository with predictable policy, budget, and scope defaults.
 2. Submit a task with objective, repo context, success criteria, and optional ticket/docs/CI references.
-3. Receive a structured run response with preflight risk, lifecycle status, policy pack, orchestration trace, agent activity, memory provenance, artifacts, and events.
+3. Receive a structured run response with preflight risk, lifecycle status, goal records, policy pack, orchestration trace, agent activity, memory provenance, artifacts, and events.
 4. Run deterministic local checks before publishing changes.
 5. Produce GitHub-ready summaries and bug reports without leaving the command workflow.
 
@@ -47,6 +47,7 @@ This baseline defines who Divinity Code is for, what work it must help them comp
 ## MVP Requirements
 - **Contract-first surfaces:** CLI, API, dashboard, and IDE commands must share Task, Run, Preflight, Event, Artifact, Policy, and capability vocabulary.
 - **Trust-first execution:** Risk, budget, budget incident, policy, policy-hook, approval, evidence, and audit state must be visible before side effects.
+- **Goal evidence:** Success criteria should become durable run goals before completion logic or dashboard mutation controls depend on them.
 - **Deterministic verification:** Local validation and smoke paths must run without polluting the repository root.
 - **Operational dashboard:** Operator Mode must manage run status, approval decisions, evidence, liveness, artifacts, and audit metadata.
 - **Extensible runtime:** Runtime adapters, execution adapters, connector references, runner isolation profiles, recipes, and policy packs must be discoverable rather than hard-coded by clients.

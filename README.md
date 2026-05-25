@@ -3,7 +3,7 @@
 Divinity Code is an AI engineering platform designed to combine best-in-class coding execution, multi-agent orchestration, and a user-friendly trust-first UX.
 
 ## Current Status
-Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows with explicit task success criteria, policy and budget gates, budget incident records, policy-pack pre-execution hook checks, approval transitions, execution locks, execution adapter and verifier records, observable planner/executor/verifier activity, run heartbeats, isolated local and Git URL execution workspaces with cleanup, runner isolation profiles with Docker-backed constrained command execution, patch/log/summary/PR-summary artifacts, structured bug reports, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, team policy packs, constrained package-script execution, discoverable runtime and connector adapters, run-level connector references, org/project observability rollups, a shared capabilities catalog, and opt-in file-backed API run storage.
+Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows with explicit task success criteria, durable goal records, policy and budget gates, budget incident records, policy-pack pre-execution hook checks, approval transitions, execution locks, execution adapter and verifier records, observable planner/executor/verifier activity, run heartbeats, isolated local and Git URL execution workspaces with cleanup, runner isolation profiles with Docker-backed constrained command execution, patch/log/summary/PR-summary artifacts, structured bug reports, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, team policy packs, constrained package-script execution, discoverable runtime and connector adapters, run-level connector references, org/project observability rollups, a shared capabilities catalog, and opt-in file-backed API run storage.
 
 ## Documents
 - [Product Plan](docs/PRODUCT_PLAN.md)
@@ -28,7 +28,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - `apps/ide-extension` - Builder Mode IDE extension scaffold
 - `apps/api` - Control Plane API
 - `apps/dashboard` - Operator Mode dashboard
-- `packages/contracts` - versioned task/run/policy/capability/verification/agent-activity/execution-lock/heartbeat/connector-reference/budget-incident/bug-report schemas, including task success criteria
+- `packages/contracts` - versioned task/run/policy/capability/verification/agent-activity/execution-lock/heartbeat/connector-reference/budget-incident/goal/bug-report schemas
 - `packages/agent-activity` - observable planner/executor/verifier activity records
 - `packages/capabilities` - shared policy, runtime adapter, execution adapter, connector adapter, and recipe capability catalog
 - `packages/runtime-adapters` - agent runtime adapter metadata for Divinity, local CLI runtimes, and generic processes
@@ -45,6 +45,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - `packages/artifacts` - patch/log/summary/PR-summary artifact payloads
 - `packages/audit` - hash-backed audit records and exports
 - `packages/budget-incidents` - soft/hard budget incident records with supporting evidence
+- `packages/goals` - durable goal records derived from task success criteria
 - `packages/recipes` - guided starter recipes
 - `packages/orchestration` - planner/executor/verifier traces
 - `packages/memory` - session/project/team memory entries with provenance
@@ -57,5 +58,6 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - Run `npm install`
 - Run `npm run validate:contracts` to validate schema examples and CI contract checks.
 - Run `npm run test:smoke` for a local CLI+API smoke path.
+- Run `npm run test:goals` for focused success-criteria-to-goal coverage.
 - Run `npm test` for preflight engine, approval API, execution adapters, run events, artifacts, audit export, CLI, and smoke checks.
 - If `npm` is unavailable but cached Corepack pnpm is present, run scripts with `node ~/.cache/node/corepack/v1/pnpm/<version>/bin/pnpm.cjs <script>`.

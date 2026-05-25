@@ -15,6 +15,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 | --- | --- | --- | --- |
 | Task | `packages/contracts/schemas/task.v1.json` | CLI/API request surfaces | Captures objective, success criteria, repo context, scope, policy, budget, connector requests, and creation time. |
 | Run | `packages/contracts/schemas/run.v1.json` | API run store, CLI run output | Tracks one execution attempt for a task, including lifecycle status and risk level. |
+| GoalRecord | `packages/contracts/schemas/goal.v1.json` | Goals package, CLI/API run output | Promotes task success criteria into durable run goals with status, scope, budget allocation, and evidence refs. |
 | PreflightDecision | `packages/contracts/schemas/preflight.v1.json` | Policy engine | Explains risk, predicted actions, budget estimate, policy hook outcomes, warnings, blocked reasons, approval requirement, and run status before execution. |
 | Policy | `packages/contracts/schemas/policy.v1.json` | Policy engine and policy packs | Defines permissions and approval threshold used to gate work. |
 | Step | `packages/contracts/schemas/step.v1.json` | API step routes, execution package | Represents a proposed atomic action and its pre-execution gate result. |
@@ -37,6 +38,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 | Relationship | Cardinality | Notes |
 | --- | --- | --- |
 | Task -> Run | One task can create many runs | API `POST /tasks` creates a run from task input; CLI `run` emits one local run payload. |
+| Run -> GoalRecord | Zero or more goals | Each non-empty success criterion creates one goal record at run assembly time. |
 | Run -> PreflightDecision | One required decision per run | Preflight determines lifecycle status before execution starts. |
 | Run -> Step | Zero or more steps | API `POST /runs/:id/steps` adds gated steps. |
 | Step -> ExecutionRecord | Zero or one execution in current bootstrap | Execution only occurs after policy gates allow the step. |
@@ -53,7 +55,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 ## Lifecycle
 1. **Task creation:** Builder or API client submits objective, success criteria, repo, scope, policy, budget, and optional connector references.
 2. **Preflight:** Policy engine infers actions, estimates risk/cost, checks policy permissions, policy-pack hooks, and budget caps, and returns decision plus evidence.
-3. **Run assembly:** API/CLI resolves policy pack, budget incidents, orchestration trace, agent activity, memory provenance, connector references, artifacts, and initial events.
+3. **Run assembly:** API/CLI resolves policy pack, goal records, budget incidents, orchestration trace, agent activity, memory provenance, connector references, artifacts, and initial events.
 4. **Approval gate:** High-risk allowed work enters `awaiting_approval`; blocked work fails or pauses before execution.
 5. **Step gate:** API step creation evaluates action-level policy and budget constraints.
 6. **Execution lock:** API acquires a run/step lock before execution and records release or recovery.
@@ -63,7 +65,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 ## Surface Placement
 | Object group | Builder CLI | Control Plane API | Operator Dashboard |
 | --- | --- | --- | --- |
-| Task, Run, Preflight | `run` output | `/tasks`, `/preflight`, `/runs/:id` | run queue and selected-run header/detail |
+| Task, Run, Goals, Preflight | `run` output | `/tasks`, `/preflight`, `/runs/:id` | run queue and selected-run header/detail |
 | Policy and Capabilities | `capabilities`, `doctor` readiness context | `/capabilities` | capability-informed labels and operator context |
 | Events and Approvals | event array in `run`; `approve` placeholder | `/runs/:id/events`, `/approvals`, `/runs/:id/approval` | timeline and approval panel |
 | Artifacts | artifact metadata in `run` | `/runs/:id/artifacts`, `/artifacts/:id` | artifact panel |
@@ -73,6 +75,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 ## Contract Index
 - Task examples: `packages/contracts/examples/task.valid.json`, `packages/contracts/examples/task.invalid.json`
 - Run examples: `packages/contracts/examples/run.valid.json`, `packages/contracts/examples/run.invalid.json`
+- Goal examples: `packages/contracts/examples/goal.valid.json`, `packages/contracts/examples/goal.invalid.json`
 - Step examples: `packages/contracts/examples/step.valid.json`, `packages/contracts/examples/step.invalid.json`
 - Artifact examples: `packages/contracts/examples/artifact.valid.json`, `packages/contracts/examples/artifact.invalid.json`
 - Budget incident examples: `packages/contracts/examples/budget-incident.valid.json`, `packages/contracts/examples/budget-incident.invalid.json`

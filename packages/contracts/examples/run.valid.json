@@ -1,1 +1,16 @@
-{"run_id":"run_1","task_id":"task_123","status":"paused","risk_level":"low"}
+{
+  "run_id": "run_1",
+  "task_id": "task_123",
+  "status": "paused",
+  "risk_level": "low",
+  "goals": [
+    {
+      "goal_id": "goal_run_1_001",
+      "run_id": "run_1",
+      "task_id": "task_123",
+      "status": "blocked",
+      "source": "task.success_criteria",
+      "title": "Operator resolves budget pause"
+    }
+  ]
+}

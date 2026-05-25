@@ -97,6 +97,7 @@ The 2026-05-25 refresh confirmed the latest observed releases above are still cu
 7. Keep documentation current with observed repo signals and implementation status.
 8. Emit structured bug reports from the CLI so support evidence is generated from the same local checks operators already run.
 9. Carry task success criteria in the shared Task contract so goal/subgoal-style acceptance signals survive across CLI, API, and run storage.
+10. Promote success criteria into durable goal records before adding mutable goal routes, so budget accounting and completion evidence stay contract-visible.
 
 ## Build Slices Adopted From Research
 1. **Approval queue:** implemented run storage with an in-memory default, opt-in file-backed persistence, approval-required runs, and approve/reject transitions.
@@ -122,3 +123,4 @@ The 2026-05-25 refresh confirmed the latest observed releases above are still cu
 21. **Runtime adapter registry:** implemented runtime adapter metadata for Divinity local, Claude local, Codex local, and generic process runtimes in the shared capabilities catalog.
 22. **Policy-hook bridge:** implemented policy-pack pre-execution hooks so CLI/API preflight and API step gates can block or warn from deterministic hook metadata before execution adapters run.
 23. **Budget incidents:** implemented `divinity.budget_incident.v1` records so soft/hard budget threshold events are attached to CLI/API runs and API audit exports.
+24. **Goal records:** implemented `divinity.goal.v1` records so task success criteria become durable run goals with initial status, evidence refs, and budget allocation.

@@ -1,5 +1,9 @@
 # Contracts Changelog
 
+## v1.32.0
+- Added `GoalRecord` schema and examples for task success criteria promoted into durable run goals.
+- Added optional `goals` arrays to the Run schema for bootstrap goal visibility.
+
 ## v1.31.0
 - Added `BudgetIncident` schema and examples for soft/hard budget threshold records.
 - Added `budget_incident` audit record type for immutable financial-risk evidence.

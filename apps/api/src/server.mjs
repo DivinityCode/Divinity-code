@@ -15,6 +15,7 @@ import {
   releaseExecutionLock
 } from '../../../packages/execution-locks/src/index.mjs';
 import { createRunHeartbeat, latestHeartbeatAt } from '../../../packages/heartbeats/src/index.mjs';
+import { createGoalRecords } from '../../../packages/goals/src/index.mjs';
 import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
 import { createObservabilitySummary } from '../../../packages/observability/src/index.mjs';
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
@@ -337,6 +338,13 @@ const server = http.createServer((req, res) => {
         sendJson(res, 400, { error: error.message });
         return;
       }
+      const goals = createGoalRecords({
+        run_id: runId,
+        task: scopedTask,
+        preflight,
+        status,
+        created_at: createdAt
+      });
       const run = {
         run_id: runId,
         task_id: scopedTask.task_id || 'unknown',
@@ -348,6 +356,7 @@ const server = http.createServer((req, res) => {
         budget_incidents: budgetIncidents,
         policy_pack: policyPack,
         orchestration: createOrchestrationTrace({ run_id: runId, task: scopedTask, status, preflight }),
+        goals,
         agent_activity: createAgentActivityRecords({
           run_id: runId,
           task: scopedTask,

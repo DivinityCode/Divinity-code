@@ -20,6 +20,8 @@ const checks = [
   ['packages/contracts/schemas/bug-report.v1.json','packages/contracts/examples/bug-report.invalid.json',false],
   ['packages/contracts/schemas/budget-incident.v1.json','packages/contracts/examples/budget-incident.valid.json',true],
   ['packages/contracts/schemas/budget-incident.v1.json','packages/contracts/examples/budget-incident.invalid.json',false],
+  ['packages/contracts/schemas/goal.v1.json','packages/contracts/examples/goal.valid.json',true],
+  ['packages/contracts/schemas/goal.v1.json','packages/contracts/examples/goal.invalid.json',false],
   ['packages/contracts/schemas/execution.v1.json','packages/contracts/examples/execution.valid.json',true],
   ['packages/contracts/schemas/execution.v1.json','packages/contracts/examples/execution.invalid.json',false],
   ['packages/contracts/schemas/execution-lock.v1.json','packages/contracts/examples/execution-lock.valid.json',true],
