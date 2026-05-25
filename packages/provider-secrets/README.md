@@ -5,8 +5,9 @@ Provider secret-reference manifest loader and credential resolver factory for ho
 ## Scope
 - Reads an optional `DIVINITY_PROVIDER_SECRET_REFS_PATH` manifest.
 - Stores provider ids, redacted secret reference ids, and environment variable names only.
-- Resolves real credential values from the runtime environment when a matching provider is selected.
-- Returns `configured_secret_refs` only when the referenced environment variable is configured.
+- Resolves real credential values from the encrypted local store first, then from the runtime environment when a matching provider is selected.
+- Writes encrypted local store records when `DIVINITY_PROVIDER_SECRET_STORE_PATH` and `DIVINITY_PROVIDER_SECRET_STORE_KEY` are configured.
+- Returns `configured_secret_refs` only when the referenced store record or environment variable is configured.
 - Builds `divinity.provider_secret_readiness.v1` metadata for operator checks without exposing secret values.
 - Rejects raw credential fields, public shared-key wording, no-signup key pools, and limit-bypass or evasion wording.
 
@@ -27,8 +28,14 @@ Provider secret-reference manifest loader and credential resolver factory for ho
 
 The manifest is not a secret store. It must not contain credential values, bearer tokens, passwords, shared public keys, scraped no-signup keys, or bypass pools. Actual values stay in the host environment or a managed operator secret store that projects the value into the named environment variable.
 
+## Store Bootstrap
+
+`DIVINITY_PROVIDER_SECRET_STORE_PATH` and `DIVINITY_PROVIDER_SECRET_STORE_KEY` enable a local encrypted store bootstrap for API-hosted evaluation. Records are encrypted with AES-256-GCM using a key derived from the configured store key. Public store responses expose only provider id, secret ref, credential env var name, algorithm, timestamp, actor, and reason. The store file must not contain plaintext provider credentials.
+
+The API write path requires an `actor` and `reason` so operator-owned credential changes have identity-aware metadata before a managed hosted secret store exists.
+
 ## API Runtime Wiring
 
 `apps/api` creates a resolver at process startup and passes it to provider route, chat, and stream execution. Route and chat metadata can include the configured `secret_ref`, but the resolved credential value is used only for upstream provider transport headers and is never returned to clients.
 
-`GET /provider-secrets/readiness` exposes redacted readiness metadata and records `provider_secret_readiness` audit records. Provider route, chat, and stream operations that select a secret ref record `provider_secret_ref` audit records containing operation, provider id, transport, model, credential env var names, and secret refs only. Audit records must not contain the resolved credential value.
+`POST /provider-secrets/store` stores encrypted credentials and records redacted `provider_secret_write` audit records. `GET /provider-secrets/readiness` exposes redacted readiness metadata and records `provider_secret_readiness` audit records. Provider route, chat, and stream operations that select a secret ref record `provider_secret_ref` audit records containing operation, provider id, transport, model, credential env var names, and secret refs only. Audit records must not contain the resolved credential value.
