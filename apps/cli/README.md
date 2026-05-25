@@ -4,11 +4,11 @@ Owner: Builder Experience
 Commands: `init`, `run`, `status`, `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `approval-revision`, `approval-resubmit`, `goal-complete`, `capabilities`, `providers`, `toolsets`, `recipes`, `doctor`, `bug`.
 
 ## Current Behavior
-- `init` writes `.divinity.json` with the default `safe_exec` policy, budget caps, and org/project scope.
+- `init` writes `.divinity.json` with the default `safe_exec` policy, budget caps, org/project scope, default LLM provider, and default toolset preferences.
 - `init --wizard` prompts for policy preset, soft/hard budget caps, and org/project scope while keeping prompts on stderr and JSON output on stdout.
-- `init --policy scoped_edit --soft-limit 3 --hard-limit 8 --org acme --project platform` writes a config without prompts for scripts and tests.
+- `init --policy scoped_edit --soft-limit 3 --hard-limit 8 --org acme --project platform --provider groq --model llama-3.3-70b-versatile` writes a config without prompts for scripts and tests.
 - `init` output includes the built-in starter recipes for onboarding.
-- `run` emits a task payload, generated `run_id`, lifecycle status, preflight decision metadata, durable goal records, budget incident records, connector references, agent activity records, artifact metadata, and a structured event timeline; hard budget cap excess returns `paused`.
+- `run` emits a task payload, generated `run_id`, lifecycle status, preflight decision metadata, provider runtime metadata, toolset resolution metadata, durable goal records, budget incident records, connector references, agent activity records, artifact metadata, and a structured event timeline; hard budget cap excess returns `paused`.
 - `run --connector ticket_reference:ticket:DIV-17:https://example.test/tickets/DIV-17 "Read the repository README"` attaches initial ticket/docs/CI context to the task and resolved run output.
 - `run --criteria "All tests pass" --success-criteria "Docs updated" "Implement policy trace"` attaches explicit success criteria to the task payload and creates matching run `goals` records with evidence and budget allocation.
 - `status <run_id> --api http://127.0.0.1:3000` fetches a stored API run and returns its lifecycle status plus the run payload; without `--api`, `status` keeps the local queued placeholder for scripts.
@@ -22,7 +22,7 @@ Commands: `init`, `run`, `status`, `approvals`, `approval`, `approve`, `reject`,
 - `approval-resubmit <run_id> --api http://127.0.0.1:3000 --actor builder@example.com --reason "rollback evidence attached"` resubmits a paused approval revision back to `awaiting_approval`; without `--api`, it emits a local structured resubmission payload for scripts.
 - `goal-complete <run_id> <goal_id> --api http://127.0.0.1:3000 --verification <verification_id>` completes an API-backed run goal only when the verification record passed; without `--api`, it emits a local structured completion payload for scripts.
 - `capabilities` lists supported policy presets, execution adapters, runner isolation profiles, connector adapters, LLM providers, toolsets, and starter recipe summaries as `divinity.capabilities.v1`.
-- `providers` lists contract-shaped LLM provider metadata without resolving or printing secret values.
+- `providers` lists contract-shaped LLM provider metadata loaded from `packages/provider-runtime/providers.v1.json` without resolving or printing secret values.
 - `toolsets` lists public toolset metadata and the default tool resolution.
 - `recipes` lists the built-in guided starter recipes.
 - `doctor` reports Node, optional npm, optional pnpm/Corepack fallback, aggregate package-manager readiness, optional Docker runtime readiness for container-sandbox execution, installed dependencies, AJV validator dependencies, git, package manifest, provider and toolset catalog readiness, optional LLM provider credential readiness, and API server source readiness as structured JSON.

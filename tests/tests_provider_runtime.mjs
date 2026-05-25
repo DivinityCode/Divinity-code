@@ -1,6 +1,7 @@
 import assert from 'assert/strict';
 
 import {
+  loadProviderCatalog,
   providerById,
   providerCredentialReadiness,
   publicLlmProviders,
@@ -10,13 +11,20 @@ import {
 const providers = publicLlmProviders();
 const providerIds = providers.map(provider => provider.provider_id);
 
-assert.deepEqual(providerIds, [
+for (const providerId of [
   'openrouter',
   'anthropic',
   'openai_api',
   'google_gemini',
+  'groq',
+  'cerebras',
+  'mistral',
+  'github_models',
   'custom_openai_compatible'
-]);
+]) {
+  assert.ok(providerIds.includes(providerId), `missing provider ${providerId}`);
+}
+assert.deepEqual(loadProviderCatalog().map(provider => provider.provider_id), providerIds);
 
 for (const provider of providers) {
   assert.equal(provider.format, 'divinity.llm_provider.v1');
@@ -30,6 +38,7 @@ for (const provider of providers) {
 }
 
 assert.equal(providerById('anthropic').transport, 'anthropic_messages');
+assert.equal(providerById('groq').base_url, 'https://api.groq.com/openai/v1');
 assert.equal(providerById('missing'), null);
 
 const anthropicRuntime = resolveProviderRuntime({
@@ -64,12 +73,14 @@ assert.throws(
 const readiness = providerCredentialReadiness({
   env: {
     OPENROUTER_API_KEY: 'router-key',
+    GROQ_API_KEY: 'groq-key',
     GOOGLE_API_KEY: ''
   }
 });
 assert.equal(readiness.format, 'divinity.provider_credential_readiness.v1');
 assert.equal(readiness.any_configured, true);
 assert.ok(readiness.providers.find(provider => provider.provider_id === 'openrouter').credential_configured);
+assert.ok(readiness.providers.find(provider => provider.provider_id === 'groq').credential_configured);
 assert.equal(readiness.providers.find(provider => provider.provider_id === 'custom_openai_compatible').credential_required, false);
 
 console.log(JSON.stringify({ ok: true, test: 'provider-runtime' }));

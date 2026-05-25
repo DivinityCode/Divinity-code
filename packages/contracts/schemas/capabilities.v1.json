@@ -90,7 +90,7 @@
           "format": { "const": "divinity.llm_provider.v1" },
           "provider_id": {
             "type": "string",
-            "enum": ["openrouter", "anthropic", "openai_api", "google_gemini", "custom_openai_compatible"]
+            "enum": ["openrouter", "anthropic", "openai_api", "google_gemini", "groq", "cerebras", "mistral", "github_models", "custom_openai_compatible"]
           },
           "display_name": { "type": "string", "minLength": 1 },
           "transport": {

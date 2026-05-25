@@ -17,7 +17,7 @@ import { createInitialRunEvents } from '../../../packages/events/src/index.mjs';
 import { completeGoalRecord, createGoalRecords } from '../../../packages/goals/src/index.mjs';
 import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
-import { providerCredentialReadiness, publicLlmProviders } from '../../../packages/provider-runtime/src/index.mjs';
+import { providerCredentialReadiness, publicLlmProviders, resolveProviderRuntime } from '../../../packages/provider-runtime/src/index.mjs';
 import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
 import { evaluatePreflight, POLICY_PRESETS } from '../../../packages/policy-engine/src/index.mjs';
 import { publicStarterRecipes } from '../../../packages/recipes/src/index.mjs';
@@ -26,10 +26,19 @@ import { publicToolsets, resolveToolsets } from '../../../packages/toolsets/src/
 const [, , command, ...args] = process.argv;
 const cwd = process.cwd();
 const configPath = path.join(cwd, '.divinity.json');
+const DEFAULT_ENABLED_TOOLSETS = resolveToolsets().toolsets.map(toolset => toolset.toolset_id);
 const DEFAULT_CONFIG = {
   policy_id: 'safe_exec',
   budget: { soft_limit_usd: 2, hard_limit_usd: 5 },
-  scope: { org_id: 'default-org', project_id: 'default-project' }
+  scope: { org_id: 'default-org', project_id: 'default-project' },
+  llm_provider: {
+    provider_id: 'openrouter',
+    model: 'openai/gpt-4o-mini'
+  },
+  toolsets: {
+    enabled: DEFAULT_ENABLED_TOOLSETS,
+    disabled: []
+  }
 };
 const POLICY_IDS = Object.keys(POLICY_PRESETS);
 
@@ -229,7 +238,12 @@ function parseInitArgs(values) {
     soft_limit_usd: DEFAULT_CONFIG.budget.soft_limit_usd,
     hard_limit_usd: DEFAULT_CONFIG.budget.hard_limit_usd,
     org_id: DEFAULT_CONFIG.scope.org_id,
-    project_id: DEFAULT_CONFIG.scope.project_id
+    project_id: DEFAULT_CONFIG.scope.project_id,
+    provider_id: DEFAULT_CONFIG.llm_provider.provider_id,
+    model: DEFAULT_CONFIG.llm_provider.model,
+    base_url: DEFAULT_CONFIG.llm_provider.base_url || '',
+    enabled_toolsets: [...DEFAULT_CONFIG.toolsets.enabled],
+    disabled_toolsets: [...DEFAULT_CONFIG.toolsets.disabled]
   };
 
   for (let index = 0; index < values.length; index += 1) {
@@ -253,6 +267,31 @@ function parseInitArgs(values) {
     } else if (value === '--project' || value === '--project-id') {
       options.project_id = next;
       index += 1;
+    } else if (value === '--provider' || value === '--provider-id') {
+      options.provider_id = next;
+      index += 1;
+    } else if (value.startsWith('--provider=')) {
+      options.provider_id = value.slice('--provider='.length);
+    } else if (value === '--model') {
+      options.model = next;
+      index += 1;
+    } else if (value.startsWith('--model=')) {
+      options.model = value.slice('--model='.length);
+    } else if (value === '--base-url' || value === '--provider-base-url') {
+      options.base_url = next;
+      index += 1;
+    } else if (value.startsWith('--base-url=')) {
+      options.base_url = value.slice('--base-url='.length);
+    } else if (value === '--enable-toolsets' || value === '--enabled-toolsets') {
+      options.enabled_toolsets = commaList(next);
+      index += 1;
+    } else if (value.startsWith('--enable-toolsets=')) {
+      options.enabled_toolsets = commaList(value.slice('--enable-toolsets='.length));
+    } else if (value === '--disable-toolsets' || value === '--disabled-toolsets') {
+      options.disabled_toolsets = commaList(next);
+      index += 1;
+    } else if (value.startsWith('--disable-toolsets=')) {
+      options.disabled_toolsets = commaList(value.slice('--disable-toolsets='.length));
     } else {
       throw new Error(`unknown init option: ${value}`);
     }
@@ -302,6 +341,13 @@ function parseRunArgs(values) {
     connector_references: connectorReferences,
     success_criteria: successCriteria.filter(Boolean)
   };
+}
+
+function commaList(value) {
+  return String(value || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
 }
 
 function parseApprovalArgs(values, defaultDecision = 'approve') {
@@ -598,6 +644,49 @@ function asScopeId(value, label) {
   return parsed;
 }
 
+function normalizedLlmProvider(source = {}) {
+  const provider = {
+    ...DEFAULT_CONFIG.llm_provider,
+    ...source
+  };
+  const normalized = {
+    provider_id: asScopeId(provider.provider_id, 'provider_id'),
+    model: String(provider.model || '').trim()
+  };
+  const baseUrl = String(provider.base_url || '').trim();
+  if (baseUrl) normalized.base_url = baseUrl;
+  return normalized;
+}
+
+function normalizedToolsetConfig(source = {}) {
+  return {
+    enabled: Array.isArray(source.enabled) ? source.enabled.map(value => String(value || '').trim()).filter(Boolean) : [...DEFAULT_CONFIG.toolsets.enabled],
+    disabled: Array.isArray(source.disabled) ? source.disabled.map(value => String(value || '').trim()).filter(Boolean) : [...DEFAULT_CONFIG.toolsets.disabled]
+  };
+}
+
+function taskWithRuntimeConfig(task, config = DEFAULT_CONFIG) {
+  const llmProvider = normalizedLlmProvider(task.llm_provider || config.llm_provider || DEFAULT_CONFIG.llm_provider);
+  const toolsets = normalizedToolsetConfig(task.toolsets || config.toolsets || DEFAULT_CONFIG.toolsets);
+  const providerRuntime = resolveProviderRuntime({
+    provider_id: llmProvider.provider_id,
+    model: llmProvider.model,
+    base_url: llmProvider.base_url
+  });
+  const toolsetResolution = resolveToolsets({
+    enabled_toolsets: toolsets.enabled,
+    disabled_toolsets: toolsets.disabled
+  });
+
+  return {
+    ...task,
+    llm_provider: llmProvider,
+    toolsets,
+    provider_runtime: providerRuntime,
+    toolset_resolution: toolsetResolution
+  };
+}
+
 function buildConfig(options) {
   if (!POLICY_IDS.includes(options.policy_id)) {
     throw new Error(`policy_id must be one of: ${POLICY_IDS.join(', ')}`);
@@ -609,6 +698,27 @@ function buildConfig(options) {
     throw new Error('hard_limit_usd must be greater than or equal to soft_limit_usd');
   }
 
+  const llmProvider = normalizedLlmProvider({
+    provider_id: options.provider_id,
+    model: options.model,
+    base_url: options.base_url
+  });
+  const toolsets = normalizedToolsetConfig({
+    enabled: options.enabled_toolsets,
+    disabled: options.disabled_toolsets
+  });
+
+  resolveProviderRuntime({
+    provider_id: llmProvider.provider_id,
+    model: llmProvider.model,
+    base_url: llmProvider.base_url,
+    env: {}
+  });
+  resolveToolsets({
+    enabled_toolsets: toolsets.enabled,
+    disabled_toolsets: toolsets.disabled
+  });
+
   return {
     policy_id: options.policy_id,
     budget: {
@@ -618,7 +728,9 @@ function buildConfig(options) {
     scope: {
       org_id: asScopeId(options.org_id, 'org_id'),
       project_id: asScopeId(options.project_id, 'project_id')
-    }
+    },
+    llm_provider: llmProvider,
+    toolsets
   };
 }
 
@@ -630,14 +742,24 @@ async function askForConfig(options) {
     process.stderr.write(`Hard budget USD [${options.hard_limit_usd}]: `);
     process.stderr.write(`Org ID [${options.org_id}]: `);
     process.stderr.write(`Project ID [${options.project_id}]: `);
-    const [policy = '', soft = '', hard = '', org = '', project = ''] = fs.readFileSync(0, 'utf8').split(/\r?\n/);
+    process.stderr.write(`LLM provider [${options.provider_id}]: `);
+    process.stderr.write(`LLM model [${options.model}]: `);
+    process.stderr.write(`Provider base URL [${options.base_url || '(default)'}]: `);
+    process.stderr.write(`Enabled toolsets [${options.enabled_toolsets.join(',')}]: `);
+    process.stderr.write(`Disabled toolsets [${options.disabled_toolsets.join(',')}]: `);
+    const [policy = '', soft = '', hard = '', org = '', project = '', provider = '', model = '', baseUrl = '', enabledToolsets = '', disabledToolsets = ''] = fs.readFileSync(0, 'utf8').split(/\r?\n/);
     return {
       ...options,
       policy_id: policy.trim() || options.policy_id,
       soft_limit_usd: soft.trim() || options.soft_limit_usd,
       hard_limit_usd: hard.trim() || options.hard_limit_usd,
       org_id: org.trim() || options.org_id,
-      project_id: project.trim() || options.project_id
+      project_id: project.trim() || options.project_id,
+      provider_id: provider.trim() || options.provider_id,
+      model: model.trim() || options.model,
+      base_url: baseUrl.trim() || options.base_url,
+      enabled_toolsets: enabledToolsets.trim() ? commaList(enabledToolsets) : options.enabled_toolsets,
+      disabled_toolsets: disabledToolsets.trim() ? commaList(disabledToolsets) : options.disabled_toolsets
     };
   }
 
@@ -649,13 +771,23 @@ async function askForConfig(options) {
     const hard = await rl.question(`Hard budget USD [${options.hard_limit_usd}]: `);
     const org = await rl.question(`Org ID [${options.org_id}]: `);
     const project = await rl.question(`Project ID [${options.project_id}]: `);
+    const provider = await rl.question(`LLM provider [${options.provider_id}]: `);
+    const model = await rl.question(`LLM model [${options.model}]: `);
+    const baseUrl = await rl.question(`Provider base URL [${options.base_url || '(default)'}]: `);
+    const enabledToolsets = await rl.question(`Enabled toolsets [${options.enabled_toolsets.join(',')}]: `);
+    const disabledToolsets = await rl.question(`Disabled toolsets [${options.disabled_toolsets.join(',')}]: `);
     return {
       ...options,
       policy_id: policy.trim() || options.policy_id,
       soft_limit_usd: soft.trim() || options.soft_limit_usd,
       hard_limit_usd: hard.trim() || options.hard_limit_usd,
       org_id: org.trim() || options.org_id,
-      project_id: project.trim() || options.project_id
+      project_id: project.trim() || options.project_id,
+      provider_id: provider.trim() || options.provider_id,
+      model: model.trim() || options.model,
+      base_url: baseUrl.trim() || options.base_url,
+      enabled_toolsets: enabledToolsets.trim() ? commaList(enabledToolsets) : options.enabled_toolsets,
+      disabled_toolsets: disabledToolsets.trim() ? commaList(disabledToolsets) : options.disabled_toolsets
     };
   } finally {
     rl.close();
@@ -680,7 +812,7 @@ function run() {
   const config = fs.existsSync(configPath)
     ? JSON.parse(fs.readFileSync(configPath, 'utf8'))
     : DEFAULT_CONFIG;
-  const payload = {
+  const payload = taskWithRuntimeConfig({
     task_id: `task_${Date.now()}`,
     objective: parsedArgs.objective,
     success_criteria: parsedArgs.success_criteria,
@@ -690,7 +822,7 @@ function run() {
     budget: config.budget,
     connector_references: parsedArgs.connector_references,
     created_at: new Date().toISOString()
-  };
+  }, config);
   const policy_pack = resolvePolicyPackForTask(payload);
   const preflight = evaluatePreflight({ task: payload, policyPack: policy_pack });
   const run_id = `run_${Date.now()}`;

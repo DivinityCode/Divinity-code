@@ -13,6 +13,17 @@ function runCli(tmpDir, args, input = '') {
   return JSON.parse(output);
 }
 
+const defaultRuntimeConfig = {
+  llm_provider: {
+    provider_id: 'openrouter',
+    model: 'openai/gpt-4o-mini'
+  },
+  toolsets: {
+    enabled: ['web', 'file', 'code_execution', 'memory', 'delegation', 'connectors', 'approvals'],
+    disabled: []
+  }
+};
+
 function readConfig(tmpDir) {
   return JSON.parse(readFileSync(path.join(tmpDir, '.divinity.json'), 'utf8'));
 }
@@ -27,15 +38,35 @@ try {
   assert.deepEqual(readConfig(tmpDir), {
     policy_id: 'safe_exec',
     budget: { soft_limit_usd: 2, hard_limit_usd: 5 },
-    scope: { org_id: 'default-org', project_id: 'default-project' }
+    scope: { org_id: 'default-org', project_id: 'default-project' },
+    ...defaultRuntimeConfig
   });
 
-  const flagResult = runCli(tmpDir, ['init', '--policy', 'scoped_edit', '--soft-limit', '3.5', '--hard-limit', '9', '--org', 'acme', '--project', 'platform']);
+  const flagResult = runCli(tmpDir, [
+    'init',
+    '--policy', 'scoped_edit',
+    '--soft-limit', '3.5',
+    '--hard-limit', '9',
+    '--org', 'acme',
+    '--project', 'platform',
+    '--provider', 'anthropic',
+    '--model', 'claude-sonnet-4.5',
+    '--enable-toolsets', 'web,file',
+    '--disable-toolsets', 'file'
+  ]);
   assert.equal(flagResult.ok, true);
   assert.deepEqual(readConfig(tmpDir), {
     policy_id: 'scoped_edit',
     budget: { soft_limit_usd: 3.5, hard_limit_usd: 9 },
-    scope: { org_id: 'acme', project_id: 'platform' }
+    scope: { org_id: 'acme', project_id: 'platform' },
+    llm_provider: {
+      provider_id: 'anthropic',
+      model: 'claude-sonnet-4.5'
+    },
+    toolsets: {
+      enabled: ['web', 'file'],
+      disabled: ['file']
+    }
   });
 
   const wizardResult = runCli(tmpDir, ['init', '--wizard'], 'read_only\n1.25\n2.5\nops\nsandbox\n');
@@ -43,7 +74,8 @@ try {
   assert.deepEqual(readConfig(tmpDir), {
     policy_id: 'read_only',
     budget: { soft_limit_usd: 1.25, hard_limit_usd: 2.5 },
-    scope: { org_id: 'ops', project_id: 'sandbox' }
+    scope: { org_id: 'ops', project_id: 'sandbox' },
+    ...defaultRuntimeConfig
   });
 
   assert.throws(() => runCli(tmpDir, ['init', '--policy', 'unknown']));

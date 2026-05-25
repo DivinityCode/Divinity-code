@@ -84,9 +84,11 @@ Build a best-in-class AI engineering platform that combines:
 ### Deliverables
 1. LLM provider runtime configuration.
    - Bootstrap status: LLM provider metadata and side-effect-free credential readiness are exposed through capabilities, CLI `providers`, API `/providers`, and `doctor`.
-   - Next production slice: wire live provider invocation behind explicit provider runtime resolution without printing or storing secret values.
+   - Bootstrap status: CLI/API task assembly resolves provider runtime metadata from config or request input without printing or storing secret values.
+   - Next production slice: wire live provider invocation behind a proxy that enforces authorized credentials, provider terms, rate limits, and budget policy.
 2. Toolset governance.
    - Bootstrap status: public toolset metadata and default resolution are exposed through capabilities, CLI `toolsets`, API `/toolsets`, and `doctor`.
+   - Bootstrap status: CLI/API task assembly carries toolset resolution metadata on task/run payloads.
    - Next production slice: connect toolset resolution to execution policy, provider capability checks, and operator controls.
 3. Public onboarding and release packaging.
    - Next production slice: add install/upgrade docs, release artifacts, environment bootstrap checks, and a first-run quickstart that does not require repo internals.

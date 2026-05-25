@@ -14,10 +14,11 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - [MVP Backlog](docs/MVP_BACKLOG.md)
 - [Competitive Repository Research](docs/REPOSITORY_RESEARCH.md)
 - [Referenced Repository Code Examples](docs/REPOSITORY_CODE_EXAMPLES.md)
+- [Free LLM Provider Research](docs/FREE_LLM_PROVIDER_RESEARCH.md)
 - [Week 1 Execution Plan](docs/WEEK1_EXECUTION_PLAN.md)
 
 ## Implemented Surfaces
-1. Builder CLI: `init`, `run`, API-backed `status`, `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `approval-revision`, `approval-resubmit`, `goal-complete`, `capabilities`, `providers`, `toolsets`, `recipes`, `doctor`, and `bug`.
+1. Builder CLI: `init`, `run`, API-backed `status`, `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `approval-revision`, `approval-resubmit`, `goal-complete`, `capabilities`, `providers`, `toolsets`, `recipes`, `doctor`, and `bug`. `init` and `run` carry provider/tool runtime metadata without storing secret values.
 2. IDE extension scaffold: task run, dashboard launch, and doctor commands delegated to the repo-local CLI.
 3. Control Plane API: health, capabilities, provider and toolset catalogs, preflight, task creation, run retrieval, approvals, approval comments, approval revisions, goal completion, step gates and execution locks, verifier evidence, run heartbeats, connector references, artifacts, audit export, and live run streams.
 4. Operator dashboard: run queue, approvals, approval comments, approval revisions, run timeline, decision trace, goal records, connector references, agent activity, execution and verification evidence with retry attempts, liveness summary, artifacts, audit metadata, and API-backed live updates.
@@ -32,7 +33,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - `packages/agent-activity` - observable planner/executor/verifier activity records
 - `packages/capabilities` - shared policy, runtime adapter, execution adapter, connector adapter, LLM provider, toolset, and recipe capability catalog
 - `packages/runtime-adapters` - agent runtime adapter metadata for Divinity, local CLI runtimes, and generic processes
-- `packages/provider-runtime` - LLM provider metadata and side-effect-free credential readiness helpers
+- `packages/provider-runtime` - data-backed LLM provider catalog and side-effect-free credential readiness helpers
 - `packages/toolsets` - toolset catalog and default tool resolution helpers
 - `packages/connectors` - ticket, docs, and CI connector adapter metadata and run reference helpers
 - `packages/policy-engine` - trust and budget gate evaluation

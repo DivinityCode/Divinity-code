@@ -12,6 +12,7 @@ This research covers the referenced GitHub repositories and public project docum
 The goal is to translate repo-level patterns into product and implementation decisions for Divinity Code.
 
 Source-level examples for the same repositories are tracked in [Referenced Repository Code Examples](REPOSITORY_CODE_EXAMPLES.md). That appendix is commit-pinned and maps concrete upstream file paths to Divinity Code implementation implications.
+Free-provider research requested for testing and cost offload is tracked in [Free LLM Provider Research](FREE_LLM_PROVIDER_RESEARCH.md). That note distinguishes legitimate free-tier providers from public shared keys and quota-bypass patterns that Divinity must not implement.
 
 ## Current Repo Signals
 | Repo | Primary language | Latest observed release | Positioning signal |
@@ -139,3 +140,4 @@ The 2026-05-25 refresh confirmed the latest observed releases above are still cu
 32. **Approval revision/resubmission:** implemented `divinity.approval_revision.v1` records, API `POST /runs/:id/approval/revision`, API `POST /runs/:id/approval/resubmit`, CLI `approval-revision`, and CLI `approval-resubmit` so operators can request changes, pause approval runs, and return resubmitted work to the approval queue without changing approve/reject semantics.
 33. **Dashboard approval revision visibility:** implemented dashboard rendering for approval revision requested/resubmitted state from static samples and API-loaded runs so operators can inspect requested changes beside approval comments and goals.
 34. **Provider and toolset runtime foundation:** implemented `divinity.llm_provider.v1` metadata, `divinity.toolset.v1` metadata, CLI/API `providers` and `toolsets` discovery, capability catalog fields, doctor readiness checks, and contract examples. This slice does not make live LLM calls or persist credentials.
+35. **Provider runtime config:** implemented data-backed provider metadata, CLI `init` provider/toolset preferences, CLI/API task-level `provider_runtime` and `toolset_resolution` metadata, and a safe free-provider research policy that excludes public shared keys and quota-bypass rotation.

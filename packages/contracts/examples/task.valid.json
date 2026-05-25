@@ -1,1 +1,56 @@
-{"task_id":"task_123","objective":"Refactor auth module","success_criteria":["Auth tests pass","Public API remains compatible"],"repo":"github.com/org/repo","scope":{"org_id":"acme","project_id":"platform"},"policy_id":"default_safe","budget":{"soft_limit_usd":2.5,"hard_limit_usd":5.0},"created_at":"2026-05-24T00:00:00Z"}
+{
+  "task_id": "task_123",
+  "objective": "Refactor auth module",
+  "success_criteria": ["Auth tests pass", "Public API remains compatible"],
+  "repo": "github.com/org/repo",
+  "scope": {
+    "org_id": "acme",
+    "project_id": "platform"
+  },
+  "policy_id": "default_safe",
+  "budget": {
+    "soft_limit_usd": 2.5,
+    "hard_limit_usd": 5.0
+  },
+  "llm_provider": {
+    "provider_id": "openrouter",
+    "model": "openai/gpt-4o-mini"
+  },
+  "toolsets": {
+    "enabled": ["web", "file", "code_execution", "memory", "delegation", "connectors", "approvals"],
+    "disabled": []
+  },
+  "provider_runtime": {
+    "format": "divinity.provider_runtime.v1",
+    "provider_id": "openrouter",
+    "display_name": "OpenRouter",
+    "transport": "chat_completions",
+    "base_url": "https://openrouter.ai/api/v1",
+    "model": "openai/gpt-4o-mini",
+    "auth": {
+      "mode": "api_key",
+      "credential_required": true,
+      "credential_configured": false,
+      "credential_env_vars": ["OPENROUTER_API_KEY"],
+      "configured_env_vars": []
+    },
+    "capabilities": ["chat", "tool_calls", "model_catalog", "aggregator", "free_tier_models"],
+    "source": "hermes_runtime_provider_reference"
+  },
+  "toolset_resolution": {
+    "format": "divinity.toolset_resolution.v1",
+    "toolsets": [
+      {
+        "format": "divinity.toolset.v1",
+        "toolset_id": "web",
+        "description": "Research and content extraction tools for public web context.",
+        "tools": ["web_extract", "web_search"],
+        "default_enabled": true,
+        "risk_level": "low",
+        "policy_permissions": ["network:read"]
+      }
+    ],
+    "tools": ["web_extract", "web_search"]
+  },
+  "created_at": "2026-05-24T00:00:00Z"
+}

@@ -51,6 +51,126 @@
         "additionalProperties": false
       }
     },
+    "llm_provider": {
+      "type": "object",
+      "required": ["provider_id"],
+      "properties": {
+        "provider_id": {
+          "type": "string",
+          "enum": ["openrouter", "anthropic", "openai_api", "google_gemini", "groq", "cerebras", "mistral", "github_models", "custom_openai_compatible"]
+        },
+        "model": { "type": "string" },
+        "base_url": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "toolsets": {
+      "type": "object",
+      "required": ["enabled", "disabled"],
+      "properties": {
+        "enabled": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["web", "file", "terminal", "code_execution", "browser", "memory", "delegation", "connectors", "approvals"]
+          }
+        },
+        "disabled": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["web", "file", "terminal", "code_execution", "browser", "memory", "delegation", "connectors", "approvals"]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "provider_runtime": {
+      "type": "object",
+      "required": ["format", "provider_id", "display_name", "transport", "base_url", "model", "auth", "capabilities", "source"],
+      "properties": {
+        "format": { "const": "divinity.provider_runtime.v1" },
+        "provider_id": {
+          "type": "string",
+          "enum": ["openrouter", "anthropic", "openai_api", "google_gemini", "groq", "cerebras", "mistral", "github_models", "custom_openai_compatible"]
+        },
+        "display_name": { "type": "string", "minLength": 1 },
+        "transport": {
+          "type": "string",
+          "enum": ["chat_completions", "anthropic_messages", "codex_responses"]
+        },
+        "base_url": { "type": "string" },
+        "model": { "type": "string" },
+        "auth": {
+          "type": "object",
+          "required": ["mode", "credential_required", "credential_configured", "credential_env_vars", "configured_env_vars"],
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["api_key", "oauth_token", "none"]
+            },
+            "credential_required": { "type": "boolean" },
+            "credential_configured": { "type": "boolean" },
+            "credential_env_vars": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "configured_env_vars": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
+        },
+        "capabilities": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "source": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "toolset_resolution": {
+      "type": "object",
+      "required": ["format", "toolsets", "tools"],
+      "properties": {
+        "format": { "const": "divinity.toolset_resolution.v1" },
+        "toolsets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["format", "toolset_id", "description", "tools", "default_enabled", "risk_level", "policy_permissions"],
+            "properties": {
+              "format": { "const": "divinity.toolset.v1" },
+              "toolset_id": {
+                "type": "string",
+                "enum": ["web", "file", "terminal", "code_execution", "browser", "memory", "delegation", "connectors", "approvals"]
+              },
+              "description": { "type": "string", "minLength": 1 },
+              "tools": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "default_enabled": { "type": "boolean" },
+              "risk_level": {
+                "type": "string",
+                "enum": ["low", "medium", "high"]
+              },
+              "policy_permissions": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "tools": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
     "created_at": { "type": "string", "format": "date-time" }
   },
   "additionalProperties": false
