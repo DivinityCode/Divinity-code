@@ -59,7 +59,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 ## Validation
 - Run `npm install`
 - Run `npm run validate:contracts` to validate schema examples and CI contract checks.
-- Run `npm run test:smoke` for a local CLI+API smoke path.
+- Run `npm run test:smoke` for the local MVP demo flow plus CLI/API smoke path.
 - Run `npm run test:goals` for focused success-criteria-to-goal and verifier-backed completion coverage.
 - Run `npm run test:approval` for focused approval decision, approval comment, and approval revision coverage.
 - Run `npm test` for preflight engine, approval API, execution adapters, run events, artifacts, audit export, CLI, and smoke checks.
