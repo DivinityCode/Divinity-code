@@ -180,7 +180,7 @@ pnpm test
 
 Expected: all syntax checks and package scripts exit 0; marker scan returns no matches.
 
-- [ ] **Step 2: Commit, push, PR, merge**
+- [x] **Step 2: Commit, push, PR, merge**
 
 ```bash
 git add .
@@ -189,6 +189,8 @@ git push -u origin codex/add-pr-summary-artifacts
 ```
 
 Open a ready PR to `main`, wait for GitHub Actions, merge if green, sync `main`, delete the branch, and rerun post-merge verification.
+
+Completed on `main` in commit `5b40f23`.
 
 ## Self-Review
 

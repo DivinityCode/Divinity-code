@@ -95,6 +95,8 @@ git diff --check
 rg -n '^(<{7}|={7}|>{7})' . --glob '!node_modules' --glob '!.git'
 ```
 
-- [ ] **Step 3: Publish**
+- [x] **Step 3: Publish**
 
 Commit as `feat: report docker doctor readiness`, push `codex/add-docker-doctor-diagnostic`, open a PR, and merge after GitHub Actions passes.
+
+Completed on `main` in commit `5e3d17d`.

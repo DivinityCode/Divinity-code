@@ -163,6 +163,8 @@ git diff --check
 rg -n '^(<{7}|={7}|>{7})' . --glob '!node_modules' --glob '!.git'
 ```
 
-- [ ] **Step 3: Publish**
+- [x] **Step 3: Publish**
 
 Commit as `feat: add cli bug report command`, push `codex/add-cli-bug-report`, open a PR, and merge after GitHub Actions passes.
+
+Completed on `main` in commit `b27fce2`.

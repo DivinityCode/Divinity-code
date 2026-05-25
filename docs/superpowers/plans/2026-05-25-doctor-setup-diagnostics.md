@@ -187,7 +187,7 @@ pnpm test
 
 Expected: all commands exit 0; marker scan returns no matches.
 
-- [ ] **Step 2: Commit, push, PR, merge**
+- [x] **Step 2: Commit, push, PR, merge**
 
 ```bash
 git add .
@@ -196,6 +196,8 @@ git push -u origin codex/add-doctor-setup-diagnostics
 ```
 
 Open a ready PR to `main`, wait for GitHub Actions, merge if green, sync `main`, delete the branch, and rerun post-merge verification.
+
+Completed on `main` in commit `218aa03`.
 
 ## Self-Review
 
