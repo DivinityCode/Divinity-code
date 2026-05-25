@@ -19,8 +19,8 @@ const sampleRuns = [
       },
       toolset_resolution: {
         format: 'divinity.toolset_resolution.v1',
-        tools: ['read_file', 'search_files', 'web_extract', 'web_search'],
-        policy_permissions: ['file:read', 'network:read'],
+        tools: ['list_files', 'read_file', 'search_files', 'web_extract', 'web_search', 'write_file'],
+        policy_permissions: ['file:read', 'file:write', 'network:read'],
         risk_summary: {
           highest_risk_level: 'medium',
           high_risk_toolsets: [],

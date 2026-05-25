@@ -1,5 +1,5 @@
 import assert from 'assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import http from 'http';
 import { tmpdir } from 'os';
 import path from 'path';
@@ -701,6 +701,54 @@ try {
   assert.equal(JSON.stringify(listExecutionBody).includes('api-list-scope'), false);
   assert.equal(JSON.stringify(listExecutionBody).includes('list-target.md'), false);
   assert.equal(JSON.stringify(listExecutionBody).includes('api secret list file contents'), false);
+
+  const { response: writeApprovalResponse, body: writeApprovalBody } = await requestJson(`${baseUrl}/runs/${approvalRun.run_id}/provider-tool-call-approvals`, {
+    method: 'POST',
+    body: JSON.stringify({
+      tool_call_id: 'call_api_write_file',
+      provider_id: 'custom_openai_compatible',
+      transport: 'chat_completions',
+      name: 'write_file',
+      argument_keys: ['path', 'content'],
+      arguments_redacted: true,
+      decision: 'approve',
+      actor: 'operator@example.com',
+      reason: 'The provider requested an approved repository file write.',
+      decided_at: '2026-05-26T12:10:00Z'
+    })
+  });
+
+  assert.equal(writeApprovalResponse.status, 201);
+  assert.equal(writeApprovalBody.approval.name, 'write_file');
+
+  const apiSecretWritePath = 'api-write-scope/write-target.md';
+  const apiSecretWriteContents = 'api secret write file contents';
+  const { response: writeExecutionResponse, body: writeExecutionBody } = await requestJson(`${baseUrl}/runs/${approvalRun.run_id}/provider-tool-executions`, {
+    method: 'POST',
+    body: JSON.stringify({
+      approval_id: writeApprovalBody.approval.approval_id,
+      argument_values: { path: apiSecretWritePath, content: apiSecretWriteContents },
+      actor: 'operator@example.com',
+      reason: 'Execute the approved redacted repository write.',
+      operator_summary: 'Operator reviewed the API write request.',
+      started_at: '2026-05-26T12:10:01Z',
+      completed_at: '2026-05-26T12:10:02Z'
+    })
+  });
+
+  assert.equal(writeExecutionResponse.status, 201);
+  assert.equal(writeExecutionBody.execution.name, 'write_file');
+  assert.equal(writeExecutionBody.execution.status, 'completed');
+  assert.equal(writeExecutionBody.execution.adapter, 'write_file');
+  assert.equal(writeExecutionBody.execution.operator_summary, 'Operator reviewed the API write request.');
+  assert.equal(writeExecutionBody.execution.operator_summary_source, 'operator');
+  assert.equal(writeExecutionBody.execution.output_metadata.bytes_written, 30);
+  assert.equal(writeExecutionBody.execution.output_metadata.line_count, 1);
+  assert.equal(writeExecutionBody.execution.output_metadata.path_redacted, true);
+  assert.equal(writeExecutionBody.execution.output_metadata.content_redacted, true);
+  assert.equal(readFileSync(path.join(approvalRun.workspace.path, apiSecretWritePath), 'utf8'), apiSecretWriteContents);
+  assert.equal(JSON.stringify(writeExecutionBody).includes(apiSecretWritePath), false);
+  assert.equal(JSON.stringify(writeExecutionBody).includes(apiSecretWriteContents), false);
 
   const { response: blockedResponse, body: blocked } = await requestJson(`${baseUrl}/provider-proxy/chat`, {
     method: 'POST',

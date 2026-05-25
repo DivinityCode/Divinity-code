@@ -75,7 +75,7 @@ function buildDoctorChecks() {
     commandCheck('git', 'git', ['--version']),
     fileCheck('package_json', path.join(cwd, 'package.json')),
     directoryCheck('node_modules', path.join(cwd, 'node_modules')),
-    dependencyCheck('ajv_dependencies', ['ajv', 'ajv-cli', 'ajv-formats']),
+    dependencyCheck('ajv_dependencies', ['ajv', 'ajv-formats']),
     fileCheck('api_server_source', path.join(cwd, 'apps/api/src/server.mjs'))
   ];
 }

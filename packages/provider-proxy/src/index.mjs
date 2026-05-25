@@ -304,6 +304,7 @@ function toolCallReviewControl(toolCallRequests) {
 const SAFE_TOOL_EXECUTION_METADATA_KEYS = new Set([
   'adapter_configured',
   'bytes_read',
+  'bytes_written',
   'content_redacted',
   'directories_scanned',
   'files_scanned',
@@ -313,6 +314,7 @@ const SAFE_TOOL_EXECUTION_METADATA_KEYS = new Set([
   'matching_files_count',
   'max_depth',
   'output_redacted',
+  'path_redacted',
   'paths_redacted',
   'query_redacted'
 ]);

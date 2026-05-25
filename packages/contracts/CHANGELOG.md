@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.43.0
+- Expanded `ProviderToolExecution` and embedded Run execution adapter enums with `write_file` for operator-gated workspace writes that expose only redacted byte/line metadata.
+
 ## v1.42.0
 - Expanded `ProviderToolExecution` and embedded Run execution adapter enums with `list_files` for redacted file-tree shape metadata.
 
