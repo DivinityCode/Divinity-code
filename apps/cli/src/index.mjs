@@ -12,6 +12,7 @@ import { createBudgetIncidents } from '../../../packages/budget-incidents/src/in
 import { createCapabilitiesCatalog } from '../../../packages/capabilities/src/index.mjs';
 import { createConnectorReferences } from '../../../packages/connectors/src/index.mjs';
 import { createInitialRunEvents } from '../../../packages/events/src/index.mjs';
+import { createGoalRecords } from '../../../packages/goals/src/index.mjs';
 import { createRunMemoryEntries } from '../../../packages/memory/src/index.mjs';
 import { createOrchestrationTrace } from '../../../packages/orchestration/src/index.mjs';
 import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
@@ -510,6 +511,13 @@ function run() {
     preflight,
     created_at: payload.created_at
   });
+  const goals = createGoalRecords({
+    run_id,
+    task: payload,
+    preflight,
+    status,
+    created_at: payload.created_at
+  });
 
   print({
     ok: true,
@@ -522,6 +530,7 @@ function run() {
     orchestration: createOrchestrationTrace({ run_id, task: payload, status, preflight }),
     connector_references,
     agent_activity,
+    goals,
     memory: createRunMemoryEntries({ run_id, task: payload, preflight, recorded_at: payload.created_at }),
     artifacts: createRunArtifacts({ run_id, task: payload, status, preflight }).map(publicArtifactMetadata),
     events: createInitialRunEvents({ run_id, task: payload, preflight, status }),

@@ -39,6 +39,7 @@
 - CLI `run` now returns `run_id`, status, task payload, and preflight decision metadata.
 - CLI `run --connector adapter:resource_type:resource_id[:url]` attaches initial ticket/docs/CI context to task and run output.
 - CLI `run --criteria "..."` and `run --success-criteria "..."` attach explicit success criteria to the task payload.
+- CLI/API run payloads include durable goal records derived from success criteria, with evidence refs and budget allocation for each criterion.
 - CLI `init` supports default, flag-driven, and prompt-driven project config creation for policy preset, soft/hard budget caps, and org/project scope.
 - CLI `doctor` reports Node, optional npm, optional pnpm/Corepack fallback, aggregate package-manager readiness, optional Docker runtime readiness for container-sandbox execution, installed dependencies, AJV validator dependencies, git, package manifest, and API server source readiness for local setup diagnostics.
 - CLI `bug` emits `divinity.bug_report.v1` with a GitHub-ready Markdown body, environment details, git status, and local doctor diagnostics for in-workflow issue reporting.

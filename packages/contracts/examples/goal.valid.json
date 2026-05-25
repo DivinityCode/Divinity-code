@@ -1,0 +1,31 @@
+{
+  "goal_id": "goal_run_123_001",
+  "run_id": "run_123",
+  "task_id": "task_123",
+  "scope": {
+    "org_id": "acme",
+    "project_id": "platform"
+  },
+  "source": "task.success_criteria",
+  "title": "All contract examples validate",
+  "status": "pending",
+  "budget_estimate_usd": 0.38,
+  "evidence_refs": [
+    {
+      "evidence_id": "evidence_goal_criteria_001",
+      "source": "task.success_criteria",
+      "claim_type": "observed",
+      "summary": "Success criterion 1: All contract examples validate",
+      "supports": ["goal.title", "goal.status"]
+    },
+    {
+      "evidence_id": "evidence_task_budget",
+      "source": "task.budget",
+      "claim_type": "observed",
+      "summary": "Estimated $0.75 against soft $2 and hard $5 limits",
+      "supports": ["budget", "warnings", "run_status"]
+    }
+  ],
+  "completion_evidence_refs": [],
+  "created_at": "2026-05-25T00:00:01.000Z"
+}

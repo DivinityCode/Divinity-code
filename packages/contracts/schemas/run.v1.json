@@ -1,1 +1,41 @@
-{ "$schema":"https://json-schema.org/draft/2020-12/schema","title":"Run","type":"object","required":["run_id","task_id","status","risk_level"],"properties":{"run_id":{"type":"string"},"task_id":{"type":"string"},"status":{"type":"string","enum":["queued","running","awaiting_approval","paused","completed","failed"]},"risk_level":{"type":"string","enum":["low","medium","high","critical"]}},"additionalProperties":false }
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Run",
+  "type": "object",
+  "required": ["run_id", "task_id", "status", "risk_level"],
+  "properties": {
+    "run_id": { "type": "string" },
+    "task_id": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["queued", "running", "awaiting_approval", "paused", "completed", "failed"]
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"]
+    },
+    "goals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["goal_id", "run_id", "task_id", "status", "source", "title"],
+        "properties": {
+          "goal_id": { "type": "string" },
+          "run_id": { "type": "string" },
+          "task_id": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "blocked", "completed"]
+          },
+          "source": {
+            "type": "string",
+            "enum": ["task.success_criteria"]
+          },
+          "title": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": false
+}
