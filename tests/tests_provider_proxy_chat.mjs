@@ -206,6 +206,8 @@ const toolSecret = 'secret tool argument value';
 const continuationSecretPath = 'secret-continuation-file.md';
 const continuationSecretOutput = 'secret continuation file contents';
 const continuationSecretListPath = 'secret-continuation-list-scope';
+const continuationSecretWritePath = 'secret-continuation-write-target.md';
+const continuationSecretWriteOutput = 'secret continuation write contents';
 const toolCallServer = await createMockChatServer(async ({ res }) => {
   res.statusCode = 200;
   res.setHeader('content-type', 'application/json');
@@ -286,12 +288,17 @@ const continuationServer = await createMockChatServer(async ({ req, res, body })
   assert.match(continuation.content, /files_listed/);
   assert.match(continuation.content, /directories_scanned/);
   assert.match(continuation.content, /max_depth/);
+  assert.match(continuation.content, /write_file/);
+  assert.match(continuation.content, /bytes_written/);
+  assert.match(continuation.content, /path_redacted/);
   assert.equal(continuation.content.includes(continuationSecretPath), false);
   assert.equal(continuation.content.includes(continuationSecretOutput), false);
   assert.equal(continuation.content.includes('secret continuation search query'), false);
   assert.equal(continuation.content.includes('secret-continuation-search-result.md'), false);
   assert.equal(continuation.content.includes(continuationSecretListPath), false);
   assert.equal(continuation.content.includes('secret-continuation-list-target.md'), false);
+  assert.equal(continuation.content.includes(continuationSecretWritePath), false);
+  assert.equal(continuation.content.includes(continuationSecretWriteOutput), false);
 
   res.statusCode = 200;
   res.setHeader('content-type', 'application/json');
@@ -414,6 +421,37 @@ try {
           path: continuationSecretListPath,
           filename: 'secret-continuation-list-target.md'
         }
+      },
+      {
+        format: 'divinity.provider_tool_execution.v1',
+        execution_id: 'provider_tool_execution_run_context_call_write_context_004',
+        run_id: 'run_context',
+        approval_id: 'provider_tool_call_approval_run_context_call_write_context_004',
+        tool_call_id: 'call_write_context',
+        provider_id: 'custom_openai_compatible',
+        transport: 'chat_completions',
+        name: 'write_file',
+        argument_keys: ['path', 'content'],
+        arguments_redacted: true,
+        argument_values: { path: continuationSecretWritePath, content: continuationSecretWriteOutput },
+        status: 'completed',
+        adapter: 'write_file',
+        actor: 'operator@example.com',
+        reason: 'Approved redacted write continuation context.',
+        operator_summary: 'Operator reviewed the write result: safe file replacement completed.',
+        started_at: '2026-05-26T12:10:06Z',
+        completed_at: '2026-05-26T12:10:07Z',
+        output_summary: 'write_file completed; content redacted',
+        output_redacted: true,
+        output_metadata: {
+          bytes_written: 35,
+          line_count: 1,
+          path_redacted: true,
+          content_redacted: true,
+          path: continuationSecretWritePath,
+          raw_output: continuationSecretWriteOutput
+        },
+        output: continuationSecretWriteOutput
       }
     ]
   });
@@ -424,6 +462,8 @@ try {
   assert.equal(JSON.stringify(continued).includes(continuationSecretPath), false);
   assert.equal(JSON.stringify(continued).includes(continuationSecretOutput), false);
   assert.equal(JSON.stringify(continued).includes(continuationSecretListPath), false);
+  assert.equal(JSON.stringify(continued).includes(continuationSecretWritePath), false);
+  assert.equal(JSON.stringify(continued).includes(continuationSecretWriteOutput), false);
   assert.equal(JSON.stringify(continued).includes(secretPrompt), false);
   assert.equal(JSON.stringify(continued).includes(apiSecret), false);
 } finally {

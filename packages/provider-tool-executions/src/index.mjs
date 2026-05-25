@@ -126,6 +126,12 @@ function isPathInside(childPath, parentPath) {
   return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
+function hasProtectedWriteSegment(targetPath, rootPath) {
+  return path.relative(rootPath, targetPath)
+    .split(path.sep)
+    .some(segment => ['.git', 'node_modules'].includes(segment));
+}
+
 function readFileExecution({
   run_id,
   approval,
@@ -471,6 +477,112 @@ function listFilesExecution({
   }
 }
 
+function writeFileExecution({
+  run_id,
+  approval,
+  argument_values,
+  workspace_root,
+  argument_keys,
+  actor,
+  reason,
+  operator_summary,
+  started_at,
+  completed_at,
+  index
+}) {
+  const root = path.resolve(cleanString(workspace_root) || process.cwd());
+  const targetInput = cleanString(argument_values.path);
+  const target = path.resolve(root, targetInput);
+  const content = String(argument_values.content ?? '');
+  if (!targetInput || !isPathInside(target, root) || target === root) {
+    return executionEnvelope({
+      run_id,
+      approval,
+      argument_keys,
+      status: 'failed',
+      adapter: 'write_file',
+      actor,
+      reason,
+      started_at,
+      completed_at,
+      output_summary: 'write_file failed; content redacted',
+      output_metadata: {
+        path_redacted: true,
+        content_redacted: true
+      },
+      operator_summary,
+      error: 'write_file target must stay inside workspace',
+      index
+    });
+  }
+  if (hasProtectedWriteSegment(target, root)) {
+    return executionEnvelope({
+      run_id,
+      approval,
+      argument_keys,
+      status: 'failed',
+      adapter: 'write_file',
+      actor,
+      reason,
+      started_at,
+      completed_at,
+      output_summary: 'write_file failed; content redacted',
+      output_metadata: {
+        path_redacted: true,
+        content_redacted: true
+      },
+      operator_summary,
+      error: 'write_file target must not use protected workspace paths',
+      index
+    });
+  }
+
+  try {
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, content, 'utf8');
+    return executionEnvelope({
+      run_id,
+      approval,
+      argument_keys,
+      status: 'completed',
+      adapter: 'write_file',
+      actor,
+      reason,
+      started_at,
+      completed_at,
+      output_summary: 'write_file completed; content redacted',
+      output_metadata: {
+        bytes_written: Buffer.byteLength(content, 'utf8'),
+        line_count: content.split(/\r?\n/).length,
+        path_redacted: true,
+        content_redacted: true
+      },
+      operator_summary,
+      index
+    });
+  } catch (error) {
+    return executionEnvelope({
+      run_id,
+      approval,
+      argument_keys,
+      status: 'failed',
+      adapter: 'write_file',
+      actor,
+      reason,
+      started_at,
+      completed_at,
+      output_summary: 'write_file failed; content redacted',
+      output_metadata: {
+        path_redacted: true,
+        content_redacted: true
+      },
+      operator_summary,
+      error: error?.code ? `write_file failed with ${error.code}` : 'write_file failed',
+      index
+    });
+  }
+}
+
 function unsupportedExecution({
   run_id,
   approval,
@@ -567,6 +679,14 @@ export function createProviderToolExecution(options = {}) {
 
   if (approval.name === 'list_files') {
     return listFilesExecution({
+      ...common,
+      argument_values,
+      workspace_root
+    });
+  }
+
+  if (approval.name === 'write_file') {
+    return writeFileExecution({
       ...common,
       argument_values,
       workspace_root

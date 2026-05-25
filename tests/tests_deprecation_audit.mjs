@@ -19,6 +19,10 @@ function assertNotIncludes(source, disallowed, label) {
 const packageJson = JSON.parse(read('package.json'));
 assert.equal(packageJson.scripts['test:deprecations'], 'node tests/tests_deprecation_audit.mjs');
 assertIncludes(packageJson.scripts.test, 'node tests/tests_deprecation_audit.mjs', 'package test script');
+assert.equal(packageJson.devDependencies['ajv-cli'], undefined, 'package manifest must not depend on deprecated ajv-cli');
+const packageLock = JSON.parse(read('package-lock.json'));
+assert.equal(packageLock.packages?.['node_modules/ajv-cli'], undefined, 'package lock must not include deprecated ajv-cli');
+assert.equal(packageLock.packages?.['node_modules/fast-json-patch'], undefined, 'package lock must not include vulnerable fast-json-patch via ajv-cli');
 
 const upgrade = read('docs/UPGRADE.md');
 const releaseChecklist = read('docs/RELEASE_CHECKLIST.md');

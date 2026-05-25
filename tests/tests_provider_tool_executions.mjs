@@ -1,5 +1,5 @@
 import assert from 'assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 
@@ -18,11 +18,15 @@ const secretListScope = 'secret-list-scope';
 const secretListNestedScope = path.join(secretListScope, 'secret-list-nested');
 const secretListPath = path.join(secretListNestedScope, 'secret-list-target.md');
 const secretListIgnoredPath = path.join(secretListScope, 'dist', 'secret-list-ignored.md');
+const secretWriteScope = 'secret-write-scope';
+const secretWritePath = path.join(secretWriteScope, 'secret-write-target.md');
+const secretWriteContents = 'secret provider write file contents';
 
 mkdirSync(workspaceRoot, { recursive: true });
 mkdirSync(path.join(workspaceRoot, secretSearchScope), { recursive: true });
 mkdirSync(path.join(workspaceRoot, secretListNestedScope), { recursive: true });
 mkdirSync(path.join(workspaceRoot, secretListScope, 'dist'), { recursive: true });
+mkdirSync(path.join(workspaceRoot, secretWriteScope), { recursive: true });
 writeFileSync(path.join(workspaceRoot, secretPath), `${secretFileContents}\n`);
 writeFileSync(path.join(workspaceRoot, secretSearchPath), `${secretSearchContents}\n`);
 writeFileSync(path.join(workspaceRoot, secretListPath), 'secret list file contents\n');
@@ -264,6 +268,80 @@ try {
   assert.equal(listTraversal.adapter, 'list_files');
   assert.match(listTraversal.error, /workspace/);
   assert.equal(JSON.stringify(listTraversal).includes('../outside-list'), false);
+
+  const writeApproval = createProviderToolCallApproval({
+    run_id: 'run_tool_execution',
+    tool_call_id: 'call_write_file_1',
+    provider_id: 'custom_openai_compatible',
+    transport: 'chat_completions',
+    name: 'write_file',
+    argument_keys: ['path', 'content'],
+    arguments_redacted: true,
+    decision: 'approve',
+    actor: 'operator@example.com',
+    reason: 'Repository file write is approved.',
+    decided_at: '2026-05-26T12:04:00Z',
+    index: 8
+  });
+
+  const writeExecution = createProviderToolExecution({
+    run_id: 'run_tool_execution',
+    approval: writeApproval,
+    argument_values: { path: secretWritePath, content: secretWriteContents },
+    workspace_root: workspaceRoot,
+    actor: 'operator@example.com',
+    reason: 'Execute the approved redacted repository write.',
+    operator_summary: 'Operator reviewed the write request: safe replacement content is approved.',
+    started_at: '2026-05-26T12:04:01Z',
+    completed_at: '2026-05-26T12:04:02Z',
+    index: 8
+  });
+
+  assert.equal(writeExecution.status, 'completed');
+  assert.equal(writeExecution.adapter, 'write_file');
+  assert.equal(writeExecution.operator_summary, 'Operator reviewed the write request: safe replacement content is approved.');
+  assert.equal(writeExecution.operator_summary_source, 'operator');
+  assert.deepEqual(writeExecution.argument_keys, ['content', 'path']);
+  assert.equal(writeExecution.output_redacted, true);
+  assert.deepEqual(writeExecution.output_metadata, {
+    bytes_written: 35,
+    line_count: 1,
+    path_redacted: true,
+    content_redacted: true
+  });
+  assert.equal(readFileSync(path.join(workspaceRoot, secretWritePath), 'utf8'), secretWriteContents);
+  assert.equal(JSON.stringify(writeExecution).includes(secretWritePath), false);
+  assert.equal(JSON.stringify(writeExecution).includes(secretWriteContents), false);
+
+  const writeTraversal = createProviderToolExecution({
+    run_id: 'run_tool_execution',
+    approval: writeApproval,
+    argument_values: { path: '../outside-write.md', content: secretWriteContents },
+    workspace_root: workspaceRoot,
+    reason: 'Write path traversal must fail closed.',
+    index: 9
+  });
+
+  assert.equal(writeTraversal.status, 'failed');
+  assert.equal(writeTraversal.adapter, 'write_file');
+  assert.match(writeTraversal.error, /workspace/);
+  assert.equal(JSON.stringify(writeTraversal).includes('../outside-write.md'), false);
+  assert.equal(JSON.stringify(writeTraversal).includes(secretWriteContents), false);
+
+  const protectedWrite = createProviderToolExecution({
+    run_id: 'run_tool_execution',
+    approval: writeApproval,
+    argument_values: { path: '.git/config', content: secretWriteContents },
+    workspace_root: workspaceRoot,
+    reason: 'Protected workspace paths must fail closed.',
+    index: 10
+  });
+
+  assert.equal(protectedWrite.status, 'failed');
+  assert.equal(protectedWrite.adapter, 'write_file');
+  assert.match(protectedWrite.error, /protected/);
+  assert.equal(JSON.stringify(protectedWrite).includes('.git/config'), false);
+  assert.equal(JSON.stringify(protectedWrite).includes(secretWriteContents), false);
 } finally {
   rmSync(tmpRoot, { recursive: true, force: true });
 }

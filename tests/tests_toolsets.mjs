@@ -68,12 +68,18 @@ const defaultResolved = resolveToolsets();
 assert.ok(defaultResolved.toolsets.some(toolset => toolset.toolset_id === 'web'));
 assert.ok(defaultResolved.tools.includes('list_files'));
 assert.ok(defaultResolved.tools.includes('read_file'));
+assert.ok(defaultResolved.tools.includes('write_file'));
 const listFilesSchema = defaultResolved.tool_schemas.find(tool => tool.name === 'list_files');
 assert.equal(listFilesSchema.description, 'List repository files under a directory and return redacted shape metadata.');
 assert.deepEqual(listFilesSchema.input_schema.required, ['path']);
 assert.equal(listFilesSchema.input_schema.properties.max_depth.type, 'integer');
+const writeFileSchema = defaultResolved.tool_schemas.find(tool => tool.name === 'write_file');
+assert.equal(writeFileSchema.description, 'Write full replacement content to a repository file after policy approval.');
+assert.deepEqual(writeFileSchema.input_schema.required, ['path', 'content']);
+assert.equal(writeFileSchema.input_schema.properties.content.type, 'string');
 assert.equal(defaultResolved.toolsets.some(toolset => toolset.toolset_id === 'terminal'), false);
 assert.ok(defaultResolved.policy_permissions.includes('file:read'));
+assert.ok(defaultResolved.policy_permissions.includes('file:write'));
 assert.equal(defaultResolved.risk_summary.highest_risk_level, 'high');
 assert.ok(defaultResolved.operator_controls.some(control => control.control_id === 'approval_required'));
 

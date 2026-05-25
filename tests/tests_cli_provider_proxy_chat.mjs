@@ -1,6 +1,6 @@
 import assert from 'assert/strict';
 import { execFile } from 'child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import http from 'http';
 import { tmpdir } from 'os';
 import path from 'path';
@@ -590,6 +590,40 @@ try {
   assert.equal(JSON.stringify(localListExecution).includes('cli-list-scope'), false);
   assert.equal(JSON.stringify(localListExecution).includes('list-target.md'), false);
   assert.equal(JSON.stringify(localListExecution).includes('cli secret list file contents'), false);
+
+  const cliSecretWritePath = 'cli-write-scope/write-target.md';
+  const cliSecretWriteContents = 'cli secret write file contents';
+  const localWriteExecution = await runCli([
+    'provider-tool-execute',
+    'run_cli_tool_execution',
+    '--approval-id', 'provider_tool_call_approval_run_cli_tool_execution_call_cli_write_file_004',
+    '--tool-call-id', 'call_cli_write_file',
+    '--provider', 'custom_openai_compatible',
+    '--transport', 'chat_completions',
+    '--name', 'write_file',
+    '--argument-key', 'path',
+    '--argument-key', 'content',
+    '--argument', `path=${cliSecretWritePath}`,
+    '--argument', `content=${cliSecretWriteContents}`,
+    '--workspace', repoFixture,
+    '--actor', 'cli@example.com',
+    '--reason', 'Execute approved redacted repository write.',
+    '--operator-summary', 'Operator reviewed the CLI write request.'
+  ]);
+
+  assert.equal(localWriteExecution.ok, true);
+  assert.equal(localWriteExecution.command, 'provider-tool-execute');
+  assert.equal(localWriteExecution.execution.status, 'completed');
+  assert.equal(localWriteExecution.execution.adapter, 'write_file');
+  assert.equal(localWriteExecution.execution.operator_summary, 'Operator reviewed the CLI write request.');
+  assert.equal(localWriteExecution.execution.operator_summary_source, 'operator');
+  assert.equal(localWriteExecution.execution.output_metadata.bytes_written, 30);
+  assert.equal(localWriteExecution.execution.output_metadata.line_count, 1);
+  assert.equal(localWriteExecution.execution.output_metadata.path_redacted, true);
+  assert.equal(localWriteExecution.execution.output_metadata.content_redacted, true);
+  assert.equal(readFileSync(path.join(repoFixture, cliSecretWritePath), 'utf8'), cliSecretWriteContents);
+  assert.equal(JSON.stringify(localWriteExecution).includes(cliSecretWritePath), false);
+  assert.equal(JSON.stringify(localWriteExecution).includes(cliSecretWriteContents), false);
 
   const apiToolApproval = await runCli([
     'provider-tool-approval',
