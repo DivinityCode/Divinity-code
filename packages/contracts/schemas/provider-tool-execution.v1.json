@@ -61,6 +61,11 @@
       "type": "object",
       "additionalProperties": true
     },
+    "operator_summary": { "type": "string", "minLength": 1 },
+    "operator_summary_source": {
+      "type": "string",
+      "const": "operator"
+    },
     "error": { "type": "string" }
   },
   "additionalProperties": false

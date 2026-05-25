@@ -60,6 +60,20 @@ function assertArgumentValues({ approvalKeys, argumentValues }) {
   }
 }
 
+function normalizedOperatorSummary({ operatorSummary, argumentValues }) {
+  const summary = cleanString(operatorSummary);
+  if (!summary) return '';
+  const rawValues = Object.values(isPlainObject(argumentValues) ? argumentValues : {})
+    .map(cleanString)
+    .filter(Boolean);
+  for (const rawValue of rawValues) {
+    if (summary.includes(rawValue)) {
+      throw new Error('provider tool execution operator summary must not include raw argument values');
+    }
+  }
+  return summary;
+}
+
 function executionEnvelope({
   run_id,
   approval,
@@ -72,6 +86,7 @@ function executionEnvelope({
   completed_at,
   output_summary,
   output_metadata,
+  operator_summary = '',
   error = null,
   index
 }) {
@@ -98,6 +113,10 @@ function executionEnvelope({
     output_redacted: true,
     output_metadata
   };
+  if (operator_summary) {
+    record.operator_summary = operator_summary;
+    record.operator_summary_source = 'operator';
+  }
   if (error) record.error = error;
   return record;
 }
@@ -115,6 +134,7 @@ function readFileExecution({
   argument_keys,
   actor,
   reason,
+  operator_summary,
   started_at,
   completed_at,
   index
@@ -134,6 +154,7 @@ function readFileExecution({
       completed_at,
       output_summary: 'read_file failed; content redacted',
       output_metadata: { content_redacted: true },
+      operator_summary,
       error: 'read_file target must stay inside workspace',
       index
     });
@@ -157,6 +178,7 @@ function readFileExecution({
         line_count: content.split(/\r?\n/).length,
         content_redacted: true
       },
+      operator_summary,
       index
     });
   } catch (error) {
@@ -172,6 +194,7 @@ function readFileExecution({
       completed_at,
       output_summary: 'read_file failed; content redacted',
       output_metadata: { content_redacted: true },
+      operator_summary,
       error: error?.code ? `read_file failed with ${error.code}` : 'read_file failed',
       index
     });
@@ -212,6 +235,7 @@ function searchFilesExecution({
   argument_keys,
   actor,
   reason,
+  operator_summary,
   started_at,
   completed_at,
   index
@@ -235,6 +259,7 @@ function searchFilesExecution({
         paths_redacted: true,
         content_redacted: true
       },
+      operator_summary,
       error: 'search_files scope must stay inside workspace',
       index
     });
@@ -281,6 +306,7 @@ function searchFilesExecution({
         paths_redacted: true,
         content_redacted: true
       },
+      operator_summary,
       index
     });
   } catch (error) {
@@ -300,6 +326,7 @@ function searchFilesExecution({
         paths_redacted: true,
         content_redacted: true
       },
+      operator_summary,
       error: error?.code ? `search_files failed with ${error.code}` : 'search_files failed',
       index
     });
@@ -312,6 +339,7 @@ function unsupportedExecution({
   argument_keys,
   actor,
   reason,
+  operator_summary,
   started_at,
   completed_at,
   index
@@ -331,6 +359,7 @@ function unsupportedExecution({
       adapter_configured: false,
       output_redacted: true
     },
+    operator_summary,
     error: 'unsupported provider tool execution adapter',
     index
   });
@@ -344,6 +373,7 @@ export function createProviderToolExecution(options = {}) {
     workspace_root = '',
     actor = 'operator',
     reason,
+    operator_summary = '',
     started_at = new Date().toISOString(),
     completed_at = new Date().toISOString(),
     index = 1
@@ -364,6 +394,10 @@ export function createProviderToolExecution(options = {}) {
   if (!normalizedReason) {
     throw new Error('provider tool execution reason must be non-empty');
   }
+  const safeOperatorSummary = normalizedOperatorSummary({
+    operatorSummary: operator_summary,
+    argumentValues: argument_values
+  });
 
   const common = {
     run_id: normalizedRunId,
@@ -371,6 +405,7 @@ export function createProviderToolExecution(options = {}) {
     argument_keys: argumentKeys,
     actor: normalizedActor,
     reason: normalizedReason,
+    operator_summary: safeOperatorSummary,
     started_at,
     completed_at,
     index

@@ -309,6 +309,11 @@ function sanitizedProviderToolExecution(execution) {
     output_summary: cleanString(execution.output_summary),
     output_metadata: safeToolExecutionMetadata(execution.output_metadata)
   };
+  const operatorSummary = cleanString(execution.operator_summary);
+  if (operatorSummary) {
+    sanitized.operator_summary = operatorSummary;
+    sanitized.operator_summary_source = 'operator';
+  }
   if (!sanitized.execution_id && !sanitized.tool_call_id) return null;
   return sanitized;
 }

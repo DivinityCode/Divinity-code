@@ -431,6 +431,7 @@ try {
       argument_values: { path: 'README.md' },
       actor: 'operator@example.com',
       reason: 'Execute the approved read-only file request.',
+      operator_summary: 'Operator reviewed the API read result.',
       started_at: '2026-05-25T12:07:00Z',
       completed_at: '2026-05-25T12:07:01Z'
     })
@@ -446,6 +447,8 @@ try {
   assert.equal(toolExecutionBody.execution.arguments_redacted, true);
   assert.equal(toolExecutionBody.execution.status, 'completed');
   assert.equal(toolExecutionBody.execution.adapter, 'read_file');
+  assert.equal(toolExecutionBody.execution.operator_summary, 'Operator reviewed the API read result.');
+  assert.equal(toolExecutionBody.execution.operator_summary_source, 'operator');
   assert.equal(toolExecutionBody.execution.output_redacted, true);
   assert.equal(toolExecutionBody.run.provider_tool_executions.length, 1);
   assert.equal(JSON.stringify(toolExecutionBody).includes('README.md'), false);
@@ -482,6 +485,7 @@ try {
       argument_values: { path: 'api-search-scope', query: 'api secret search needle' },
       actor: 'operator@example.com',
       reason: 'Execute the approved redacted repository search.',
+      operator_summary: 'Operator reviewed the API search result.',
       started_at: '2026-05-25T12:08:01Z',
       completed_at: '2026-05-25T12:08:02Z'
     })
@@ -491,6 +495,8 @@ try {
   assert.equal(searchExecutionBody.execution.name, 'search_files');
   assert.equal(searchExecutionBody.execution.status, 'completed');
   assert.equal(searchExecutionBody.execution.adapter, 'search_files');
+  assert.equal(searchExecutionBody.execution.operator_summary, 'Operator reviewed the API search result.');
+  assert.equal(searchExecutionBody.execution.operator_summary_source, 'operator');
   assert.equal(searchExecutionBody.execution.output_metadata.match_count, 1);
   assert.equal(searchExecutionBody.execution.output_metadata.query_redacted, true);
   assert.equal(searchExecutionBody.execution.output_metadata.paths_redacted, true);

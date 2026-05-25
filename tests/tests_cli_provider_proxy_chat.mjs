@@ -507,7 +507,8 @@ try {
     '--argument', 'path=README.md',
     '--workspace', repoFixture,
     '--actor', 'cli@example.com',
-    '--reason', 'Execute approved read-only file request.'
+    '--reason', 'Execute approved read-only file request.',
+    '--operator-summary', 'Operator reviewed the CLI read result.'
   ]);
 
   assert.equal(localToolExecution.ok, true);
@@ -516,6 +517,8 @@ try {
   assert.equal(localToolExecution.execution.tool_call_id, 'call_cli_read');
   assert.equal(localToolExecution.execution.status, 'completed');
   assert.equal(localToolExecution.execution.adapter, 'read_file');
+  assert.equal(localToolExecution.execution.operator_summary, 'Operator reviewed the CLI read result.');
+  assert.equal(localToolExecution.execution.operator_summary_source, 'operator');
   assert.equal(localToolExecution.execution.arguments_redacted, true);
   assert.equal(localToolExecution.execution.output_redacted, true);
   assert.equal(JSON.stringify(localToolExecution).includes('README.md'), false);
@@ -535,13 +538,16 @@ try {
     '--argument', 'query=cli secret search needle',
     '--workspace', repoFixture,
     '--actor', 'cli@example.com',
-    '--reason', 'Execute approved redacted repository search.'
+    '--reason', 'Execute approved redacted repository search.',
+    '--operator-summary', 'Operator reviewed the CLI search result.'
   ]);
 
   assert.equal(localSearchExecution.ok, true);
   assert.equal(localSearchExecution.command, 'provider-tool-execute');
   assert.equal(localSearchExecution.execution.status, 'completed');
   assert.equal(localSearchExecution.execution.adapter, 'search_files');
+  assert.equal(localSearchExecution.execution.operator_summary, 'Operator reviewed the CLI search result.');
+  assert.equal(localSearchExecution.execution.operator_summary_source, 'operator');
   assert.equal(localSearchExecution.execution.output_metadata.match_count, 1);
   assert.equal(localSearchExecution.execution.output_metadata.query_redacted, true);
   assert.equal(localSearchExecution.execution.output_metadata.paths_redacted, true);
