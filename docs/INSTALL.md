@@ -77,6 +77,13 @@ pnpm run release:native-binary
 pnpm run test:native-binary
 ```
 
+Generate signed native binary review artifacts with:
+
+```bash
+pnpm run release:signed-native-binary
+pnpm run test:signed-native-binary
+```
+
 Assemble a release-candidate review bundle with:
 
 ```bash
@@ -98,7 +105,7 @@ pnpm run release:promotion-preflight
 pnpm run test:release-promotion
 ```
 
-`release-status` prints the same `divinity.release_artifacts.v1` metadata as JSON. `release:artifacts` writes `dist/release-artifacts.json` with source-checkout, local pnpm-link, package-registry, and binary-download paths. That manifest also includes `divinity.release_gate_clearance.v1`, a blocker-by-blocker audit of package privacy, the README production warning, registry token readiness, native binary distribution, release signing, and GitHub release-readiness evidence. `release:native-binary` writes `divinity.release_native_binary_artifacts.v1` metadata under `dist/native-binary/` with externally built native binary artifacts and `SHA256SUMS` when native build inputs are configured. `release:bundle` writes `divinity.release_candidate_bundle.v1` metadata under `dist/release-bundle/` with the package tarball, release metadata, binary launcher artifacts, release attestation, and `SHA256SUMS`. `release:signatures` writes `divinity.release_signature_artifacts.v1` metadata under `dist/release-signatures/` with signature files and checksums for the bundle subjects when signing inputs are configured. `release:promotion-preflight` writes `dist/release-promotion-preflight.json` with required promotion artifacts, gate commands, registry token readiness, native binary artifact readiness, signing readiness, and blockers. Registry and binary paths remain blocked in these surfaces while the package is private and the non-production warning is active.
+`release-status` prints the same `divinity.release_artifacts.v1` metadata as JSON. `release:artifacts` writes `dist/release-artifacts.json` with source-checkout, local pnpm-link, package-registry, and binary-download paths. That manifest also includes `divinity.release_gate_clearance.v1`, a blocker-by-blocker audit of package privacy, the README production warning, registry token readiness, native binary distribution, release signing, and GitHub release-readiness evidence. `release:native-binary` writes `divinity.release_native_binary_artifacts.v1` metadata under `dist/native-binary/` with externally built native binary artifacts and `SHA256SUMS` when native build inputs are configured. `release:signed-native-binary` writes `divinity.release_signed_native_binary_artifacts.v1` metadata under `dist/signed-native-binary/` with nested native binary artifacts, detached signatures, and `SHA256SUMS` when native build and signing inputs are configured. `release:bundle` writes `divinity.release_candidate_bundle.v1` metadata under `dist/release-bundle/` with the package tarball, release metadata, binary launcher artifacts, release attestation, and `SHA256SUMS`. `release:signatures` writes `divinity.release_signature_artifacts.v1` metadata under `dist/release-signatures/` with signature files and checksums for the bundle subjects when signing inputs are configured. `release:promotion-preflight` writes `dist/release-promotion-preflight.json` with required promotion artifacts, gate commands, registry token readiness, native binary artifact readiness, signing readiness, and blockers. Registry and binary paths remain blocked in these surfaces while the package is private and the non-production warning is active.
 
 Release source provenance is included in both surfaces. It reports the Git commit SHA, branch, repository URL from `package.json`, whether tracked source changes were present, and redaction flags. It ignores untracked files and does not print changed file paths or absolute local paths; if Git metadata is unavailable, provenance is marked unavailable without failing artifact generation.
 
@@ -116,6 +123,8 @@ Binary release readiness is reported without leaking local paths or signing secr
 
 Native binary artifacts are generated only through an operator-configured external build command. Configure `DIVINITY_NATIVE_BINARY_BUILD_COMMAND` as an absolute executable path and `DIVINITY_NATIVE_BINARY_BUILD_COMMAND_ARGS` as an optional JSON array of strings. `release:native-binary` sends target metadata over JSON stdin, writes `divinity.release_native_binary_artifacts.v1`, native artifact checksums, and relative artifact paths under `dist/native-binary/`, and redacts local paths plus raw build command paths. It does not sign artifacts, publish downloads, or store signing secrets, registry tokens, provider credentials, or absolute paths.
 
+Signed native binary artifacts compose the native build command with the release signing command. Configure both `DIVINITY_NATIVE_BINARY_BUILD_COMMAND` and the release signing environment variables above. `release:signed-native-binary` builds native artifacts under `dist/signed-native-binary/native-binary/`, signs each native target through JSON stdin, writes detached signatures under `dist/signed-native-binary/signatures/`, and records `divinity.release_signed_native_binary_artifacts.v1` with only relative subject paths, subject digests, signature digests, byte counts, blockers, and redaction flags. It does not publish downloads or store signing command paths, signing key references, signing identities, registry tokens, provider credentials, or absolute local paths.
+
 Release candidate bundle readiness is reported without leaking local paths or signing secrets. The bundle manifest stores only relative artifact paths, sha256 checksums, byte counts, release blockers, and redaction flags. It does not publish the package tarball or binary artifacts.
 
 Release attestation readiness is reported without leaking local paths or signing secrets. `dist/release-bundle/attestation.json` records package identity, source provenance, release metadata digest, subject artifact digests, release blockers, and blocked signing status so future signing work has a deterministic subject list. It is not a public release signature.
@@ -132,6 +141,7 @@ node apps/cli/src/index.mjs release-status
 pnpm run test:package
 pnpm run test:binary
 pnpm run test:native-binary
+pnpm run test:signed-native-binary
 pnpm run test:release-bundle
 pnpm run test:release-signatures
 pnpm run test:release-promotion

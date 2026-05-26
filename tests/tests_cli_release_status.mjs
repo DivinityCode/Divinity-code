@@ -53,10 +53,10 @@ assert.equal(clearanceItemsById.get('package_privacy').evidence_command, 'pnpm r
 assert.equal(clearanceItemsById.get('production_warning').status, 'blocked');
 assert.equal(clearanceItemsById.get('production_warning').evidence_command, 'pnpm run test:public-docs');
 assert.equal(clearanceItemsById.get('registry_token').current_state, 'NPM_TOKEN not configured');
-assert.equal(clearanceItemsById.get('native_binary_distribution').evidence_command, 'pnpm run test:native-binary');
+assert.equal(clearanceItemsById.get('native_binary_distribution').evidence_command, 'pnpm run test:signed-native-binary');
 assert.deepEqual(clearanceItemsById.get('native_binary_distribution').evidence_artifacts, [
-  'dist/native-binary/manifest.json',
-  'dist/native-binary/SHA256SUMS'
+  'dist/signed-native-binary/manifest.json',
+  'dist/signed-native-binary/SHA256SUMS'
 ]);
 assert.equal(clearanceItemsById.get('release_signing').blocker, 'signing_blocked');
 assert.equal(clearanceItemsById.get('release_signing').evidence_command, 'pnpm run test:release-signatures');
@@ -182,6 +182,10 @@ assert.ok(result.release.release_promotion_preflight.release_gates.some(gate => 
   gate.command === 'pnpm run test:native-binary'
 )));
 assert.ok(result.release.release_promotion_preflight.release_gates.some(gate => (
+  gate.gate_id === 'signed_native_binary_artifacts' &&
+  gate.command === 'pnpm run test:signed-native-binary'
+)));
+assert.ok(result.release.release_promotion_preflight.release_gates.some(gate => (
   gate.gate_id === 'release_signature_artifacts' &&
   gate.command === 'pnpm run test:release-signatures'
 )));
@@ -223,6 +227,21 @@ assert.deepEqual(result.release.binary_release_readiness.native_build_pipeline, 
   redacts_local_paths: true,
   redacts_build_command: true,
   reason: 'Native binary build command is not configured.'
+});
+assert.deepEqual(result.release.binary_release_readiness.signed_native_binary_pipeline, {
+  status: 'not_configured',
+  command: 'pnpm run release:signed-native-binary',
+  smoke_test_command: 'pnpm run test:signed-native-binary',
+  artifact_format: 'divinity.release_signed_native_binary_artifacts.v1',
+  artifact_type: 'signed_native_binary',
+  native_build_configured: false,
+  native_build_command_absolute: false,
+  signing_configured: false,
+  signing_command_absolute: false,
+  redacts_local_paths: true,
+  redacts_build_command: true,
+  redacts_signing_secrets: true,
+  reason: 'Signed native binary artifacts require configured native build and release signing inputs.'
 });
 assert.equal(result.release.binary_release_readiness.supported_targets.length, 5);
 assert.ok(result.release.binary_release_readiness.supported_targets.some(target => (
@@ -284,6 +303,7 @@ for (const command of [
   'pnpm run test:providers',
   'pnpm run test:binary',
   'pnpm run test:native-binary',
+  'pnpm run test:signed-native-binary',
   'pnpm run test:release-bundle',
   'pnpm run test:release-promotion',
   'pnpm run test:release-signatures',
@@ -310,6 +330,9 @@ assert.equal(configuredResult.release.artifact_signing.configuration.status, 'co
 assert.equal(configuredResult.release.artifact_signing.configuration.ready_when_release_gates_clear, true);
 assert.equal(configuredResult.release.release_signature_artifacts.signing_configuration.status, 'configured');
 assert.equal(configuredResult.release.release_signature_artifacts.signing_configuration.ready_when_release_gates_clear, true);
+assert.equal(configuredResult.release.binary_release_readiness.signed_native_binary_pipeline.status, 'not_configured');
+assert.equal(configuredResult.release.binary_release_readiness.signed_native_binary_pipeline.signing_configured, true);
+assert.equal(configuredResult.release.binary_release_readiness.signed_native_binary_pipeline.native_build_configured, false);
 assert.equal(configuredResult.release.release_gate_clearance.clearance_items.find(
   item => item.item_id === 'release_signing'
 ).current_state, 'release signing inputs configured');
@@ -328,10 +351,30 @@ assert.equal(configuredNativeBinaryResult.release.binary_release_readiness.nativ
 assert.equal(configuredNativeBinaryResult.release.binary_release_readiness.native_build_pipeline.command_configured, true);
 assert.equal(configuredNativeBinaryResult.release.binary_release_readiness.native_build_pipeline.command_absolute, true);
 assert.equal(configuredNativeBinaryResult.release.binary_release_readiness.native_build_pipeline.command_args_configured, true);
+assert.equal(configuredNativeBinaryResult.release.binary_release_readiness.signed_native_binary_pipeline.status, 'not_configured');
+assert.equal(configuredNativeBinaryResult.release.binary_release_readiness.signed_native_binary_pipeline.native_build_configured, true);
+assert.equal(configuredNativeBinaryResult.release.binary_release_readiness.signed_native_binary_pipeline.signing_configured, false);
 assert.equal(configuredNativeBinaryResult.release.release_gate_clearance.clearance_items.find(
   item => item.item_id === 'native_binary_distribution'
 ).current_state, 'native binary build inputs configured');
 assert.equal(JSON.stringify(configuredNativeBinaryResult).includes(process.execPath), false);
+
+const configuredSignedNativeBinaryResult = runCli(['release-status'], {
+  cwd: mkdtempSync(path.join(tmpdir(), 'divinity-release-status-signed-native-binary-')),
+  env: {
+    ...process.env,
+    DIVINITY_NATIVE_BINARY_BUILD_COMMAND: process.execPath,
+    DIVINITY_NATIVE_BINARY_BUILD_COMMAND_ARGS: JSON.stringify(['--version']),
+    DIVINITY_RELEASE_SIGNING_COMMAND: process.execPath,
+    DIVINITY_RELEASE_SIGNING_COMMAND_ARGS: JSON.stringify(['--version']),
+    DIVINITY_RELEASE_SIGNING_KEY_REF: 'secret://divinity/release/signing-key',
+    DIVINITY_RELEASE_SIGNING_IDENTITY: 'release@example.com'
+  }
+});
+assert.equal(configuredSignedNativeBinaryResult.release.binary_release_readiness.signed_native_binary_pipeline.status, 'configured');
+assert.equal(configuredSignedNativeBinaryResult.release.binary_release_readiness.signed_native_binary_pipeline.native_build_configured, true);
+assert.equal(configuredSignedNativeBinaryResult.release.binary_release_readiness.signed_native_binary_pipeline.signing_configured, true);
+assert.equal(JSON.stringify(configuredSignedNativeBinaryResult).includes(process.execPath), false);
 
 const tokenConfiguredResult = runCli(['release-status'], {
   cwd: mkdtempSync(path.join(tmpdir(), 'divinity-release-status-registry-token-')),
