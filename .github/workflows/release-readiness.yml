@@ -42,6 +42,9 @@ jobs:
       - name: Validate public readiness audit
         run: npm run test:public-readiness-audit
 
+      - name: Validate release environment readiness
+        run: npm run test:release-environment-readiness
+
       - name: Validate registry publish dry-run
         run: npm run test:release-registry-dry-run
 
