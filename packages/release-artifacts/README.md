@@ -10,6 +10,7 @@ Builds release-readiness metadata for Divinity Code.
 - Keeps registry publishing and signed binary paths blocked while `package.json` remains `private: true` and the non-production warning is active.
 - Reports redacted signing input readiness from `DIVINITY_RELEASE_SIGNING_COMMAND`, `DIVINITY_RELEASE_SIGNING_COMMAND_ARGS`, `DIVINITY_RELEASE_SIGNING_KEY_REF`, and `DIVINITY_RELEASE_SIGNING_IDENTITY` without storing command args, key refs, identities, or key material in release metadata.
 - Reports redacted npm registry publish readiness for `npm publish --provenance --access public`, including `NPM_TOKEN` configured state, blockers, and token/path redaction without storing token values.
+- Reports and writes `divinity.release_registry_publish_dry_run.v1` metadata for fail-closed npm registry dry-run checks without storing token values, raw npm output, executable paths, or local paths.
 - Reports `divinity.release_binary_readiness.v1` metadata for future signed binary downloads, including target filenames, build/smoke command placeholders, checksum and signing requirements, blockers, and path/signing-secret redaction.
 - Generates `divinity.release_binary_artifacts.v1` local Node launcher artifacts, `SHA256SUMS`, and `manifest.json` under `dist/binary/` for release-candidate smoke checks.
 - Generates `divinity.release_native_binary_artifacts.v1` native binary artifacts through `DIVINITY_NATIVE_BINARY_BUILD_COMMAND`, plus `SHA256SUMS` and `manifest.json` under `dist/native-binary/` for release-candidate review.
@@ -29,6 +30,8 @@ Release gate clearance is metadata only. It keeps `public_release_ready: false` 
 Signing commands must be absolute executable paths. Signing args must be a JSON array of strings. The key reference and identity are exposed only as configured booleans so release-candidate metadata can prove readiness without leaking signing secrets or identities.
 
 Registry publish readiness is metadata only. It keeps package publishing blocked while `private: true`, the non-production warning, or missing `NPM_TOKEN` readiness remains in effect, and it does not print registry tokens or local absolute paths.
+
+Registry publish dry-run artifacts are fail-closed release checks. `pnpm run release:registry-dry-run` writes `dist/release-registry-dry-run.json` and skips npm execution while blockers remain. When package privacy, the production warning, and token readiness gates are clear, the dry-run path executes `npm publish --dry-run --provenance --access public --json` and stores only execution status, stdout byte count, stdout sha256, parsed-output status, blockers, and redaction flags. It intentionally excludes registry token values, raw npm output, npm executable paths, and local absolute paths.
 
 Binary release readiness is metadata only. It keeps the `binary_download` artifact blocked until the production warning is cleared and signed native binaries are built. The local `release:binary` path generates Node launcher artifacts and checksums for smoke review, marks them as non-native, and does not read or store signing secrets.
 

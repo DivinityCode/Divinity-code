@@ -40,6 +40,7 @@ for (const command of [
   'npm run test:providers',
   'npm run test:package',
   'npm run test:package-tarball',
+  'npm run test:release-registry-dry-run',
   'npm run test:binary',
   'npm run test:native-binary',
   'npm run test:signed-native-binary',
