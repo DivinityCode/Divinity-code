@@ -320,6 +320,72 @@ try {
     /secret id mapping/
   );
 
+  const gcpManagedStorePath = path.join(tmpRoot, 'gcp-managed-store.json');
+  const gcpManagedSecretId = 'projects/divinity-test/secrets/openrouter-api-key/versions/latest';
+  const gcpManagedEnv = {
+    DIVINITY_PROVIDER_SECRET_REFS_PATH: manifestPath,
+    DIVINITY_PROVIDER_SECRET_STORE_BACKEND: 'gcp_secret_manager',
+    DIVINITY_GCP_SECRET_MANAGER_COMMAND: process.execPath,
+    DIVINITY_GCP_SECRET_MANAGER_COMMAND_ARGS: JSON.stringify([
+      path.resolve('tests/fixtures/provider-secret-store-command.mjs')
+    ]),
+    DIVINITY_GCP_SECRET_MANAGER_SECRET_IDS: JSON.stringify({
+      [secretRef]: gcpManagedSecretId
+    }),
+    DIVINITY_TEST_MANAGED_SECRET_STORE_PATH: gcpManagedStorePath
+  };
+  const gcpManagedRecord = storeProviderSecret({
+    env: gcpManagedEnv,
+    provider_id: 'hosted_secret_mock',
+    secret_ref: secretRef,
+    credential_env_var: 'HOSTED_SECRET_MOCK_API_KEY',
+    secret_value: 'gcp-managed-secret-value',
+    actor: 'operator@example.com',
+    reason: 'Authorized GCP Secret Manager onboarding',
+    updated_at: '2026-05-26T12:00:00.000Z'
+  });
+  assert.equal(gcpManagedRecord.format, 'divinity.provider_secret_store_record.v1');
+  assert.equal(gcpManagedRecord.store_backend_id, 'gcp_secret_manager');
+  assert.equal(gcpManagedRecord.store_backend_kind, 'managed_secret_store');
+  assert.equal(gcpManagedRecord.algorithm, 'managed-by-gcp-secret-manager');
+  assert.equal(JSON.stringify(gcpManagedRecord).includes('gcp-managed-secret-value'), false);
+  assert.equal(JSON.stringify(gcpManagedRecord).includes(gcpManagedSecretId), false);
+
+  const gcpManagedReadiness = providerSecretReadiness({
+    env: gcpManagedEnv
+  });
+  assert.equal(gcpManagedReadiness.store_configured, true);
+  assert.equal(gcpManagedReadiness.store_backend_id, 'gcp_secret_manager');
+  assert.equal(gcpManagedReadiness.store_backend_kind, 'managed_secret_store');
+  assert.equal(gcpManagedReadiness.providers[0].credential_configured, true);
+  assert.equal(gcpManagedReadiness.providers[0].credential_source, 'store');
+  assert.equal(JSON.stringify(gcpManagedReadiness).includes('gcp-managed-secret-value'), false);
+  assert.equal(JSON.stringify(gcpManagedReadiness).includes(gcpManagedSecretId), false);
+
+  const gcpManagedResolver = createProviderCredentialResolver({
+    env: gcpManagedEnv
+  });
+  assert.deepEqual(gcpManagedResolver.configuredSecretRefs(runtime), [secretRef]);
+  assert.equal(gcpManagedResolver.resolveCredential(runtime), 'gcp-managed-secret-value');
+  assert.throws(
+    () => createConfiguredProviderSecretStoreAdapter({
+      env: {
+        ...gcpManagedEnv,
+        DIVINITY_GCP_SECRET_MANAGER_COMMAND: 'gcloud'
+      }
+    }).configuredSecretRefs(),
+    /absolute executable path/
+  );
+  assert.throws(
+    () => createConfiguredProviderSecretStoreAdapter({
+      env: {
+        ...gcpManagedEnv,
+        DIVINITY_GCP_SECRET_MANAGER_SECRET_IDS: '{}'
+      }
+    }).configuredSecretRefs(),
+    /secret id mapping/
+  );
+
   assert.throws(
     () => storeProviderSecret({
       env: {
