@@ -26,6 +26,10 @@ export const AZURE_KEY_VAULT_COMMAND_ENV = 'DIVINITY_AZURE_KEY_VAULT_COMMAND';
 export const AZURE_KEY_VAULT_COMMAND_ARGS_ENV = 'DIVINITY_AZURE_KEY_VAULT_COMMAND_ARGS';
 export const AZURE_KEY_VAULT_TIMEOUT_MS_ENV = 'DIVINITY_AZURE_KEY_VAULT_TIMEOUT_MS';
 export const AZURE_KEY_VAULT_SECRET_IDS_ENV = 'DIVINITY_AZURE_KEY_VAULT_SECRET_IDS';
+export const HASHICORP_VAULT_COMMAND_ENV = 'DIVINITY_HASHICORP_VAULT_COMMAND';
+export const HASHICORP_VAULT_COMMAND_ARGS_ENV = 'DIVINITY_HASHICORP_VAULT_COMMAND_ARGS';
+export const HASHICORP_VAULT_TIMEOUT_MS_ENV = 'DIVINITY_HASHICORP_VAULT_TIMEOUT_MS';
+export const HASHICORP_VAULT_SECRET_PATHS_ENV = 'DIVINITY_HASHICORP_VAULT_SECRET_PATHS';
 
 const RAW_CREDENTIAL_FIELD_NAMES = new Set([
   'api_key',
@@ -262,6 +266,59 @@ function azureSecretIdMapFrom({ env = process.env } = {}) {
       throw new Error(`${AZURE_KEY_VAULT_SECRET_IDS_ENV} secret id mapping entries must use secret:// refs and non-empty secret ids`);
     }
     normalized[cleanSecretRef] = cleanSecretId;
+  }
+  return normalized;
+}
+
+function vaultCommandFrom({ env = process.env } = {}) {
+  return cleanString(env[HASHICORP_VAULT_COMMAND_ENV]);
+}
+
+function vaultCommandArgsFrom({ env = process.env } = {}) {
+  const rawArgs = cleanString(env[HASHICORP_VAULT_COMMAND_ARGS_ENV]);
+  if (!rawArgs) return [];
+  let parsed;
+  try {
+    parsed = JSON.parse(rawArgs);
+  } catch {
+    throw new Error(`${HASHICORP_VAULT_COMMAND_ARGS_ENV} must be a JSON array of strings`);
+  }
+  if (!Array.isArray(parsed) || parsed.some(value => typeof value !== 'string')) {
+    throw new Error(`${HASHICORP_VAULT_COMMAND_ARGS_ENV} must be a JSON array of strings`);
+  }
+  return parsed;
+}
+
+function vaultCommandTimeoutFrom({ env = process.env } = {}) {
+  const rawTimeout = cleanString(env[HASHICORP_VAULT_TIMEOUT_MS_ENV]);
+  if (!rawTimeout) return 5000;
+  const timeout = Number(rawTimeout);
+  if (!Number.isInteger(timeout) || timeout < 100 || timeout > 30000) {
+    throw new Error(`${HASHICORP_VAULT_TIMEOUT_MS_ENV} must be an integer between 100 and 30000`);
+  }
+  return timeout;
+}
+
+function vaultSecretPathMapFrom({ env = process.env } = {}) {
+  const rawMap = cleanString(env[HASHICORP_VAULT_SECRET_PATHS_ENV]);
+  if (!rawMap) throw new Error(`${HASHICORP_VAULT_SECRET_PATHS_ENV} secret path mapping is required`);
+  let parsed;
+  try {
+    parsed = JSON.parse(rawMap);
+  } catch {
+    throw new Error(`${HASHICORP_VAULT_SECRET_PATHS_ENV} secret path mapping must be a JSON object`);
+  }
+  if (!isPlainObject(parsed) || Object.keys(parsed).length === 0) {
+    throw new Error(`${HASHICORP_VAULT_SECRET_PATHS_ENV} secret path mapping must be a non-empty JSON object`);
+  }
+  const normalized = {};
+  for (const [secretRef, secretPath] of Object.entries(parsed)) {
+    const cleanSecretRef = cleanString(secretRef);
+    const cleanSecretPath = cleanString(secretPath);
+    if (!SECRET_REF_PATTERN.test(cleanSecretRef) || !cleanSecretPath) {
+      throw new Error(`${HASHICORP_VAULT_SECRET_PATHS_ENV} secret path mapping entries must use secret:// refs and non-empty Vault paths`);
+    }
+    normalized[cleanSecretRef] = cleanSecretPath;
   }
   return normalized;
 }
@@ -1051,6 +1108,119 @@ export function createAzureKeyVaultProviderSecretStoreAdapter({ env = process.en
   };
 }
 
+function runVaultSecretStoreCommand({ env, action, payload }) {
+  const commandPath = vaultCommandFrom({ env });
+  if (!commandPath) throw new Error(`${HASHICORP_VAULT_COMMAND_ENV} is required for hashicorp_vault provider secret store backend`);
+  if (!path.isAbsolute(commandPath)) {
+    throw new Error(`${HASHICORP_VAULT_COMMAND_ENV} must be an absolute executable path`);
+  }
+
+  const request = {
+    action,
+    provider: 'hashicorp_vault',
+    ...payload
+  };
+  const commandArgs = vaultCommandArgsFrom({ env });
+  const commandTimeoutMs = vaultCommandTimeoutFrom({ env });
+
+  let output;
+  try {
+    output = execFileSync(commandPath, commandArgs, {
+      input: `${JSON.stringify(request)}\n`,
+      encoding: 'utf8',
+      timeout: commandTimeoutMs,
+      maxBuffer: 1024 * 1024,
+      env
+    });
+  } catch {
+    throw new Error(`HashiCorp Vault command failed for action ${action}`);
+  }
+
+  let result;
+  try {
+    result = JSON.parse(output || '{}');
+  } catch {
+    throw new Error(`HashiCorp Vault command returned invalid JSON for action ${action}`);
+  }
+  if (result.ok !== true) {
+    throw new Error(`HashiCorp Vault command failed for action ${action}`);
+  }
+  return result;
+}
+
+export function createHashicorpVaultProviderSecretStoreAdapter({ env = process.env } = {}) {
+  return {
+    backend_id: 'hashicorp_vault',
+    backend_kind: 'managed_secret_store',
+    storeConfigured() {
+      if (!vaultCommandFrom({ env })) return false;
+      return Object.keys(vaultSecretPathMapFrom({ env })).length > 0;
+    },
+    configuredSecretRefs() {
+      if (!this.storeConfigured()) return new Set();
+      const secretPathMap = vaultSecretPathMapFrom({ env });
+      const allowedSecretRefs = new Set(Object.keys(secretPathMap));
+      const result = runVaultSecretStoreCommand({
+        env,
+        action: 'configured_refs',
+        payload: { secret_ids: secretPathMap }
+      });
+      const secretRefs = Array.isArray(result.secret_refs) ? result.secret_refs : [];
+      return new Set(secretRefs.map(cleanString).filter(secretRef => allowedSecretRefs.has(secretRef)));
+    },
+    resolveSecret(secretRef) {
+      if (!this.storeConfigured()) return '';
+      const cleanSecretRef = cleanString(secretRef);
+      const secretPathMap = vaultSecretPathMapFrom({ env });
+      const secretPath = secretPathMap[cleanSecretRef];
+      if (!secretPath) return '';
+      const result = runVaultSecretStoreCommand({
+        env,
+        action: 'resolve',
+        payload: {
+          secret_ref: cleanSecretRef,
+          secret_id: secretPath
+        }
+      });
+      return cleanString(result.secret_value);
+    },
+    storeSecret({
+      provider,
+      secret_value,
+      actor,
+      reason,
+      updated_at
+    }) {
+      const secretPathMap = vaultSecretPathMapFrom({ env });
+      const secretPath = secretPathMap[provider.secret_ref];
+      if (!secretPath) {
+        throw new Error(`${HASHICORP_VAULT_SECRET_PATHS_ENV} secret path mapping is required for ${provider.secret_ref}`);
+      }
+      runVaultSecretStoreCommand({
+        env,
+        action: 'store',
+        payload: {
+          provider_id: provider.provider_id,
+          secret_ref: provider.secret_ref,
+          secret_id: secretPath,
+          credential_env_var: provider.credential_env_var,
+          secret_value,
+          actor,
+          reason,
+          updated_at
+        }
+      });
+      return publicStoreRecord({
+        ...provider,
+        algorithm: 'managed-by-hashicorp-vault',
+        updated_at,
+        updated_by: actor,
+        reason
+      }, this);
+    }
+  };
+}
+
 export function createConfiguredProviderSecretStoreAdapter({ env = process.env } = {}) {
   const backend = storeBackendFrom({ env });
   if (backend === 'local_file') {
@@ -1075,6 +1245,9 @@ export function createConfiguredProviderSecretStoreAdapter({ env = process.env }
   }
   if (backend === 'azure_key_vault') {
     return createAzureKeyVaultProviderSecretStoreAdapter({ env });
+  }
+  if (backend === 'hashicorp_vault') {
+    return createHashicorpVaultProviderSecretStoreAdapter({ env });
   }
   throw new Error(`unsupported provider secret store backend: ${backend}`);
 }

@@ -452,6 +452,72 @@ try {
     /secret id mapping/
   );
 
+  const vaultManagedStorePath = path.join(tmpRoot, 'vault-managed-store.json');
+  const vaultManagedSecretPath = 'kv/data/divinity/providers/openrouter';
+  const vaultManagedEnv = {
+    DIVINITY_PROVIDER_SECRET_REFS_PATH: manifestPath,
+    DIVINITY_PROVIDER_SECRET_STORE_BACKEND: 'hashicorp_vault',
+    DIVINITY_HASHICORP_VAULT_COMMAND: process.execPath,
+    DIVINITY_HASHICORP_VAULT_COMMAND_ARGS: JSON.stringify([
+      path.resolve('tests/fixtures/provider-secret-store-command.mjs')
+    ]),
+    DIVINITY_HASHICORP_VAULT_SECRET_PATHS: JSON.stringify({
+      [secretRef]: vaultManagedSecretPath
+    }),
+    DIVINITY_TEST_MANAGED_SECRET_STORE_PATH: vaultManagedStorePath
+  };
+  const vaultManagedRecord = storeProviderSecret({
+    env: vaultManagedEnv,
+    provider_id: 'hosted_secret_mock',
+    secret_ref: secretRef,
+    credential_env_var: 'HOSTED_SECRET_MOCK_API_KEY',
+    secret_value: 'vault-managed-secret-value',
+    actor: 'operator@example.com',
+    reason: 'Authorized HashiCorp Vault onboarding',
+    updated_at: '2026-05-26T14:00:00.000Z'
+  });
+  assert.equal(vaultManagedRecord.format, 'divinity.provider_secret_store_record.v1');
+  assert.equal(vaultManagedRecord.store_backend_id, 'hashicorp_vault');
+  assert.equal(vaultManagedRecord.store_backend_kind, 'managed_secret_store');
+  assert.equal(vaultManagedRecord.algorithm, 'managed-by-hashicorp-vault');
+  assert.equal(JSON.stringify(vaultManagedRecord).includes('vault-managed-secret-value'), false);
+  assert.equal(JSON.stringify(vaultManagedRecord).includes(vaultManagedSecretPath), false);
+
+  const vaultManagedReadiness = providerSecretReadiness({
+    env: vaultManagedEnv
+  });
+  assert.equal(vaultManagedReadiness.store_configured, true);
+  assert.equal(vaultManagedReadiness.store_backend_id, 'hashicorp_vault');
+  assert.equal(vaultManagedReadiness.store_backend_kind, 'managed_secret_store');
+  assert.equal(vaultManagedReadiness.providers[0].credential_configured, true);
+  assert.equal(vaultManagedReadiness.providers[0].credential_source, 'store');
+  assert.equal(JSON.stringify(vaultManagedReadiness).includes('vault-managed-secret-value'), false);
+  assert.equal(JSON.stringify(vaultManagedReadiness).includes(vaultManagedSecretPath), false);
+
+  const vaultManagedResolver = createProviderCredentialResolver({
+    env: vaultManagedEnv
+  });
+  assert.deepEqual(vaultManagedResolver.configuredSecretRefs(runtime), [secretRef]);
+  assert.equal(vaultManagedResolver.resolveCredential(runtime), 'vault-managed-secret-value');
+  assert.throws(
+    () => createConfiguredProviderSecretStoreAdapter({
+      env: {
+        ...vaultManagedEnv,
+        DIVINITY_HASHICORP_VAULT_COMMAND: 'vault'
+      }
+    }).configuredSecretRefs(),
+    /absolute executable path/
+  );
+  assert.throws(
+    () => createConfiguredProviderSecretStoreAdapter({
+      env: {
+        ...vaultManagedEnv,
+        DIVINITY_HASHICORP_VAULT_SECRET_PATHS: '{}'
+      }
+    }).configuredSecretRefs(),
+    /secret path mapping/
+  );
+
   assert.throws(
     () => storeProviderSecret({
       env: {
