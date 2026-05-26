@@ -84,6 +84,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - Run `pnpm run test:release-artifacts` to validate the generated release artifact manifest, install-path gates, signing, registry publish, binary release readiness, bundle readiness metadata, attestation readiness metadata, and promotion preflight metadata.
 - Run `pnpm run test:release-status` to validate the CLI release readiness surface.
 - Run `pnpm run test:public-docs` to validate public install, quickstart, upgrade, and release checklist docs.
+- Run `pnpm run test:github-workflows` to validate GitHub Actions use Node 22, clean installs, and the `Release Readiness` gate.
 - Run `pnpm run test:smoke` for the local MVP demo flow plus CLI/API smoke path.
 - Run `pnpm run test:providers` for focused LLM provider catalog coverage.
 - Run `pnpm run test:toolsets` for focused toolset catalog coverage.

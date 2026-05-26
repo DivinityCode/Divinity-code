@@ -97,9 +97,12 @@ for (const item of [
   'pnpm test',
   'pnpm run test:smoke',
   'pnpm run test:providers',
+  'pnpm run test:github-workflows',
   'git diff --check',
   'conflict marker scan',
-  'GitHub Actions'
+  'GitHub Actions',
+  'Release Readiness',
+  '.github/workflows/release-readiness.yml'
 ]) {
   assertIncludes(releaseChecklist, item, 'release checklist');
 }
