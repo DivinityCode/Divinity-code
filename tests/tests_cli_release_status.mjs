@@ -65,9 +65,18 @@ const clearanceItemsById = new Map(
   result.release.release_gate_clearance.clearance_items.map(item => [item.item_id, item])
 );
 assert.equal(clearanceItemsById.get('package_privacy').status, 'blocked');
-assert.equal(clearanceItemsById.get('package_privacy').evidence_command, 'pnpm run test:package');
+assert.equal(clearanceItemsById.get('package_privacy').evidence_command, 'pnpm run test:public-readiness-audit');
+assert.deepEqual(clearanceItemsById.get('package_privacy').evidence_artifacts, [
+  'dist/release-public-readiness-audit.json',
+  'package.json'
+]);
 assert.equal(clearanceItemsById.get('production_warning').status, 'blocked');
-assert.equal(clearanceItemsById.get('production_warning').evidence_command, 'pnpm run test:public-docs');
+assert.equal(clearanceItemsById.get('production_warning').evidence_command, 'pnpm run test:public-readiness-audit');
+assert.deepEqual(clearanceItemsById.get('production_warning').evidence_artifacts, [
+  'dist/release-public-readiness-audit.json',
+  'README.md',
+  'docs/RELEASE_CHECKLIST.md'
+]);
 assert.equal(clearanceItemsById.get('registry_token').current_state, 'NPM_TOKEN not configured');
 assert.equal(clearanceItemsById.get('registry_token').evidence_command, 'pnpm run test:release-registry-dry-run');
 assert.deepEqual(clearanceItemsById.get('registry_token').evidence_artifacts, ['dist/release-registry-dry-run.json']);
@@ -91,6 +100,33 @@ assert.deepEqual(clearanceItemsById.get('release_signing').evidence_artifacts, [
 assert.equal(clearanceItemsById.get('github_release_readiness').status, 'required');
 assert.equal(clearanceItemsById.get('github_release_readiness').evidence_command, 'pnpm run test:github-workflows');
 assert.equal(JSON.stringify(result.release.release_gate_clearance).includes(process.cwd()), false);
+assert.equal(result.release.release_public_readiness_audit.format, 'divinity.release_public_readiness_audit.v1');
+assert.equal(result.release.release_public_readiness_audit.status, 'blocked');
+assert.equal(result.release.release_public_readiness_audit.public_release_ready, false);
+assert.equal(result.release.release_public_readiness_audit.decision_required, true);
+assert.equal(result.release.release_public_readiness_audit.command, 'pnpm run release:public-readiness-audit');
+assert.equal(result.release.release_public_readiness_audit.smoke_test_command, 'pnpm run test:public-readiness-audit');
+assert.equal(result.release.release_public_readiness_audit.package.private, true);
+assert.equal(result.release.release_public_readiness_audit.non_production_warning_active, true);
+assert.deepEqual(result.release.release_public_readiness_audit.blockers, result.release.release_gate_clearance.blockers);
+assert.deepEqual(
+  result.release.release_public_readiness_audit.package_privacy_decision,
+  clearanceItemsById.get('package_privacy')
+);
+assert.deepEqual(
+  result.release.release_public_readiness_audit.production_warning_decision,
+  clearanceItemsById.get('production_warning')
+);
+assert.equal(result.release.release_public_readiness_audit.does_not_publish, true);
+assert.equal(result.release.release_public_readiness_audit.does_not_upload, true);
+assert.equal(result.release.release_public_readiness_audit.does_not_mutate_package_metadata, true);
+assert.equal(result.release.release_public_readiness_audit.does_not_remove_non_production_warning, true);
+assert.equal(result.release.release_public_readiness_audit.redacts_local_paths, true);
+assert.equal(result.release.release_public_readiness_audit.redacts_registry_token, true);
+assert.equal(result.release.release_public_readiness_audit.redacts_github_token, true);
+assert.equal(result.release.release_public_readiness_audit.redacts_release_tag, true);
+assert.equal(result.release.release_public_readiness_audit.redacts_signing_secrets, true);
+assert.equal(JSON.stringify(result.release.release_public_readiness_audit).includes(process.cwd()), false);
 assert.equal(result.release.registry_publish_readiness.format, 'divinity.release_registry_publish_readiness.v1');
 assert.equal(result.release.registry_publish_readiness.status, 'blocked');
 assert.equal(result.release.registry_publish_readiness.provenance_required, true);
@@ -227,6 +263,10 @@ assert.ok(result.release.release_promotion_preflight.required_artifacts.some(req
   required.path === 'dist/release-bundle/attestation.json'
 )));
 assert.ok(result.release.release_promotion_preflight.required_artifacts.some(required => (
+  required.artifact_id === 'public_readiness_audit' &&
+  required.path === 'dist/release-public-readiness-audit.json'
+)));
+assert.ok(result.release.release_promotion_preflight.required_artifacts.some(required => (
   required.artifact_id === 'registry_publish_dry_run_report' &&
   required.path === 'dist/release-registry-dry-run.json'
 )));
@@ -245,6 +285,10 @@ assert.ok(result.release.release_promotion_preflight.required_artifacts.some(req
 assert.ok(result.release.release_promotion_preflight.release_gates.some(gate => (
   gate.gate_id === 'native_binary_artifacts' &&
   gate.command === 'pnpm run test:native-binary'
+)));
+assert.ok(result.release.release_promotion_preflight.release_gates.some(gate => (
+  gate.gate_id === 'public_readiness_audit' &&
+  gate.command === 'pnpm run test:public-readiness-audit'
 )));
 assert.ok(result.release.release_promotion_preflight.release_gates.some(gate => (
   gate.gate_id === 'registry_publish_dry_run' &&
@@ -374,6 +418,7 @@ assert.equal(installPathsById.get('binary_download').status, 'blocked');
 for (const command of [
   'pnpm test',
   'pnpm run test:providers',
+  'pnpm run test:public-readiness-audit',
   'pnpm run test:release-registry-dry-run',
   'pnpm run test:release-binary-attachments',
   'pnpm run test:binary',

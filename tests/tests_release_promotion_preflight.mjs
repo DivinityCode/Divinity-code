@@ -95,6 +95,7 @@ try {
 
   const requiredArtifactsById = new Map(preflight.required_artifacts.map(artifact => [artifact.artifact_id, artifact]));
   assert.equal(requiredArtifactsById.get('release_artifacts_manifest').path, 'dist/release-artifacts.json');
+  assert.equal(requiredArtifactsById.get('public_readiness_audit').path, 'dist/release-public-readiness-audit.json');
   assert.equal(requiredArtifactsById.get('registry_publish_dry_run_report').path, 'dist/release-registry-dry-run.json');
   assert.equal(requiredArtifactsById.get('binary_attachment_plan').path, 'dist/release-binary-attachments.json');
   assert.equal(requiredArtifactsById.get('release_candidate_bundle_manifest').path, 'dist/release-bundle/manifest.json');
@@ -111,6 +112,7 @@ try {
   for (const command of [
     'pnpm run test:package',
     'pnpm run test:package-tarball',
+    'pnpm run test:public-readiness-audit',
     'pnpm run test:release-registry-dry-run',
     'pnpm run test:release-binary-attachments',
     'pnpm run test:binary',

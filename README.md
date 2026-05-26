@@ -75,6 +75,8 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - Run `pnpm run test:package` to validate package metadata and the `divinity` CLI bin target.
 - Run `node apps/cli/src/index.mjs release-status` for a read-only release readiness view.
 - Run `pnpm run release:artifacts` to generate `dist/release-artifacts.json` for release-candidate review, including the release gate clearance audit.
+- Run `pnpm run release:public-readiness-audit` to generate `dist/release-public-readiness-audit.json` with the package privacy and README warning decision audit before clearing public distribution gates.
+- Run `pnpm run test:public-readiness-audit` to validate the audit stays blocked, side-effect-free, and redacted while release blockers remain.
 - Run `pnpm run release:registry-dry-run` to generate a fail-closed npm registry publish dry-run report without publishing while release blockers remain.
 - Run `pnpm run test:release-registry-dry-run` to validate registry dry-run blockers, command metadata, token redaction, and npm-output redaction.
 - Run `pnpm run release:binary` to generate local Node launcher artifacts and checksums for release-candidate binary smoke review.
@@ -91,7 +93,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - Run `pnpm run test:release-signatures` to validate signature artifacts, checksum metadata, and signing-secret/path redaction without publishing.
 - Run `pnpm run release:promotion-preflight` to generate a blocked public-promotion preflight manifest before any package publish or signed binary release.
 - Run `pnpm run test:release-promotion` to validate promotion blockers, required artifacts, gate commands, and secret redaction.
-- Run `pnpm run test:release-artifacts` to validate the generated release artifact manifest, install-path gates, release gate clearance audit, signing, registry publish, binary release readiness, bundle readiness metadata, attestation readiness metadata, and promotion preflight metadata.
+- Run `pnpm run test:release-artifacts` to validate the generated release artifact manifest, install-path gates, release gate clearance audit, public readiness audit, signing, registry publish, binary release readiness, bundle readiness metadata, attestation readiness metadata, and promotion preflight metadata.
 - Run `pnpm run test:release-status` to validate the CLI release readiness surface.
 - Run `pnpm run test:public-docs` to validate public install, quickstart, upgrade, and release checklist docs.
 - Run `pnpm run test:github-workflows` to validate GitHub Actions use Node 22, clean installs, and the `Release Readiness` gate.

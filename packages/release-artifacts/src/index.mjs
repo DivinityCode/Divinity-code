@@ -19,9 +19,11 @@ export const RELEASE_ATTESTATION_FORMAT = 'divinity.release_attestation.v1';
 export const RELEASE_ATTESTATION_READINESS_FORMAT = 'divinity.release_attestation_readiness.v1';
 export const RELEASE_PROMOTION_PREFLIGHT_FORMAT = 'divinity.release_promotion_preflight.v1';
 export const RELEASE_GATE_CLEARANCE_FORMAT = 'divinity.release_gate_clearance.v1';
+export const RELEASE_PUBLIC_READINESS_AUDIT_FORMAT = 'divinity.release_public_readiness_audit.v1';
 export const RELEASE_SIGNATURE_ARTIFACTS_FORMAT = 'divinity.release_signature_artifacts.v1';
 export const RELEASE_SIGNATURE_ARTIFACTS_READINESS_FORMAT = 'divinity.release_signature_artifacts_readiness.v1';
 export const DEFAULT_RELEASE_ARTIFACT_OUTPUT = path.join('dist', 'release-artifacts.json');
+export const DEFAULT_RELEASE_PUBLIC_READINESS_AUDIT_OUTPUT = path.join('dist', 'release-public-readiness-audit.json');
 export const DEFAULT_RELEASE_REGISTRY_PUBLISH_DRY_RUN_OUTPUT = path.join('dist', 'release-registry-dry-run.json');
 export const DEFAULT_RELEASE_BINARY_ATTACHMENT_PLAN_OUTPUT = path.join('dist', 'release-binary-attachments.json');
 export const DEFAULT_RELEASE_BINARY_OUTPUT = path.join('dist', 'binary');
@@ -951,6 +953,12 @@ function releasePromotionRequiredArtifacts() {
       required: true
     },
     {
+      artifact_id: 'public_readiness_audit',
+      path: DEFAULT_RELEASE_PUBLIC_READINESS_AUDIT_OUTPUT.split(path.sep).join('/'),
+      command: 'pnpm run release:public-readiness-audit',
+      required: true
+    },
+    {
       artifact_id: 'registry_publish_dry_run_report',
       path: DEFAULT_RELEASE_REGISTRY_PUBLISH_DRY_RUN_OUTPUT.split(path.sep).join('/'),
       command: 'pnpm run release:registry-dry-run',
@@ -1006,6 +1014,11 @@ function releasePromotionGates() {
     {
       gate_id: 'package_manifest',
       command: 'pnpm run test:package',
+      required: true
+    },
+    {
+      gate_id: 'public_readiness_audit',
+      command: 'pnpm run test:public-readiness-audit',
       required: true
     },
     {
@@ -1119,8 +1132,11 @@ export function buildReleaseGateClearanceAudit({
         blocker: 'package_private',
         current_state: publishingBlocked ? 'package.json private=true' : 'package publishing enabled',
         required_state: 'package publishing is explicitly enabled by an approved public release decision',
-        evidence_command: 'pnpm run test:package',
-        evidence_artifacts: ['package.json']
+        evidence_command: 'pnpm run test:public-readiness-audit',
+        evidence_artifacts: [
+          DEFAULT_RELEASE_PUBLIC_READINESS_AUDIT_OUTPUT.split(path.sep).join('/'),
+          'package.json'
+        ]
       },
       {
         item_id: 'production_warning',
@@ -1128,8 +1144,12 @@ export function buildReleaseGateClearanceAudit({
         blocker: 'non_production_warning',
         current_state: warningActive ? 'README non-production warning active' : 'README production warning cleared',
         required_state: 'README production warning is removed only after the public readiness audit passes',
-        evidence_command: 'pnpm run test:public-docs',
-        evidence_artifacts: ['README.md', 'docs/RELEASE_CHECKLIST.md']
+        evidence_command: 'pnpm run test:public-readiness-audit',
+        evidence_artifacts: [
+          DEFAULT_RELEASE_PUBLIC_READINESS_AUDIT_OUTPUT.split(path.sep).join('/'),
+          'README.md',
+          'docs/RELEASE_CHECKLIST.md'
+        ]
       },
       {
         item_id: 'registry_token',
@@ -1201,6 +1221,67 @@ export function buildReleaseGateClearanceAudit({
     reason: blockers.length
       ? 'Public release clearance remains blocked; each clearance item records the current state, required state, and local evidence command.'
       : 'Public release clearance metadata is ready.'
+  };
+}
+
+export function buildReleasePublicReadinessAudit({
+  packageJson,
+  publishingBlocked = packageJson?.private === true,
+  warningActive = true,
+  env = process.env
+} = {}) {
+  const releaseGateClearance = buildReleaseGateClearanceAudit({
+    packageJson,
+    publishingBlocked,
+    warningActive,
+    env
+  });
+  const clearanceItemsById = new Map(
+    releaseGateClearance.clearance_items.map(item => [item.item_id, item])
+  );
+  const packagePrivacyDecision = clearanceItemsById.get('package_privacy');
+  const productionWarningDecision = clearanceItemsById.get('production_warning');
+  const decisionRequired = (
+    packagePrivacyDecision.status !== 'ready' ||
+    productionWarningDecision.status !== 'ready'
+  );
+
+  return {
+    format: RELEASE_PUBLIC_READINESS_AUDIT_FORMAT,
+    generated_by: 'packages/release-artifacts',
+    status: releaseGateClearance.blockers.length ? 'blocked' : 'ready',
+    public_release_ready: releaseGateClearance.public_release_ready,
+    decision_required: decisionRequired,
+    package: {
+      name: packageJson.name,
+      version: packageJson.version,
+      private: packageJson.private === true
+    },
+    non_production_warning_active: warningActive === true,
+    command: 'pnpm run release:public-readiness-audit',
+    smoke_test_command: 'pnpm run test:public-readiness-audit',
+    package_privacy_decision: packagePrivacyDecision,
+    production_warning_decision: productionWarningDecision,
+    release_gate_clearance: releaseGateClearance,
+    required_evidence_commands: [
+      'pnpm run test:public-readiness-audit',
+      'pnpm run test:release-artifacts',
+      'pnpm run test:release-status',
+      'pnpm run test:github-workflows'
+    ],
+    blockers: releaseGateClearance.blockers,
+    does_not_publish: true,
+    does_not_upload: true,
+    does_not_mutate_package_metadata: true,
+    does_not_remove_non_production_warning: true,
+    redacts_local_paths: true,
+    redacts_registry_token: true,
+    redacts_github_token: true,
+    redacts_release_tag: true,
+    redacts_signing_secrets: true,
+    reason: releaseGateClearance.blockers.length
+      ? 'Public distribution readiness remains blocked; this audit records the package privacy and README warning decisions without mutating release configuration.'
+      : 'Public distribution readiness metadata is ready for final operator review.'
   };
 }
 
@@ -1330,6 +1411,12 @@ export function buildReleaseArtifactsManifest({
       warningActive: true,
       env
     }),
+    release_public_readiness_audit: buildReleasePublicReadinessAudit({
+      packageJson,
+      publishingBlocked,
+      warningActive: true,
+      env
+    }),
     source_provenance: buildSourceProvenance({ cwd: root, packageJson, gitCommand }),
     release_sbom: buildReleaseSbom({ packageJson, packageLock }),
     artifact_integrity: buildArtifactIntegrity(packageJson.files || [], root),
@@ -1415,6 +1502,11 @@ export function buildReleaseArtifactsManifest({
       {
         gate_id: 'package_manifest',
         command: 'pnpm run test:package',
+        required: true
+      },
+      {
+        gate_id: 'public_readiness_audit',
+        command: 'pnpm run test:public-readiness-audit',
         required: true
       },
       {
@@ -1521,6 +1613,37 @@ export function writeReleaseArtifactsManifest({
   const root = path.resolve(cwd);
   const artifactPath = path.resolve(root, cleanString(output) || DEFAULT_RELEASE_ARTIFACT_OUTPUT);
   const artifact = buildReleaseArtifactsManifest({ cwd: root });
+
+  mkdirSync(path.dirname(artifactPath), { recursive: true });
+  writeFileSync(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`);
+
+  return {
+    ok: true,
+    artifact_path: artifactPath,
+    artifact
+  };
+}
+
+export function writeReleasePublicReadinessAudit({
+  output = DEFAULT_RELEASE_PUBLIC_READINESS_AUDIT_OUTPUT,
+  cwd = process.cwd(),
+  env = process.env,
+  packageJson = null,
+  publishingBlocked = null,
+  warningActive = true
+} = {}) {
+  const root = path.resolve(cwd);
+  const artifactPath = path.resolve(root, cleanString(output) || DEFAULT_RELEASE_PUBLIC_READINESS_AUDIT_OUTPUT);
+  const releasePackageJson = packageJson || JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const releasePublishingBlocked = publishingBlocked === null
+    ? releasePackageJson.private === true
+    : publishingBlocked;
+  const artifact = buildReleasePublicReadinessAudit({
+    packageJson: releasePackageJson,
+    publishingBlocked: releasePublishingBlocked,
+    warningActive,
+    env
+  });
 
   mkdirSync(path.dirname(artifactPath), { recursive: true });
   writeFileSync(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`);
