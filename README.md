@@ -83,6 +83,8 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - Run `pnpm run test:native-binary` to validate native binary artifact checksums, target coverage, and build-command/path redaction without publishing downloads.
 - Run `pnpm run release:signed-native-binary` to generate local detached signatures for those native binary artifacts when native build and signing inputs are configured.
 - Run `pnpm run test:signed-native-binary` to validate signed native binary manifests, checksums, signature metadata, and build/signing redaction without publishing downloads.
+- Run `pnpm run release:binary-attachments` to generate a fail-closed GitHub Release binary attachment plan without uploading files while release blockers remain.
+- Run `pnpm run test:release-binary-attachments` to validate attachment blockers, release tag/token readiness, asset source metadata, and token/path redaction.
 - Run `pnpm run release:bundle` to assemble a local release-candidate review bundle with the package tarball, release metadata, binary launcher artifacts, release attestation, and checksums.
 - Run `pnpm run test:release-bundle` to validate the bundle manifest, attestation, redaction guarantees, package tarball, binary metadata, and checksums without publishing.
 - Run `pnpm run release:signatures` to generate local redacted release-candidate signatures for the bundle subjects when deployment-managed signing inputs are configured.

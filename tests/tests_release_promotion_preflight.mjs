@@ -24,7 +24,21 @@ try {
     '--',
     '--output',
     outputPath
-  ]);
+  ], {
+    env: {
+      ...process.env,
+      NPM_TOKEN: '',
+      GITHUB_TOKEN: '',
+      GH_TOKEN: '',
+      DIVINITY_RELEASE_TAG: '',
+      DIVINITY_NATIVE_BINARY_BUILD_COMMAND: '',
+      DIVINITY_NATIVE_BINARY_BUILD_COMMAND_ARGS: '',
+      DIVINITY_RELEASE_SIGNING_COMMAND: '',
+      DIVINITY_RELEASE_SIGNING_COMMAND_ARGS: '',
+      DIVINITY_RELEASE_SIGNING_KEY_REF: '',
+      DIVINITY_RELEASE_SIGNING_IDENTITY: ''
+    }
+  });
 
   assert.equal(result.ok, true);
   assert.equal(result.artifact_path, outputPath);
@@ -44,11 +58,14 @@ try {
   assert.equal(preflight.smoke_test_command, 'pnpm run test:release-promotion');
   assert.equal(preflight.redacts_local_paths, true);
   assert.equal(preflight.redacts_registry_token, true);
+  assert.equal(preflight.redacts_github_token, true);
   assert.equal(preflight.redacts_signing_secrets, true);
   assert.deepEqual(preflight.blockers, [
     'package_private',
     'non_production_warning',
     'missing_registry_token',
+    'missing_github_release_token',
+    'missing_release_tag',
     'native_binary_build_pending',
     'signing_blocked'
   ]);
@@ -63,6 +80,14 @@ try {
   assert.equal(preflight.binary_distribution.artifact_type, 'signed_native_binary');
   assert.equal(preflight.binary_distribution.build_command, 'pnpm run release:signed-native-binary');
   assert.equal(preflight.binary_distribution.smoke_test_command, 'pnpm run test:signed-native-binary');
+  assert.equal(preflight.binary_distribution.attachment_plan_path, 'dist/release-binary-attachments.json');
+  assert.equal(preflight.binary_distribution.attachment_plan_command, 'pnpm run release:binary-attachments');
+  assert.equal(preflight.binary_distribution.attachment_plan_smoke_test_command, 'pnpm run test:release-binary-attachments');
+  assert.equal(preflight.binary_distribution.attachment_plan_status, 'blocked');
+  assert.equal(preflight.binary_distribution.provider, 'github_releases');
+  assert.equal(preflight.binary_distribution.repository, 'DivinityCode/Divinity-code');
+  assert.equal(preflight.binary_distribution.token_configured, false);
+  assert.equal(preflight.binary_distribution.release_tag_configured, false);
   assert.equal(preflight.signing.required, true);
   assert.equal(preflight.signing.status, 'blocked');
   assert.equal(preflight.signing.configuration.status, 'not_configured');
@@ -71,6 +96,7 @@ try {
   const requiredArtifactsById = new Map(preflight.required_artifacts.map(artifact => [artifact.artifact_id, artifact]));
   assert.equal(requiredArtifactsById.get('release_artifacts_manifest').path, 'dist/release-artifacts.json');
   assert.equal(requiredArtifactsById.get('registry_publish_dry_run_report').path, 'dist/release-registry-dry-run.json');
+  assert.equal(requiredArtifactsById.get('binary_attachment_plan').path, 'dist/release-binary-attachments.json');
   assert.equal(requiredArtifactsById.get('release_candidate_bundle_manifest').path, 'dist/release-bundle/manifest.json');
   assert.equal(requiredArtifactsById.get('release_attestation').path, 'dist/release-bundle/attestation.json');
   assert.equal(requiredArtifactsById.get('binary_artifacts_manifest').path, 'dist/binary/manifest.json');
@@ -86,6 +112,7 @@ try {
     'pnpm run test:package',
     'pnpm run test:package-tarball',
     'pnpm run test:release-registry-dry-run',
+    'pnpm run test:release-binary-attachments',
     'pnpm run test:binary',
     'pnpm run test:native-binary',
     'pnpm run test:signed-native-binary',
@@ -111,6 +138,9 @@ try {
     env: {
       ...process.env,
       NPM_TOKEN: 'npm-secret-token-value',
+      GITHUB_TOKEN: 'github-release-secret-value',
+      GH_TOKEN: '',
+      DIVINITY_RELEASE_TAG: 'v0.1.0',
       DIVINITY_RELEASE_SIGNING_COMMAND: process.execPath,
       DIVINITY_RELEASE_SIGNING_COMMAND_ARGS: JSON.stringify(['--version']),
       DIVINITY_RELEASE_SIGNING_KEY_REF: 'secret://divinity/release/signing-key',
@@ -118,9 +148,13 @@ try {
     }
   });
   assert.equal(configured.artifact.registry_publish.token_configured, true);
+  assert.equal(configured.artifact.binary_distribution.token_configured, true);
+  assert.equal(configured.artifact.binary_distribution.release_tag_configured, true);
   assert.equal(configured.artifact.signing.configuration.status, 'configured');
   assert.equal(configured.artifact.signing.configuration.ready_when_release_gates_clear, true);
   assert.equal(configured.artifact.blockers.includes('missing_registry_token'), false);
+  assert.equal(configured.artifact.blockers.includes('missing_github_release_token'), false);
+  assert.equal(configured.artifact.blockers.includes('missing_release_tag'), false);
   assert.ok(configured.artifact.blockers.includes('package_private'));
   assert.ok(configured.artifact.blockers.includes('non_production_warning'));
   assert.ok(configured.artifact.blockers.includes('native_binary_build_pending'));
@@ -133,6 +167,8 @@ try {
     'node_modules/',
     'secret://',
     'npm-secret-token-value',
+    'github-release-secret-value',
+    'v0.1.0',
     'release@example.com',
     'DIVINITY_RELEASE_SIGNING_KEY_REF',
     'DIVINITY_RELEASE_SIGNING_IDENTITY'
