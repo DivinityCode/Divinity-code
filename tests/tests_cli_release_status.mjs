@@ -27,6 +27,37 @@ assert.equal(result.release.format, 'divinity.release_artifacts.v1');
 assert.equal(result.release.generated_by, 'packages/release-artifacts');
 assert.equal(result.release.package.private, true);
 assert.equal(result.release.non_production_warning_active, true);
+assert.equal(result.release.release_gate_clearance.format, 'divinity.release_gate_clearance.v1');
+assert.equal(result.release.release_gate_clearance.status, 'blocked');
+assert.equal(result.release.release_gate_clearance.public_release_ready, false);
+for (const blocker of [
+  'package_private',
+  'non_production_warning',
+  'missing_registry_token',
+  'native_binary_build_pending',
+  'signing_blocked'
+]) {
+  assert.ok(
+    result.release.release_gate_clearance.blockers.includes(blocker),
+    `missing release gate clearance blocker: ${blocker}`
+  );
+}
+assert.equal(result.release.release_gate_clearance.redacts_local_paths, true);
+assert.equal(result.release.release_gate_clearance.redacts_registry_token, true);
+assert.equal(result.release.release_gate_clearance.redacts_signing_secrets, true);
+const clearanceItemsById = new Map(
+  result.release.release_gate_clearance.clearance_items.map(item => [item.item_id, item])
+);
+assert.equal(clearanceItemsById.get('package_privacy').status, 'blocked');
+assert.equal(clearanceItemsById.get('package_privacy').evidence_command, 'pnpm run test:package');
+assert.equal(clearanceItemsById.get('production_warning').status, 'blocked');
+assert.equal(clearanceItemsById.get('production_warning').evidence_command, 'pnpm run test:public-docs');
+assert.equal(clearanceItemsById.get('registry_token').current_state, 'NPM_TOKEN not configured');
+assert.equal(clearanceItemsById.get('native_binary_distribution').evidence_command, 'pnpm run test:binary');
+assert.equal(clearanceItemsById.get('release_signing').blocker, 'signing_blocked');
+assert.equal(clearanceItemsById.get('github_release_readiness').status, 'required');
+assert.equal(clearanceItemsById.get('github_release_readiness').evidence_command, 'pnpm run test:github-workflows');
+assert.equal(JSON.stringify(result.release.release_gate_clearance).includes(process.cwd()), false);
 assert.equal(result.release.registry_publish_readiness.format, 'divinity.release_registry_publish_readiness.v1');
 assert.equal(result.release.registry_publish_readiness.status, 'blocked');
 assert.equal(result.release.registry_publish_readiness.provenance_required, true);
@@ -212,6 +243,9 @@ const configuredResult = runCli(['release-status'], {
 assert.equal(configuredResult.release.artifact_signing.status, 'blocked');
 assert.equal(configuredResult.release.artifact_signing.configuration.status, 'configured');
 assert.equal(configuredResult.release.artifact_signing.configuration.ready_when_release_gates_clear, true);
+assert.equal(configuredResult.release.release_gate_clearance.clearance_items.find(
+  item => item.item_id === 'release_signing'
+).current_state, 'release signing inputs configured');
 assert.equal(JSON.stringify(configuredResult).includes('secret://divinity/release/signing-key'), false);
 assert.equal(JSON.stringify(configuredResult).includes('release@example.com'), false);
 
@@ -223,6 +257,9 @@ const tokenConfiguredResult = runCli(['release-status'], {
   }
 });
 assert.equal(tokenConfiguredResult.release.registry_publish_readiness.token_configured, true);
+assert.equal(tokenConfiguredResult.release.release_gate_clearance.clearance_items.find(
+  item => item.item_id === 'registry_token'
+).current_state, 'NPM_TOKEN configured');
 assert.equal(JSON.stringify(tokenConfiguredResult).includes('npm-secret-token-value'), false);
 
 const serialized = JSON.stringify(result);

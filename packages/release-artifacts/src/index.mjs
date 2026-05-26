@@ -14,6 +14,7 @@ export const RELEASE_CANDIDATE_BUNDLE_READINESS_FORMAT = 'divinity.release_candi
 export const RELEASE_ATTESTATION_FORMAT = 'divinity.release_attestation.v1';
 export const RELEASE_ATTESTATION_READINESS_FORMAT = 'divinity.release_attestation_readiness.v1';
 export const RELEASE_PROMOTION_PREFLIGHT_FORMAT = 'divinity.release_promotion_preflight.v1';
+export const RELEASE_GATE_CLEARANCE_FORMAT = 'divinity.release_gate_clearance.v1';
 export const DEFAULT_RELEASE_ARTIFACT_OUTPUT = path.join('dist', 'release-artifacts.json');
 export const DEFAULT_RELEASE_BINARY_OUTPUT = path.join('dist', 'binary');
 export const DEFAULT_RELEASE_BUNDLE_OUTPUT = path.join('dist', 'release-bundle');
@@ -652,6 +653,94 @@ function redactedSigningConfiguration(configuration) {
   };
 }
 
+export function buildReleaseGateClearanceAudit({
+  packageJson,
+  publishingBlocked = packageJson?.private === true,
+  warningActive = true,
+  env = process.env
+} = {}) {
+  const tokenConfigured = Boolean(cleanString(env[NPM_TOKEN_ENV]));
+  const signingConfiguration = buildSigningConfiguration({ env });
+  const blockers = promotionPreflightBlockers({
+    publishingBlocked,
+    warningActive,
+    tokenConfigured
+  });
+
+  return {
+    format: RELEASE_GATE_CLEARANCE_FORMAT,
+    status: blockers.length ? 'blocked' : 'ready',
+    public_release_ready: blockers.length === 0,
+    blockers,
+    clearance_items: [
+      {
+        item_id: 'package_privacy',
+        status: publishingBlocked ? 'blocked' : 'ready',
+        blocker: 'package_private',
+        current_state: publishingBlocked ? 'package.json private=true' : 'package publishing enabled',
+        required_state: 'package publishing is explicitly enabled by an approved public release decision',
+        evidence_command: 'pnpm run test:package',
+        evidence_artifacts: ['package.json']
+      },
+      {
+        item_id: 'production_warning',
+        status: warningActive ? 'blocked' : 'ready',
+        blocker: 'non_production_warning',
+        current_state: warningActive ? 'README non-production warning active' : 'README production warning cleared',
+        required_state: 'README production warning is removed only after the public readiness audit passes',
+        evidence_command: 'pnpm run test:public-docs',
+        evidence_artifacts: ['README.md', 'docs/RELEASE_CHECKLIST.md']
+      },
+      {
+        item_id: 'registry_token',
+        status: tokenConfigured ? 'ready' : 'blocked',
+        blocker: 'missing_registry_token',
+        current_state: tokenConfigured ? 'NPM_TOKEN configured' : 'NPM_TOKEN not configured',
+        required_state: 'operator-owned npm automation token is configured outside repository files',
+        evidence_command: 'pnpm run test:release-promotion',
+        evidence_artifacts: ['dist/release-promotion-preflight.json']
+      },
+      {
+        item_id: 'native_binary_distribution',
+        status: 'blocked',
+        blocker: 'native_binary_build_pending',
+        current_state: 'local Node launcher artifacts only',
+        required_state: 'signed native binary artifacts are built, checksummed, smoke-tested, and attached to release distribution',
+        evidence_command: 'pnpm run test:binary',
+        evidence_artifacts: ['dist/binary/manifest.json', 'dist/binary/SHA256SUMS']
+      },
+      {
+        item_id: 'release_signing',
+        status: 'blocked',
+        blocker: 'signing_blocked',
+        current_state: signingConfiguration.status === 'configured'
+          ? 'release signing inputs configured'
+          : signingConfiguration.status === 'invalid'
+            ? 'release signing inputs invalid'
+            : 'release signing inputs not configured',
+        required_state: 'package tarball, binary downloads, and release attestation are signed by an approved signing workflow',
+        evidence_command: 'pnpm run test:release-artifacts',
+        evidence_artifacts: ['dist/release-artifacts.json', 'dist/release-bundle/attestation.json']
+      },
+      {
+        item_id: 'github_release_readiness',
+        status: 'required',
+        blocker: '',
+        current_state: 'Release Readiness workflow configured',
+        required_state: 'GitHub Release Readiness workflow passes on the PR head SHA before integration',
+        evidence_command: 'pnpm run test:github-workflows',
+        evidence_artifacts: ['.github/workflows/release-readiness.yml']
+      }
+    ],
+    redacts_local_paths: true,
+    redacts_registry_token: true,
+    redacts_signing_secrets: true,
+    reason: blockers.length
+      ? 'Public release clearance remains blocked; each clearance item records the current state, required state, and local evidence command.'
+      : 'Public release clearance metadata is ready.'
+  };
+}
+
 export function buildReleasePromotionPreflight({
   packageJson,
   publishingBlocked = packageJson?.private === true,
@@ -749,6 +838,12 @@ export function buildReleaseArtifactsManifest({
       bin: packageJson.bin || {}
     },
     non_production_warning_active: true,
+    release_gate_clearance: buildReleaseGateClearanceAudit({
+      packageJson,
+      publishingBlocked,
+      warningActive: true,
+      env
+    }),
     source_provenance: buildSourceProvenance({ cwd: root, packageJson, gitCommand }),
     release_sbom: buildReleaseSbom({ packageJson, packageLock }),
     artifact_integrity: buildArtifactIntegrity(packageJson.files || [], root),
