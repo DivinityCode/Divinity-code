@@ -77,7 +77,14 @@ pnpm run release:bundle
 pnpm run test:release-bundle
 ```
 
-`release-status` prints the same `divinity.release_artifacts.v1` metadata as JSON. `release:artifacts` writes `dist/release-artifacts.json` with source-checkout, local pnpm-link, package-registry, and binary-download paths. `release:bundle` writes `divinity.release_candidate_bundle.v1` metadata under `dist/release-bundle/` with the package tarball, release metadata, binary launcher artifacts, release attestation, and `SHA256SUMS`. Registry and binary paths remain blocked in these surfaces while the package is private and the non-production warning is active.
+Generate the public-promotion preflight report with:
+
+```bash
+pnpm run release:promotion-preflight
+pnpm run test:release-promotion
+```
+
+`release-status` prints the same `divinity.release_artifacts.v1` metadata as JSON. `release:artifacts` writes `dist/release-artifacts.json` with source-checkout, local pnpm-link, package-registry, and binary-download paths. `release:bundle` writes `divinity.release_candidate_bundle.v1` metadata under `dist/release-bundle/` with the package tarball, release metadata, binary launcher artifacts, release attestation, and `SHA256SUMS`. `release:promotion-preflight` writes `dist/release-promotion-preflight.json` with required promotion artifacts, gate commands, registry token readiness, signing readiness, and blockers. Registry and binary paths remain blocked in these surfaces while the package is private and the non-production warning is active.
 
 Release source provenance is included in both surfaces. It reports the Git commit SHA, branch, repository URL from `package.json`, whether tracked source changes were present, and redaction flags. It ignores untracked files and does not print changed file paths or absolute local paths; if Git metadata is unavailable, provenance is marked unavailable without failing artifact generation.
 
@@ -93,6 +100,8 @@ Release candidate bundle readiness is reported without leaking local paths or si
 
 Release attestation readiness is reported without leaking local paths or signing secrets. `dist/release-bundle/attestation.json` records package identity, source provenance, release metadata digest, subject artifact digests, release blockers, and blocked signing status so future signing work has a deterministic subject list. It is not a public release signature.
 
+Release promotion preflight is reported without leaking registry tokens or signing secrets. It never runs `npm publish`, creates signatures, or uploads binaries; it only proves whether the current release candidate has the required artifacts, checks, credentials, and cleared blockers for a future public promotion.
+
 The package remains marked `private` while the non-production warning is active. Published package and binary install paths are future release work.
 
 ## Verify The Install
@@ -103,6 +112,7 @@ node apps/cli/src/index.mjs release-status
 pnpm run test:package
 pnpm run test:binary
 pnpm run test:release-bundle
+pnpm run test:release-promotion
 pnpm run test:release-artifacts
 pnpm run test:release-status
 pnpm run validate:contracts
