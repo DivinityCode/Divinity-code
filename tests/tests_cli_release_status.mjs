@@ -27,6 +27,10 @@ assert.equal(result.release.format, 'divinity.release_artifacts.v1');
 assert.equal(result.release.generated_by, 'packages/release-artifacts');
 assert.equal(result.release.package.private, true);
 assert.equal(result.release.non_production_warning_active, true);
+assert.equal(result.release.source_provenance.format, 'divinity.release_source_provenance.v1');
+assert.equal(result.release.source_provenance.status, 'available');
+assert.match(result.release.source_provenance.commit_sha, /^[a-f0-9]{40}$/);
+assert.equal(result.release.source_provenance.redacts_paths, true);
 assert.equal(result.release.artifact_signing.status, 'blocked');
 assert.equal(result.release.artifact_signing.configuration.status, 'not_configured');
 

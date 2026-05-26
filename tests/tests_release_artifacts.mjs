@@ -39,6 +39,24 @@ assert.equal(artifact.package.node_engine, packageJson.engines.node);
 assert.equal(artifact.package.package_manager, packageJson.packageManager);
 assert.deepEqual(artifact.package.bin, packageJson.bin);
 assert.equal(artifact.non_production_warning_active, true);
+assert.equal(artifact.source_provenance.format, 'divinity.release_source_provenance.v1');
+assert.equal(artifact.source_provenance.status, 'available');
+assert.equal(artifact.source_provenance.vcs, 'git');
+assert.equal(artifact.source_provenance.repository_url, packageJson.repository.url);
+assert.match(artifact.source_provenance.commit_sha, /^[a-f0-9]{40}$/);
+assert.match(artifact.source_provenance.short_commit_sha, /^[a-f0-9]{7,12}$/);
+assert.equal(typeof artifact.source_provenance.branch, 'string');
+assert.equal(typeof artifact.source_provenance.tracked_changes, 'boolean');
+assert.equal(artifact.source_provenance.untracked_files_ignored, true);
+assert.equal(artifact.source_provenance.redacts_paths, true);
+assert.equal(JSON.stringify(artifact.source_provenance).includes('tests/tests_release_artifacts.mjs'), false);
+
+const unavailableProvenanceArtifact = buildReleaseArtifactsManifest({
+  cwd: process.cwd(),
+  gitCommand: '/definitely/missing/git'
+});
+assert.equal(unavailableProvenanceArtifact.source_provenance.status, 'unavailable');
+assert.equal(unavailableProvenanceArtifact.source_provenance.commit_sha, '');
 
 assert.equal(artifact.artifact_integrity.algorithm, 'sha256');
 assert.equal(artifact.artifact_integrity.generated_from_package_files, true);
