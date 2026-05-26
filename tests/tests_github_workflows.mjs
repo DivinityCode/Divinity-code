@@ -43,6 +43,7 @@ for (const command of [
   'npm run test:binary',
   'npm run test:release-bundle',
   'npm run test:release-promotion',
+  'npm run test:release-signatures',
   'npm run test:release-artifacts',
   'npm run test:release-status',
   'npm run test:smoke',

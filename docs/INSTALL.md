@@ -77,6 +77,13 @@ pnpm run release:bundle
 pnpm run test:release-bundle
 ```
 
+Generate local release-candidate signatures with:
+
+```bash
+pnpm run release:signatures
+pnpm run test:release-signatures
+```
+
 Generate the public-promotion preflight report with:
 
 ```bash
@@ -84,7 +91,7 @@ pnpm run release:promotion-preflight
 pnpm run test:release-promotion
 ```
 
-`release-status` prints the same `divinity.release_artifacts.v1` metadata as JSON. `release:artifacts` writes `dist/release-artifacts.json` with source-checkout, local pnpm-link, package-registry, and binary-download paths. That manifest also includes `divinity.release_gate_clearance.v1`, a blocker-by-blocker audit of package privacy, the README production warning, registry token readiness, native binary distribution, release signing, and GitHub release-readiness evidence. `release:bundle` writes `divinity.release_candidate_bundle.v1` metadata under `dist/release-bundle/` with the package tarball, release metadata, binary launcher artifacts, release attestation, and `SHA256SUMS`. `release:promotion-preflight` writes `dist/release-promotion-preflight.json` with required promotion artifacts, gate commands, registry token readiness, signing readiness, and blockers. Registry and binary paths remain blocked in these surfaces while the package is private and the non-production warning is active.
+`release-status` prints the same `divinity.release_artifacts.v1` metadata as JSON. `release:artifacts` writes `dist/release-artifacts.json` with source-checkout, local pnpm-link, package-registry, and binary-download paths. That manifest also includes `divinity.release_gate_clearance.v1`, a blocker-by-blocker audit of package privacy, the README production warning, registry token readiness, native binary distribution, release signing, and GitHub release-readiness evidence. `release:bundle` writes `divinity.release_candidate_bundle.v1` metadata under `dist/release-bundle/` with the package tarball, release metadata, binary launcher artifacts, release attestation, and `SHA256SUMS`. `release:signatures` writes `divinity.release_signature_artifacts.v1` metadata under `dist/release-signatures/` with signature files and checksums for the bundle subjects when signing inputs are configured. `release:promotion-preflight` writes `dist/release-promotion-preflight.json` with required promotion artifacts, gate commands, registry token readiness, signing readiness, and blockers. Registry and binary paths remain blocked in these surfaces while the package is private and the non-production warning is active.
 
 Release source provenance is included in both surfaces. It reports the Git commit SHA, branch, repository URL from `package.json`, whether tracked source changes were present, and redaction flags. It ignores untracked files and does not print changed file paths or absolute local paths; if Git metadata is unavailable, provenance is marked unavailable without failing artifact generation.
 
@@ -92,7 +99,9 @@ Release SBOM metadata is included in both surfaces as `divinity.release_sbom.v1`
 
 Release gate clearance metadata is a deterministic audit, not a release approval. It lists the current state, required state, evidence command, and evidence artifacts for each blocker while redacting local paths, registry tokens, signing key references, signing identities, and signing secrets. It keeps `public_release_ready: false` until package privacy, the production warning, registry credentials, native binary distribution, signing, and GitHub release-readiness evidence are all resolved.
 
-Release signing readiness is reported without leaking signing secrets. Configure `DIVINITY_RELEASE_SIGNING_COMMAND` as an absolute executable path, `DIVINITY_RELEASE_SIGNING_COMMAND_ARGS` as an optional JSON array of strings, and `DIVINITY_RELEASE_SIGNING_KEY_REF` plus `DIVINITY_RELEASE_SIGNING_IDENTITY` as deployment-managed signing references. The generated metadata reports only configured booleans and validation status; it does not store command args, key refs, identities, key material, package signatures, or binary signatures.
+Release signing readiness is reported without leaking signing secrets. Configure `DIVINITY_RELEASE_SIGNING_COMMAND` as an absolute executable path, `DIVINITY_RELEASE_SIGNING_COMMAND_ARGS` as an optional JSON array of strings, and `DIVINITY_RELEASE_SIGNING_KEY_REF` plus `DIVINITY_RELEASE_SIGNING_IDENTITY` as deployment-managed signing references. The generated metadata reports only configured booleans and validation status; it does not store command args, key refs, identities, key material, local paths, or raw signing command paths.
+
+Release signature artifacts are local review artifacts only. `release:signatures` regenerates the release bundle, sends selected bundle subjects to the configured signing command over JSON stdin, writes detached signatures under `dist/release-signatures/signatures/`, and records only relative subject paths, subject digests, signature digests, byte counts, redaction flags, and blockers. It does not publish package tarballs, upload binaries, or store raw signing key references, signing identities, signing command paths, local absolute paths, registry tokens, or provider credentials.
 
 Registry publish readiness is reported without leaking registry tokens. The release metadata records `npm publish --provenance --access public` and `npm publish --dry-run --provenance --access public` as the future registry commands, reports whether `NPM_TOKEN` is configured, and lists blockers while `private: true`, the non-production warning, or token readiness prevent publishing. It does not store the token value or local absolute paths.
 
@@ -114,6 +123,7 @@ node apps/cli/src/index.mjs release-status
 pnpm run test:package
 pnpm run test:binary
 pnpm run test:release-bundle
+pnpm run test:release-signatures
 pnpm run test:release-promotion
 pnpm run test:release-artifacts
 pnpm run test:release-status

@@ -55,6 +55,11 @@ assert.equal(clearanceItemsById.get('production_warning').evidence_command, 'pnp
 assert.equal(clearanceItemsById.get('registry_token').current_state, 'NPM_TOKEN not configured');
 assert.equal(clearanceItemsById.get('native_binary_distribution').evidence_command, 'pnpm run test:binary');
 assert.equal(clearanceItemsById.get('release_signing').blocker, 'signing_blocked');
+assert.equal(clearanceItemsById.get('release_signing').evidence_command, 'pnpm run test:release-signatures');
+assert.deepEqual(clearanceItemsById.get('release_signing').evidence_artifacts, [
+  'dist/release-signatures/manifest.json',
+  'dist/release-bundle/attestation.json'
+]);
 assert.equal(clearanceItemsById.get('github_release_readiness').status, 'required');
 assert.equal(clearanceItemsById.get('github_release_readiness').evidence_command, 'pnpm run test:github-workflows');
 assert.equal(JSON.stringify(result.release.release_gate_clearance).includes(process.cwd()), false);
@@ -111,6 +116,29 @@ for (const blocker of [
 assert.equal(result.release.release_attestation.redacts_local_paths, true);
 assert.equal(result.release.release_attestation.redacts_signing_secrets, true);
 assert.equal(JSON.stringify(result.release.release_attestation).includes(process.cwd()), false);
+assert.equal(result.release.release_signature_artifacts.format, 'divinity.release_signature_artifacts_readiness.v1');
+assert.equal(result.release.release_signature_artifacts.status, 'blocked');
+assert.equal(result.release.release_signature_artifacts.artifact_format, 'divinity.release_signature_artifacts.v1');
+assert.equal(result.release.release_signature_artifacts.build_command, 'pnpm run release:signatures');
+assert.equal(result.release.release_signature_artifacts.smoke_test_command, 'pnpm run test:release-signatures');
+assert.equal(result.release.release_signature_artifacts.output_directory, 'dist/release-signatures');
+assert.equal(result.release.release_signature_artifacts.bundle_manifest_path, 'dist/release-bundle/manifest.json');
+assert.equal(result.release.release_signature_artifacts.signing_required, true);
+assert.equal(result.release.release_signature_artifacts.signing_configuration.status, 'not_configured');
+for (const blocker of [
+  'package_private',
+  'non_production_warning',
+  'native_binary_build_pending',
+  'signing_blocked'
+]) {
+  assert.ok(
+    result.release.release_signature_artifacts.blockers.includes(blocker),
+    `missing release signature artifact blocker: ${blocker}`
+  );
+}
+assert.equal(result.release.release_signature_artifacts.redacts_local_paths, true);
+assert.equal(result.release.release_signature_artifacts.redacts_signing_secrets, true);
+assert.equal(JSON.stringify(result.release.release_signature_artifacts).includes(process.cwd()), false);
 assert.equal(result.release.release_promotion_preflight.format, 'divinity.release_promotion_preflight.v1');
 assert.equal(result.release.release_promotion_preflight.status, 'blocked');
 assert.equal(result.release.release_promotion_preflight.public_release_ready, false);
@@ -136,6 +164,14 @@ assert.equal(result.release.release_promotion_preflight.redacts_signing_secrets,
 assert.ok(result.release.release_promotion_preflight.required_artifacts.some(required => (
   required.artifact_id === 'release_attestation' &&
   required.path === 'dist/release-bundle/attestation.json'
+)));
+assert.ok(result.release.release_promotion_preflight.required_artifacts.some(required => (
+  required.artifact_id === 'release_signature_artifacts_manifest' &&
+  required.path === 'dist/release-signatures/manifest.json'
+)));
+assert.ok(result.release.release_promotion_preflight.release_gates.some(gate => (
+  gate.gate_id === 'release_signature_artifacts' &&
+  gate.command === 'pnpm run test:release-signatures'
 )));
 assert.equal(JSON.stringify(result.release.release_promotion_preflight).includes(process.cwd()), false);
 assert.equal(result.release.binary_release_readiness.format, 'divinity.release_binary_readiness.v1');
@@ -222,6 +258,7 @@ for (const command of [
   'pnpm run test:binary',
   'pnpm run test:release-bundle',
   'pnpm run test:release-promotion',
+  'pnpm run test:release-signatures',
   'pnpm run test:smoke'
 ]) {
   assert.ok(
@@ -243,6 +280,8 @@ const configuredResult = runCli(['release-status'], {
 assert.equal(configuredResult.release.artifact_signing.status, 'blocked');
 assert.equal(configuredResult.release.artifact_signing.configuration.status, 'configured');
 assert.equal(configuredResult.release.artifact_signing.configuration.ready_when_release_gates_clear, true);
+assert.equal(configuredResult.release.release_signature_artifacts.signing_configuration.status, 'configured');
+assert.equal(configuredResult.release.release_signature_artifacts.signing_configuration.ready_when_release_gates_clear, true);
 assert.equal(configuredResult.release.release_gate_clearance.clearance_items.find(
   item => item.item_id === 'release_signing'
 ).current_state, 'release signing inputs configured');

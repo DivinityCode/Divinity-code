@@ -15,9 +15,12 @@ export const RELEASE_ATTESTATION_FORMAT = 'divinity.release_attestation.v1';
 export const RELEASE_ATTESTATION_READINESS_FORMAT = 'divinity.release_attestation_readiness.v1';
 export const RELEASE_PROMOTION_PREFLIGHT_FORMAT = 'divinity.release_promotion_preflight.v1';
 export const RELEASE_GATE_CLEARANCE_FORMAT = 'divinity.release_gate_clearance.v1';
+export const RELEASE_SIGNATURE_ARTIFACTS_FORMAT = 'divinity.release_signature_artifacts.v1';
+export const RELEASE_SIGNATURE_ARTIFACTS_READINESS_FORMAT = 'divinity.release_signature_artifacts_readiness.v1';
 export const DEFAULT_RELEASE_ARTIFACT_OUTPUT = path.join('dist', 'release-artifacts.json');
 export const DEFAULT_RELEASE_BINARY_OUTPUT = path.join('dist', 'binary');
 export const DEFAULT_RELEASE_BUNDLE_OUTPUT = path.join('dist', 'release-bundle');
+export const DEFAULT_RELEASE_SIGNATURE_OUTPUT = path.join('dist', 'release-signatures');
 export const DEFAULT_RELEASE_PROMOTION_PREFLIGHT_OUTPUT = path.join('dist', 'release-promotion-preflight.json');
 export const NPM_TOKEN_ENV = 'NPM_TOKEN';
 export const RELEASE_SIGNING_COMMAND_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND';
@@ -330,6 +333,12 @@ function signingCommandArgsStatus({ env = process.env } = {}) {
   };
 }
 
+function parseSigningCommandArgs({ env = process.env } = {}) {
+  const rawArgs = cleanString(env[RELEASE_SIGNING_COMMAND_ARGS_ENV]);
+  if (!rawArgs) return [];
+  return JSON.parse(rawArgs);
+}
+
 function buildSigningConfiguration({ env = process.env } = {}) {
   const command = cleanString(env[RELEASE_SIGNING_COMMAND_ENV]);
   const keyRefConfigured = Boolean(cleanString(env[RELEASE_SIGNING_KEY_REF_ENV]));
@@ -552,6 +561,39 @@ function buildReleaseAttestationReadiness({
   };
 }
 
+function buildReleaseSignatureArtifactsReadiness({
+  publishingBlocked,
+  warningActive = true,
+  env = process.env
+} = {}) {
+  const blockers = releaseBundleBlockers({ publishingBlocked, warningActive });
+  return {
+    format: RELEASE_SIGNATURE_ARTIFACTS_READINESS_FORMAT,
+    status: blockers.length ? 'blocked' : 'ready',
+    artifact_format: RELEASE_SIGNATURE_ARTIFACTS_FORMAT,
+    build_command: 'pnpm run release:signatures',
+    smoke_test_command: 'pnpm run test:release-signatures',
+    output_directory: DEFAULT_RELEASE_SIGNATURE_OUTPUT.split(path.sep).join('/'),
+    bundle_manifest_path: `${DEFAULT_RELEASE_BUNDLE_OUTPUT.split(path.sep).join('/')}/manifest.json`,
+    signing_required: true,
+    signing_configuration: redactedSigningConfiguration(buildSigningConfiguration({ env })),
+    signed_artifact_ids: [
+      'release_artifacts_manifest',
+      'package_tarball',
+      'binary_artifacts_manifest',
+      'binary_checksums',
+      'release_attestation',
+      'bundle_checksums'
+    ],
+    blockers,
+    redacts_local_paths: true,
+    redacts_signing_secrets: true,
+    reason: blockers.length
+      ? 'Release signatures can be generated for local release-candidate review, but public signed distribution remains blocked by release gates.'
+      : 'Release signature artifacts are ready once release gates pass.'
+  };
+}
+
 function promotionPreflightBlockers({ publishingBlocked, warningActive = true, tokenConfigured = false } = {}) {
   return [
     ...(publishingBlocked ? ['package_private'] : []),
@@ -580,6 +622,12 @@ function releasePromotionRequiredArtifacts() {
       artifact_id: 'release_attestation',
       path: `${DEFAULT_RELEASE_BUNDLE_OUTPUT.split(path.sep).join('/')}/attestation.json`,
       command: 'pnpm run release:bundle',
+      required: true
+    },
+    {
+      artifact_id: 'release_signature_artifacts_manifest',
+      path: `${DEFAULT_RELEASE_SIGNATURE_OUTPUT.split(path.sep).join('/')}/manifest.json`,
+      command: 'pnpm run release:signatures',
       required: true
     },
     {
@@ -616,6 +664,11 @@ function releasePromotionGates() {
     {
       gate_id: 'release_artifacts_manifest',
       command: 'pnpm run test:release-artifacts',
+      required: true
+    },
+    {
+      gate_id: 'release_signature_artifacts',
+      command: 'pnpm run test:release-signatures',
       required: true
     },
     {
@@ -719,8 +772,8 @@ export function buildReleaseGateClearanceAudit({
             ? 'release signing inputs invalid'
             : 'release signing inputs not configured',
         required_state: 'package tarball, binary downloads, and release attestation are signed by an approved signing workflow',
-        evidence_command: 'pnpm run test:release-artifacts',
-        evidence_artifacts: ['dist/release-artifacts.json', 'dist/release-bundle/attestation.json']
+        evidence_command: 'pnpm run test:release-signatures',
+        evidence_artifacts: ['dist/release-signatures/manifest.json', 'dist/release-bundle/attestation.json']
       },
       {
         item_id: 'github_release_readiness',
@@ -856,6 +909,11 @@ export function buildReleaseArtifactsManifest({
       publishingBlocked,
       warningActive: true
     }),
+    release_signature_artifacts: buildReleaseSignatureArtifactsReadiness({
+      publishingBlocked,
+      warningActive: true,
+      env
+    }),
     release_promotion_preflight: buildReleasePromotionPreflight({
       packageJson,
       publishingBlocked,
@@ -932,6 +990,11 @@ export function buildReleaseArtifactsManifest({
       {
         gate_id: 'release_promotion_preflight',
         command: 'pnpm run test:release-promotion',
+        required: true
+      },
+      {
+        gate_id: 'release_signature_artifacts',
+        command: 'pnpm run test:release-signatures',
         required: true
       },
       {
@@ -1351,6 +1414,149 @@ export function writeReleaseCandidateBundle({
       left.artifact_id.localeCompare(right.artifact_id)
     ))
   };
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  return {
+    ok: true,
+    output_directory: outputDirectory,
+    checksum_path: checksumPath,
+    manifest_path: manifestPath,
+    manifest
+  };
+}
+
+function signableBundleArtifacts(bundleManifest) {
+  const signableIds = new Set([
+    'release_artifacts_manifest',
+    'package_tarball',
+    'binary_artifacts_manifest',
+    'binary_checksums',
+    'release_attestation',
+    'bundle_checksums'
+  ]);
+  return bundleManifest.artifacts
+    .filter(artifact => signableIds.has(artifact.artifact_id))
+    .sort((left, right) => left.artifact_id.localeCompare(right.artifact_id));
+}
+
+function signatureRequest({ artifact, bundleDirectory, signaturePath }) {
+  return {
+    format: 'divinity.release_signature_request.v1',
+    artifact_id: artifact.artifact_id,
+    artifact_kind: artifact.artifact_kind,
+    input_path: path.join(bundleDirectory, artifact.path),
+    signature_path: signaturePath,
+    digest_algorithm: 'sha256',
+    sha256: artifact.sha256
+  };
+}
+
+function executeSigningCommand({ artifact, bundleDirectory, signaturePath, command, commandArgs }) {
+  const request = signatureRequest({
+    artifact,
+    bundleDirectory,
+    signaturePath
+  });
+  const output = execFileSync(command, commandArgs, {
+    input: `${JSON.stringify(request)}\n`,
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe']
+  });
+  const response = JSON.parse(output || '{}');
+  if (response.ok !== true) {
+    throw new Error(`release signing command failed for ${artifact.artifact_id}`);
+  }
+  return {
+    signature_algorithm: cleanString(response.signature_algorithm) || 'external'
+  };
+}
+
+export function writeReleaseSignatureArtifacts({
+  output = DEFAULT_RELEASE_SIGNATURE_OUTPUT,
+  cwd = process.cwd(),
+  env = process.env,
+  bundleOutput = DEFAULT_RELEASE_BUNDLE_OUTPUT,
+  npmCommand = defaultNpmCommand()
+} = {}) {
+  const root = path.resolve(cwd);
+  const outputDirectory = path.resolve(root, cleanString(output) || DEFAULT_RELEASE_SIGNATURE_OUTPUT);
+  const signatureDirectory = path.join(outputDirectory, 'signatures');
+  const signingConfiguration = buildSigningConfiguration({ env });
+  if (signingConfiguration.status !== 'configured') {
+    throw new Error(signingConfiguration.reason);
+  }
+
+  const command = cleanString(env[RELEASE_SIGNING_COMMAND_ENV]);
+  const commandArgs = parseSigningCommandArgs({ env });
+  mkdirSync(signatureDirectory, { recursive: true });
+
+  const bundleResult = writeReleaseCandidateBundle({
+    cwd: root,
+    output: bundleOutput,
+    npmCommand
+  });
+  const bundleDirectory = bundleResult.output_directory;
+  const packageJson = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const blockers = releaseBundleBlockers({
+    publishingBlocked: packageJson.private === true,
+    warningActive: true
+  });
+
+  const signatures = signableBundleArtifacts(bundleResult.manifest).map(artifact => {
+    const signaturePath = path.join(signatureDirectory, `${artifact.artifact_id}.sig`);
+    const signingResult = executeSigningCommand({
+      artifact,
+      bundleDirectory,
+      signaturePath,
+      command,
+      commandArgs
+    });
+    return {
+      artifact_id: artifact.artifact_id,
+      artifact_kind: artifact.artifact_kind,
+      subject_path: artifact.path,
+      subject_sha256: artifact.sha256,
+      digest_algorithm: 'sha256',
+      signature_path: normalizedRelativePath(outputDirectory, signaturePath),
+      signature_algorithm: signingResult.signature_algorithm,
+      signature_bytes: statSync(signaturePath).size,
+      signature_sha256: sha256Absolute(signaturePath),
+      status: 'generated'
+    };
+  });
+
+  const checksumPath = path.join(outputDirectory, 'SHA256SUMS');
+  writeFileSync(
+    checksumPath,
+    `${signatures.map(signature => `${signature.signature_sha256}  ${signature.signature_path}`).join('\n')}\n`
+  );
+
+  const manifest = {
+    format: RELEASE_SIGNATURE_ARTIFACTS_FORMAT,
+    generated_by: 'packages/release-artifacts',
+    status: 'generated',
+    public_release_ready: false,
+    package: {
+      name: packageJson.name,
+      version: packageJson.version,
+      private: packageJson.private === true
+    },
+    output_directory: DEFAULT_RELEASE_SIGNATURE_OUTPUT.split(path.sep).join('/'),
+    bundle_manifest_path: `${DEFAULT_RELEASE_BUNDLE_OUTPUT.split(path.sep).join('/')}/manifest.json`,
+    checksums_file: 'SHA256SUMS',
+    checksum_algorithm: 'sha256',
+    signing: {
+      required: true,
+      status: 'generated',
+      configuration: redactedSigningConfiguration(signingConfiguration)
+    },
+    blockers,
+    redacts_local_paths: true,
+    redacts_signing_secrets: true,
+    reason: 'Generated local release-candidate signatures for review only; public package and signed binary distribution remain blocked by release gates.',
+    signatures
+  };
+  const manifestPath = path.join(outputDirectory, 'manifest.json');
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
   return {

@@ -14,6 +14,7 @@ Builds release-readiness metadata for Divinity Code.
 - Generates `divinity.release_binary_artifacts.v1` local Node launcher artifacts, `SHA256SUMS`, and `manifest.json` under `dist/binary/` for release-candidate smoke checks.
 - Reports `divinity.release_candidate_bundle_readiness.v1` metadata and generates `divinity.release_candidate_bundle.v1` review bundles under `dist/release-bundle/`.
 - Reports `divinity.release_attestation_readiness.v1` metadata and writes `divinity.release_attestation.v1` as `dist/release-bundle/attestation.json`.
+- Reports `divinity.release_signature_artifacts_readiness.v1` metadata and writes `divinity.release_signature_artifacts.v1` as `dist/release-signatures/manifest.json` when signing inputs are configured.
 - Reports and writes `divinity.release_promotion_preflight.v1` metadata for blocked public package and signed binary promotion checks.
 - Powers both `pnpm run release:artifacts` and CLI `divinity release-status`.
 
@@ -33,4 +34,6 @@ Release candidate bundles are local review artifacts only. `pnpm run release:bun
 
 Release attestation is signable provenance metadata, not a public release signature. `attestation.json` records package identity, source provenance, release metadata digest, subject artifact digests, release blockers, and blocked signing status. It intentionally excludes absolute paths, `node_modules` paths, registry tokens, signing key references, signing identities, and provider credentials.
 
-Release promotion preflight is a deterministic blocker report, not a publish command. `pnpm run release:promotion-preflight` writes `dist/release-promotion-preflight.json` with package-registry and signed-binary promotion targets, required local artifacts, gate commands, registry token readiness, signing readiness, and blockers. It does not run `npm publish`, create signatures, upload binaries, or store raw registry tokens, signing key references, signing identities, local paths, or provider credentials.
+Release signature artifacts are detached local review signatures, not a public release. `pnpm run release:signatures` regenerates the release-candidate bundle, sends selected bundle subjects to the configured signing command over JSON stdin, writes signature files plus `SHA256SUMS` under `dist/release-signatures/`, and records `divinity.release_signature_artifacts.v1` metadata with relative subject paths, subject digests, signature digests, byte counts, redaction flags, and blockers. It intentionally excludes local absolute paths, signing command paths, command args, signing key references, signing identities, registry tokens, and provider credentials.
+
+Release promotion preflight is a deterministic blocker report, not a publish command. `pnpm run release:promotion-preflight` writes `dist/release-promotion-preflight.json` with package-registry and signed-binary promotion targets, required local artifacts, gate commands, registry token readiness, signing readiness, and blockers. It does not run `npm publish`, upload binaries, or store raw registry tokens, signing key references, signing identities, local paths, or provider credentials.

@@ -79,6 +79,8 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - Run `pnpm run test:binary` to validate those launcher artifacts without publishing signed native downloads.
 - Run `pnpm run release:bundle` to assemble a local release-candidate review bundle with the package tarball, release metadata, binary launcher artifacts, release attestation, and checksums.
 - Run `pnpm run test:release-bundle` to validate the bundle manifest, attestation, redaction guarantees, package tarball, binary metadata, and checksums without publishing.
+- Run `pnpm run release:signatures` to generate local redacted release-candidate signatures for the bundle subjects when deployment-managed signing inputs are configured.
+- Run `pnpm run test:release-signatures` to validate signature artifacts, checksum metadata, and signing-secret/path redaction without publishing.
 - Run `pnpm run release:promotion-preflight` to generate a blocked public-promotion preflight manifest before any package publish or signed binary release.
 - Run `pnpm run test:release-promotion` to validate promotion blockers, required artifacts, gate commands, and secret redaction.
 - Run `pnpm run test:release-artifacts` to validate the generated release artifact manifest, install-path gates, release gate clearance audit, signing, registry publish, binary release readiness, bundle readiness metadata, attestation readiness metadata, and promotion preflight metadata.
