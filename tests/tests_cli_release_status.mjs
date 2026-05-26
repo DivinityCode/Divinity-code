@@ -18,7 +18,20 @@ function runCli(args = [], options = {}) {
 }
 
 const result = runCli(['release-status'], {
-  cwd: mkdtempSync(path.join(tmpdir(), 'divinity-release-status-'))
+  cwd: mkdtempSync(path.join(tmpdir(), 'divinity-release-status-')),
+  env: {
+    ...process.env,
+    NPM_TOKEN: '',
+    GITHUB_TOKEN: '',
+    GH_TOKEN: '',
+    DIVINITY_RELEASE_TAG: '',
+    DIVINITY_NATIVE_BINARY_BUILD_COMMAND: '',
+    DIVINITY_NATIVE_BINARY_BUILD_COMMAND_ARGS: '',
+    DIVINITY_RELEASE_SIGNING_COMMAND: '',
+    DIVINITY_RELEASE_SIGNING_COMMAND_ARGS: '',
+    DIVINITY_RELEASE_SIGNING_KEY_REF: '',
+    DIVINITY_RELEASE_SIGNING_IDENTITY: ''
+  }
 });
 
 assert.equal(result.ok, true);
@@ -34,6 +47,8 @@ for (const blocker of [
   'package_private',
   'non_production_warning',
   'missing_registry_token',
+  'missing_github_release_token',
+  'missing_release_tag',
   'native_binary_build_pending',
   'signing_blocked'
 ]) {
@@ -44,6 +59,7 @@ for (const blocker of [
 }
 assert.equal(result.release.release_gate_clearance.redacts_local_paths, true);
 assert.equal(result.release.release_gate_clearance.redacts_registry_token, true);
+assert.equal(result.release.release_gate_clearance.redacts_github_token, true);
 assert.equal(result.release.release_gate_clearance.redacts_signing_secrets, true);
 const clearanceItemsById = new Map(
   result.release.release_gate_clearance.clearance_items.map(item => [item.item_id, item])
@@ -55,6 +71,12 @@ assert.equal(clearanceItemsById.get('production_warning').evidence_command, 'pnp
 assert.equal(clearanceItemsById.get('registry_token').current_state, 'NPM_TOKEN not configured');
 assert.equal(clearanceItemsById.get('registry_token').evidence_command, 'pnpm run test:release-registry-dry-run');
 assert.deepEqual(clearanceItemsById.get('registry_token').evidence_artifacts, ['dist/release-registry-dry-run.json']);
+assert.equal(clearanceItemsById.get('github_release_token').current_state, 'GitHub release token not configured');
+assert.equal(clearanceItemsById.get('github_release_token').evidence_command, 'pnpm run test:release-binary-attachments');
+assert.deepEqual(clearanceItemsById.get('github_release_token').evidence_artifacts, ['dist/release-binary-attachments.json']);
+assert.equal(clearanceItemsById.get('github_release_tag').current_state, 'GitHub release tag not configured');
+assert.equal(clearanceItemsById.get('github_release_tag').evidence_command, 'pnpm run test:release-binary-attachments');
+assert.deepEqual(clearanceItemsById.get('github_release_tag').evidence_artifacts, ['dist/release-binary-attachments.json']);
 assert.equal(clearanceItemsById.get('native_binary_distribution').evidence_command, 'pnpm run test:signed-native-binary');
 assert.deepEqual(clearanceItemsById.get('native_binary_distribution').evidence_artifacts, [
   'dist/signed-native-binary/manifest.json',
@@ -88,6 +110,22 @@ assert.equal(result.release.release_registry_publish_dry_run.dry_run_executed, f
 assert.equal(result.release.release_registry_publish_dry_run.redacts_token, true);
 assert.equal(result.release.release_registry_publish_dry_run.redacts_local_paths, true);
 assert.equal(result.release.release_registry_publish_dry_run.redacts_npm_output, true);
+assert.equal(result.release.release_binary_attachment_plan.format, 'divinity.release_binary_attachment_plan.v1');
+assert.equal(result.release.release_binary_attachment_plan.status, 'blocked');
+assert.equal(result.release.release_binary_attachment_plan.public_release_ready, false);
+assert.equal(result.release.release_binary_attachment_plan.binary_attachments_ready, false);
+assert.equal(result.release.release_binary_attachment_plan.command, 'pnpm run release:binary-attachments');
+assert.equal(result.release.release_binary_attachment_plan.smoke_test_command, 'pnpm run test:release-binary-attachments');
+assert.equal(result.release.release_binary_attachment_plan.provider, 'github_releases');
+assert.equal(result.release.release_binary_attachment_plan.repository, 'DivinityCode/Divinity-code');
+assert.equal(result.release.release_binary_attachment_plan.token_configured, false);
+assert.equal(result.release.release_binary_attachment_plan.release_tag_configured, false);
+assert.ok(result.release.release_binary_attachment_plan.blockers.includes('missing_github_release_token'));
+assert.ok(result.release.release_binary_attachment_plan.blockers.includes('missing_release_tag'));
+assert.equal(result.release.release_binary_attachment_plan.does_not_upload, true);
+assert.equal(result.release.release_binary_attachment_plan.redacts_token, true);
+assert.equal(result.release.release_binary_attachment_plan.redacts_local_paths, true);
+assert.equal(result.release.release_binary_attachment_plan.redacts_signing_secrets, true);
 assert.equal(result.release.release_candidate_bundle.format, 'divinity.release_candidate_bundle_readiness.v1');
 assert.equal(result.release.release_candidate_bundle.status, 'blocked');
 assert.equal(result.release.release_candidate_bundle.build_command, 'pnpm run release:bundle');
@@ -165,6 +203,8 @@ for (const blocker of [
   'package_private',
   'non_production_warning',
   'missing_registry_token',
+  'missing_github_release_token',
+  'missing_release_tag',
   'native_binary_build_pending',
   'signing_blocked'
 ]) {
@@ -174,9 +214,13 @@ for (const blocker of [
   );
 }
 assert.equal(result.release.release_promotion_preflight.registry_publish.token_configured, false);
+assert.equal(result.release.release_promotion_preflight.binary_distribution.attachment_plan_path, 'dist/release-binary-attachments.json');
+assert.equal(result.release.release_promotion_preflight.binary_distribution.token_configured, false);
+assert.equal(result.release.release_promotion_preflight.binary_distribution.release_tag_configured, false);
 assert.equal(result.release.release_promotion_preflight.signing.status, 'blocked');
 assert.equal(result.release.release_promotion_preflight.redacts_local_paths, true);
 assert.equal(result.release.release_promotion_preflight.redacts_registry_token, true);
+assert.equal(result.release.release_promotion_preflight.redacts_github_token, true);
 assert.equal(result.release.release_promotion_preflight.redacts_signing_secrets, true);
 assert.ok(result.release.release_promotion_preflight.required_artifacts.some(required => (
   required.artifact_id === 'release_attestation' &&
@@ -185,6 +229,10 @@ assert.ok(result.release.release_promotion_preflight.required_artifacts.some(req
 assert.ok(result.release.release_promotion_preflight.required_artifacts.some(required => (
   required.artifact_id === 'registry_publish_dry_run_report' &&
   required.path === 'dist/release-registry-dry-run.json'
+)));
+assert.ok(result.release.release_promotion_preflight.required_artifacts.some(required => (
+  required.artifact_id === 'binary_attachment_plan' &&
+  required.path === 'dist/release-binary-attachments.json'
 )));
 assert.ok(result.release.release_promotion_preflight.required_artifacts.some(required => (
   required.artifact_id === 'native_binary_artifacts_manifest' &&
@@ -201,6 +249,10 @@ assert.ok(result.release.release_promotion_preflight.release_gates.some(gate => 
 assert.ok(result.release.release_promotion_preflight.release_gates.some(gate => (
   gate.gate_id === 'registry_publish_dry_run' &&
   gate.command === 'pnpm run test:release-registry-dry-run'
+)));
+assert.ok(result.release.release_promotion_preflight.release_gates.some(gate => (
+  gate.gate_id === 'binary_attachment_plan' &&
+  gate.command === 'pnpm run test:release-binary-attachments'
 )));
 assert.ok(result.release.release_promotion_preflight.release_gates.some(gate => (
   gate.gate_id === 'signed_native_binary_artifacts' &&
@@ -323,6 +375,7 @@ for (const command of [
   'pnpm test',
   'pnpm run test:providers',
   'pnpm run test:release-registry-dry-run',
+  'pnpm run test:release-binary-attachments',
   'pnpm run test:binary',
   'pnpm run test:native-binary',
   'pnpm run test:signed-native-binary',
@@ -411,6 +464,26 @@ assert.equal(tokenConfiguredResult.release.release_gate_clearance.clearance_item
   item => item.item_id === 'registry_token'
 ).current_state, 'NPM_TOKEN configured');
 assert.equal(JSON.stringify(tokenConfiguredResult).includes('npm-secret-token-value'), false);
+
+const githubReleaseConfiguredResult = runCli(['release-status'], {
+  cwd: mkdtempSync(path.join(tmpdir(), 'divinity-release-status-github-release-')),
+  env: {
+    ...process.env,
+    GITHUB_TOKEN: 'github-release-secret-value',
+    GH_TOKEN: '',
+    DIVINITY_RELEASE_TAG: 'v0.1.0'
+  }
+});
+assert.equal(githubReleaseConfiguredResult.release.release_binary_attachment_plan.token_configured, true);
+assert.equal(githubReleaseConfiguredResult.release.release_binary_attachment_plan.release_tag_configured, true);
+assert.equal(githubReleaseConfiguredResult.release.release_gate_clearance.clearance_items.find(
+  item => item.item_id === 'github_release_token'
+).current_state, 'GitHub release token configured');
+assert.equal(githubReleaseConfiguredResult.release.release_gate_clearance.clearance_items.find(
+  item => item.item_id === 'github_release_tag'
+).current_state, 'GitHub release tag configured');
+assert.equal(JSON.stringify(githubReleaseConfiguredResult).includes('github-release-secret-value'), false);
+assert.equal(JSON.stringify(githubReleaseConfiguredResult).includes('v0.1.0'), false);
 
 const serialized = JSON.stringify(result);
 for (const disallowed of [

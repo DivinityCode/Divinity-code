@@ -42,6 +42,9 @@ jobs:
       - name: Validate registry publish dry-run
         run: npm run test:release-registry-dry-run
 
+      - name: Validate binary attachment plan
+        run: npm run test:release-binary-attachments
+
       - name: Validate binary artifact smoke
         run: npm run test:binary
 

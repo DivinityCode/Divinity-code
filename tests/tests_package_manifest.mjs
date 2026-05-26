@@ -17,6 +17,8 @@ assert.equal(packageJson.license, 'UNLICENSED');
 assert.equal(packageJson.scripts?.['test:package-tarball'], 'node tests/tests_package_tarball_smoke.mjs');
 assert.equal(packageJson.scripts?.['release:registry-dry-run'], 'node tests/scripts_release_registry_publish_dry_run.mjs');
 assert.equal(packageJson.scripts?.['test:release-registry-dry-run'], 'node tests/tests_release_registry_publish_dry_run.mjs');
+assert.equal(packageJson.scripts?.['release:binary-attachments'], 'node tests/scripts_release_binary_attachments.mjs');
+assert.equal(packageJson.scripts?.['test:release-binary-attachments'], 'node tests/tests_release_binary_attachments.mjs');
 assert.equal(packageJson.scripts?.['release:binary'], 'node tests/scripts_release_binary.mjs');
 assert.equal(packageJson.scripts?.['test:binary'], 'node tests/tests_release_binary_artifacts.mjs');
 assert.equal(packageJson.scripts?.['release:native-binary'], 'node tests/scripts_release_native_binary.mjs');
@@ -31,6 +33,7 @@ assert.equal(packageJson.scripts?.['release:promotion-preflight'], 'node tests/s
 assert.equal(packageJson.scripts?.['test:release-promotion'], 'node tests/tests_release_promotion_preflight.mjs');
 assert.equal(packageJson.scripts?.['test:github-workflows'], 'node tests/tests_github_workflows.mjs');
 assert.ok(packageJson.scripts?.test.includes('node tests/tests_release_registry_publish_dry_run.mjs'));
+assert.ok(packageJson.scripts?.test.includes('node tests/tests_release_binary_attachments.mjs'));
 assert.ok(packageJson.scripts?.test.includes('node tests/tests_release_signed_native_binary_artifacts.mjs'));
 assert.ok(packageJson.files.includes('apps'));
 assert.ok(packageJson.files.includes('packages'));

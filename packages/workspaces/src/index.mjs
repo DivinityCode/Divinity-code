@@ -33,9 +33,35 @@ function safeRunSegment(runId) {
   return (runId || 'run').replace(/[^a-zA-Z0-9_.-]/g, '_');
 }
 
+function isVolatileGitObject(source) {
+  const normalized = source.split(path.sep).join('/');
+  if (!normalized.includes('/.git/objects/')) return false;
+  const basename = path.basename(source);
+  return basename.startsWith('bitmap-ref-tips_') || basename.startsWith('tmp_');
+}
+
 function shouldCopy(source) {
   if (source.includes(`${path.sep}.git${path.sep}`) && source.endsWith('.lock')) return false;
+  if (isVolatileGitObject(source)) return false;
   return !EXCLUDED_DIRECTORIES.has(path.basename(source));
+}
+
+function copyLocalSnapshot(sourcePath, workspacePath) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      cpSync(sourcePath, workspacePath, {
+        recursive: true,
+        filter: shouldCopy
+      });
+      return;
+    } catch (error) {
+      if (attempt === 0 && error?.code === 'ENOENT') {
+        rmSync(workspacePath, { recursive: true, force: true });
+        continue;
+      }
+      throw error;
+    }
+  }
 }
 
 function isPathInside(childPath, parentPath) {
@@ -56,10 +82,7 @@ export function createRunWorkspace({
 
   if (isLocalDirectory(repoPath)) {
     const sourcePath = path.resolve(repoPath);
-    cpSync(sourcePath, workspacePath, {
-      recursive: true,
-      filter: shouldCopy
-    });
+    copyLocalSnapshot(sourcePath, workspacePath);
 
     return {
       run_id: runId,

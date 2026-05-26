@@ -43,6 +43,7 @@ assertIncludes(install, 'pnpm install', 'install guide');
 assertIncludes(install, 'pnpm run validate:contracts', 'install guide');
 assertIncludes(install, 'pnpm run release:artifacts', 'install guide');
 assertIncludes(install, 'pnpm run release:registry-dry-run', 'install guide');
+assertIncludes(install, 'pnpm run release:binary-attachments', 'install guide');
 assertIncludes(install, 'pnpm run release:native-binary', 'install guide');
 assertIncludes(install, 'pnpm run release:signed-native-binary', 'install guide');
 assertIncludes(install, 'pnpm run release:bundle', 'install guide');
@@ -51,6 +52,7 @@ assertIncludes(install, 'pnpm run release:promotion-preflight', 'install guide')
 assertIncludes(install, 'divinity.release_gate_clearance.v1', 'install guide');
 assertIncludes(install, 'pnpm run test:release-artifacts', 'install guide');
 assertIncludes(install, 'pnpm run test:release-registry-dry-run', 'install guide');
+assertIncludes(install, 'pnpm run test:release-binary-attachments', 'install guide');
 assertIncludes(install, 'pnpm run test:native-binary', 'install guide');
 assertIncludes(install, 'pnpm run test:signed-native-binary', 'install guide');
 assertIncludes(install, 'pnpm run test:release-bundle', 'install guide');
@@ -96,6 +98,7 @@ for (const item of [
   'node apps/cli/src/index.mjs doctor --profile source',
   'pnpm run release:artifacts',
   'pnpm run release:registry-dry-run',
+  'pnpm run release:binary-attachments',
   'pnpm run release:native-binary',
   'pnpm run release:signed-native-binary',
   'pnpm run release:bundle',
@@ -103,6 +106,7 @@ for (const item of [
   'pnpm run release:promotion-preflight',
   'pnpm run test:release-artifacts',
   'pnpm run test:release-registry-dry-run',
+  'pnpm run test:release-binary-attachments',
   'pnpm run test:native-binary',
   'pnpm run test:signed-native-binary',
   'pnpm run test:release-bundle',
@@ -110,6 +114,7 @@ for (const item of [
   'pnpm run test:release-promotion',
   'divinity.release_gate_clearance.v1',
   'divinity.release_registry_publish_dry_run.v1',
+  'divinity.release_binary_attachment_plan.v1',
   'divinity.release_native_binary_artifacts.v1',
   'divinity.release_signed_native_binary_artifacts.v1',
   'divinity.release_signature_artifacts.v1',
