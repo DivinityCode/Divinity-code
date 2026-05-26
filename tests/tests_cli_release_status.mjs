@@ -35,6 +35,29 @@ assert.equal(result.release.registry_publish_readiness.token_configured, false);
 assert.equal(result.release.registry_publish_readiness.redacts_token, true);
 assert.ok(result.release.registry_publish_readiness.blockers.includes('package_private'));
 assert.ok(result.release.registry_publish_readiness.blockers.includes('non_production_warning'));
+assert.equal(result.release.release_candidate_bundle.format, 'divinity.release_candidate_bundle_readiness.v1');
+assert.equal(result.release.release_candidate_bundle.status, 'blocked');
+assert.equal(result.release.release_candidate_bundle.build_command, 'pnpm run release:bundle');
+assert.equal(result.release.release_candidate_bundle.smoke_test_command, 'pnpm run test:release-bundle');
+assert.equal(result.release.release_candidate_bundle.artifact_format, 'divinity.release_candidate_bundle.v1');
+assert.equal(result.release.release_candidate_bundle.output_directory, 'dist/release-bundle');
+assert.ok(result.release.release_candidate_bundle.includes.includes('release_artifacts_manifest'));
+assert.ok(result.release.release_candidate_bundle.includes.includes('package_tarball'));
+assert.ok(result.release.release_candidate_bundle.includes.includes('binary_artifacts_manifest'));
+for (const blocker of [
+  'package_private',
+  'non_production_warning',
+  'native_binary_build_pending',
+  'signing_blocked'
+]) {
+  assert.ok(
+    result.release.release_candidate_bundle.blockers.includes(blocker),
+    `missing release candidate bundle blocker: ${blocker}`
+  );
+}
+assert.equal(result.release.release_candidate_bundle.redacts_local_paths, true);
+assert.equal(result.release.release_candidate_bundle.redacts_signing_secrets, true);
+assert.equal(JSON.stringify(result.release.release_candidate_bundle).includes(process.cwd()), false);
 assert.equal(result.release.binary_release_readiness.format, 'divinity.release_binary_readiness.v1');
 assert.equal(result.release.binary_release_readiness.status, 'blocked');
 assert.equal(result.release.binary_release_readiness.artifact_id, 'binary_download');
@@ -117,6 +140,7 @@ for (const command of [
   'pnpm test',
   'pnpm run test:providers',
   'pnpm run test:binary',
+  'pnpm run test:release-bundle',
   'pnpm run test:smoke'
 ]) {
   assert.ok(

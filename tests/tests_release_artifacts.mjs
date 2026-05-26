@@ -58,6 +58,27 @@ assert.deepEqual(artifact.registry_publish_readiness.blockers, [
   'missing_registry_token'
 ]);
 assert.equal(JSON.stringify(artifact.registry_publish_readiness).includes(process.cwd()), false);
+assert.equal(artifact.release_candidate_bundle.format, 'divinity.release_candidate_bundle_readiness.v1');
+assert.equal(artifact.release_candidate_bundle.status, 'blocked');
+assert.equal(artifact.release_candidate_bundle.build_command, 'pnpm run release:bundle');
+assert.equal(artifact.release_candidate_bundle.smoke_test_command, 'pnpm run test:release-bundle');
+assert.equal(artifact.release_candidate_bundle.artifact_format, 'divinity.release_candidate_bundle.v1');
+assert.equal(artifact.release_candidate_bundle.output_directory, 'dist/release-bundle');
+assert.deepEqual(artifact.release_candidate_bundle.includes, [
+  'release_artifacts_manifest',
+  'package_tarball',
+  'binary_artifacts_manifest',
+  'bundle_checksums'
+]);
+assert.deepEqual(artifact.release_candidate_bundle.blockers, [
+  'package_private',
+  'non_production_warning',
+  'native_binary_build_pending',
+  'signing_blocked'
+]);
+assert.equal(artifact.release_candidate_bundle.redacts_local_paths, true);
+assert.equal(artifact.release_candidate_bundle.redacts_signing_secrets, true);
+assert.equal(JSON.stringify(artifact.release_candidate_bundle).includes(process.cwd()), false);
 assert.equal(artifact.binary_release_readiness.format, 'divinity.release_binary_readiness.v1');
 assert.equal(artifact.binary_release_readiness.status, 'blocked');
 assert.equal(artifact.binary_release_readiness.artifact_id, 'binary_download');
@@ -314,6 +335,7 @@ for (const command of [
   'pnpm run test:package',
   'pnpm run test:package-tarball',
   'pnpm run test:binary',
+  'pnpm run test:release-bundle',
   'node apps/cli/src/index.mjs doctor',
   'node apps/cli/src/index.mjs doctor --profile source',
   'pnpm run test:deprecations',

@@ -9,8 +9,11 @@ export const RELEASE_SBOM_FORMAT = 'divinity.release_sbom.v1';
 export const RELEASE_REGISTRY_PUBLISH_READINESS_FORMAT = 'divinity.release_registry_publish_readiness.v1';
 export const RELEASE_BINARY_READINESS_FORMAT = 'divinity.release_binary_readiness.v1';
 export const RELEASE_BINARY_ARTIFACTS_FORMAT = 'divinity.release_binary_artifacts.v1';
+export const RELEASE_CANDIDATE_BUNDLE_FORMAT = 'divinity.release_candidate_bundle.v1';
+export const RELEASE_CANDIDATE_BUNDLE_READINESS_FORMAT = 'divinity.release_candidate_bundle_readiness.v1';
 export const DEFAULT_RELEASE_ARTIFACT_OUTPUT = path.join('dist', 'release-artifacts.json');
 export const DEFAULT_RELEASE_BINARY_OUTPUT = path.join('dist', 'binary');
+export const DEFAULT_RELEASE_BUNDLE_OUTPUT = path.join('dist', 'release-bundle');
 export const NPM_TOKEN_ENV = 'NPM_TOKEN';
 export const RELEASE_SIGNING_COMMAND_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND';
 export const RELEASE_SIGNING_COMMAND_ARGS_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND_ARGS';
@@ -47,6 +50,14 @@ const BINARY_RELEASE_TARGETS = [
 
 function cleanString(value) {
   return String(value || '').trim();
+}
+
+function defaultNpmCommand() {
+  return process.platform === 'win32' ? 'npm.cmd' : 'npm';
+}
+
+function normalizedRelativePath(from, to) {
+  return path.relative(from, to).split(path.sep).join('/');
 }
 
 function skippedIntegrityPath(relativePath) {
@@ -102,6 +113,10 @@ function sha256File(cwd, filePath) {
 
 function sha256Bytes(value) {
   return createHash('sha256').update(value).digest('hex');
+}
+
+function sha256Absolute(filePath) {
+  return createHash('sha256').update(readFileSync(filePath)).digest('hex');
 }
 
 function buildArtifactIntegrity(packageFiles, cwd) {
@@ -466,6 +481,42 @@ function buildBinaryReleaseReadiness({ warningActive = true } = {}) {
   };
 }
 
+function releaseBundleBlockers({ publishingBlocked, warningActive = true } = {}) {
+  return [
+    ...(publishingBlocked ? ['package_private'] : []),
+    ...(warningActive ? ['non_production_warning'] : []),
+    'native_binary_build_pending',
+    'signing_blocked'
+  ];
+}
+
+function buildReleaseCandidateBundleReadiness({
+  publishingBlocked,
+  warningActive = true
+} = {}) {
+  const blockers = releaseBundleBlockers({ publishingBlocked, warningActive });
+  return {
+    format: RELEASE_CANDIDATE_BUNDLE_READINESS_FORMAT,
+    status: blockers.length ? 'blocked' : 'ready',
+    artifact_format: RELEASE_CANDIDATE_BUNDLE_FORMAT,
+    build_command: 'pnpm run release:bundle',
+    smoke_test_command: 'pnpm run test:release-bundle',
+    output_directory: DEFAULT_RELEASE_BUNDLE_OUTPUT.split(path.sep).join('/'),
+    includes: [
+      'release_artifacts_manifest',
+      'package_tarball',
+      'binary_artifacts_manifest',
+      'bundle_checksums'
+    ],
+    blockers,
+    redacts_local_paths: true,
+    redacts_signing_secrets: true,
+    reason: blockers.length
+      ? 'Release candidate bundles can be generated for review, but public package and signed native binary distribution remain blocked by release gates.'
+      : 'Release candidate bundle metadata is ready once release gates pass.'
+  };
+}
+
 export function buildReleaseArtifactsManifest({
   cwd = process.cwd(),
   generated_by = 'packages/release-artifacts',
@@ -496,6 +547,10 @@ export function buildReleaseArtifactsManifest({
     release_sbom: buildReleaseSbom({ packageJson, packageLock }),
     artifact_integrity: buildArtifactIntegrity(packageJson.files || [], root),
     artifact_signing: buildArtifactSigning({ publishingBlocked, warningReason, env }),
+    release_candidate_bundle: buildReleaseCandidateBundleReadiness({
+      publishingBlocked,
+      warningActive: true
+    }),
     binary_release_readiness: buildBinaryReleaseReadiness({ warningActive: true }),
     registry_publish_readiness: buildRegistryPublishReadiness({
       packageJson,
@@ -556,6 +611,11 @@ export function buildReleaseArtifactsManifest({
       {
         gate_id: 'binary_artifact_smoke',
         command: 'pnpm run test:binary',
+        required: true
+      },
+      {
+        gate_id: 'release_candidate_bundle_smoke',
+        command: 'pnpm run test:release-bundle',
         required: true
       },
       {
@@ -711,6 +771,163 @@ export function writeReleaseBinaryArtifacts({
   };
 
   const manifestPath = path.join(outputDirectory, 'manifest.json');
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  return {
+    ok: true,
+    output_directory: outputDirectory,
+    checksum_path: checksumPath,
+    manifest_path: manifestPath,
+    manifest
+  };
+}
+
+function bundleArtifactEntry({ bundleDirectory, filePath, artifactId, artifactKind, extra = {} }) {
+  return {
+    artifact_id: artifactId,
+    artifact_kind: artifactKind,
+    path: normalizedRelativePath(bundleDirectory, filePath),
+    bytes: statSync(filePath).size,
+    sha256: sha256Absolute(filePath),
+    ...extra
+  };
+}
+
+function packPackageTarball({ cwd, outputDirectory, npmCommand }) {
+  mkdirSync(outputDirectory, { recursive: true });
+  const output = execFileSync(npmCommand, ['pack', '--json', '--pack-destination', outputDirectory], {
+    cwd,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  const result = JSON.parse(output);
+  if (!Array.isArray(result) || result.length !== 1 || !result[0]?.filename) {
+    throw new Error('npm pack did not return exactly one package tarball');
+  }
+  return {
+    filename: result[0].filename,
+    name: result[0].name || '',
+    version: result[0].version || '',
+    file_count: Array.isArray(result[0].files) ? result[0].files.length : 0,
+    tarball_path: path.join(outputDirectory, result[0].filename)
+  };
+}
+
+export function writeReleaseCandidateBundle({
+  output = DEFAULT_RELEASE_BUNDLE_OUTPUT,
+  cwd = process.cwd(),
+  npmCommand = defaultNpmCommand()
+} = {}) {
+  const root = path.resolve(cwd);
+  const outputDirectory = path.resolve(root, cleanString(output) || DEFAULT_RELEASE_BUNDLE_OUTPUT);
+  const packageJson = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
+  mkdirSync(outputDirectory, { recursive: true });
+
+  const releaseArtifactPath = path.join(outputDirectory, 'release-artifacts.json');
+  const releaseArtifact = buildReleaseArtifactsManifest({ cwd: root });
+  writeFileSync(releaseArtifactPath, `${JSON.stringify(releaseArtifact, null, 2)}\n`);
+
+  const packageDirectory = path.join(outputDirectory, 'package');
+  const packResult = packPackageTarball({ cwd: root, outputDirectory: packageDirectory, npmCommand });
+
+  const binaryResult = writeReleaseBinaryArtifacts({
+    cwd: root,
+    output: path.join(outputDirectory, 'binary')
+  });
+
+  const artifacts = [
+    bundleArtifactEntry({
+      bundleDirectory: outputDirectory,
+      filePath: releaseArtifactPath,
+      artifactId: 'release_artifacts_manifest',
+      artifactKind: 'release_artifacts_manifest'
+    }),
+    bundleArtifactEntry({
+      bundleDirectory: outputDirectory,
+      filePath: packResult.tarball_path,
+      artifactId: 'package_tarball',
+      artifactKind: 'package_tarball',
+      extra: {
+        package_name: packResult.name,
+        package_version: packResult.version,
+        package_file_count: packResult.file_count
+      }
+    }),
+    bundleArtifactEntry({
+      bundleDirectory: outputDirectory,
+      filePath: binaryResult.manifest_path,
+      artifactId: 'binary_artifacts_manifest',
+      artifactKind: 'binary_artifacts_manifest'
+    }),
+    bundleArtifactEntry({
+      bundleDirectory: outputDirectory,
+      filePath: binaryResult.checksum_path,
+      artifactId: 'binary_checksums',
+      artifactKind: 'checksum_manifest'
+    }),
+    ...binaryResult.manifest.artifacts.map(artifact => bundleArtifactEntry({
+      bundleDirectory: outputDirectory,
+      filePath: path.join(outputDirectory, 'binary', artifact.filename),
+      artifactId: `binary_launcher_${artifact.platform}_${artifact.arch}`,
+      artifactKind: 'binary_launcher',
+      extra: {
+        platform: artifact.platform,
+        arch: artifact.arch,
+        native_binary: false
+      }
+    }))
+  ].sort((left, right) => left.path.localeCompare(right.path));
+
+  const checksumPath = path.join(outputDirectory, 'SHA256SUMS');
+  writeFileSync(
+    checksumPath,
+    `${artifacts.map(artifact => `${artifact.sha256}  ${artifact.path}`).join('\n')}\n`
+  );
+
+  const manifestWithoutChecksum = {
+    format: RELEASE_CANDIDATE_BUNDLE_FORMAT,
+    generated_by: 'packages/release-artifacts',
+    status: 'generated',
+    public_release_ready: false,
+    package: {
+      name: packageJson.name,
+      version: packageJson.version,
+      private: packageJson.private === true
+    },
+    output_directory: DEFAULT_RELEASE_BUNDLE_OUTPUT.split(path.sep).join('/'),
+    checksums_file: 'SHA256SUMS',
+    checksum_algorithm: 'sha256',
+    redacts_local_paths: true,
+    redacts_signing_secrets: true,
+    blockers: releaseBundleBlockers({
+      publishingBlocked: packageJson.private === true,
+      warningActive: true
+    }),
+    release_gates: [
+      'pnpm run test:package-tarball',
+      'pnpm run test:binary',
+      'pnpm run test:release-artifacts',
+      'pnpm run test:release-bundle'
+    ],
+    reason: 'This bundle is for release-candidate review only; public package and signed native binary distribution remain blocked by release gates.',
+    artifacts
+  };
+
+  const manifestPath = path.join(outputDirectory, 'manifest.json');
+  writeFileSync(manifestPath, `${JSON.stringify(manifestWithoutChecksum, null, 2)}\n`);
+
+  const bundleChecksums = bundleArtifactEntry({
+    bundleDirectory: outputDirectory,
+    filePath: checksumPath,
+    artifactId: 'bundle_checksums',
+    artifactKind: 'checksum_manifest'
+  });
+  const manifest = {
+    ...manifestWithoutChecksum,
+    artifacts: [...manifestWithoutChecksum.artifacts, bundleChecksums].sort((left, right) => (
+      left.artifact_id.localeCompare(right.artifact_id)
+    ))
+  };
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
   return {

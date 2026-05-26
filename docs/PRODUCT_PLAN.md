@@ -130,6 +130,7 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: release artifacts now include redacted npm registry publish readiness metadata with provenance publish commands, `NPM_TOKEN` configured state, blockers, and token/path redaction while publishing remains blocked.
    - Bootstrap status: release artifacts now include `divinity.release_binary_readiness.v1` metadata with target filenames, future build/smoke commands, checksum/signing requirements, blockers, and path/signing-secret redaction while signed binary downloads remain blocked.
    - Bootstrap status: `release:binary` now generates `divinity.release_binary_artifacts.v1` local Node launcher artifacts plus `SHA256SUMS`, and `test:binary` smokes the current-platform launcher while public signed native binary downloads remain blocked.
+   - Bootstrap status: `release:bundle` now generates a local `divinity.release_candidate_bundle.v1` review bundle with package tarball, release metadata, binary launcher metadata, and bundle checksums, guarded by `test:release-bundle` while public package and signed binary distribution remain blocked.
    - Next production slice: add actual published package and signed binary artifacts after the production warning and `private: true` release gates are cleared.
 4. Hosted/identity/billing boundary.
    - Non-goal for the current bootstrap: hosted identity, billing, and managed secret-store operations are not implemented until local provider/tool/runtime behavior is stable.
