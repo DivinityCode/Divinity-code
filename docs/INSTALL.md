@@ -77,7 +77,7 @@ pnpm run release:bundle
 pnpm run test:release-bundle
 ```
 
-`release-status` prints the same `divinity.release_artifacts.v1` metadata as JSON. `release:artifacts` writes `dist/release-artifacts.json` with source-checkout, local pnpm-link, package-registry, and binary-download paths. `release:bundle` writes `divinity.release_candidate_bundle.v1` metadata under `dist/release-bundle/` with the package tarball, release metadata, binary launcher artifacts, and `SHA256SUMS`. Registry and binary paths remain blocked in these surfaces while the package is private and the non-production warning is active.
+`release-status` prints the same `divinity.release_artifacts.v1` metadata as JSON. `release:artifacts` writes `dist/release-artifacts.json` with source-checkout, local pnpm-link, package-registry, and binary-download paths. `release:bundle` writes `divinity.release_candidate_bundle.v1` metadata under `dist/release-bundle/` with the package tarball, release metadata, binary launcher artifacts, release attestation, and `SHA256SUMS`. Registry and binary paths remain blocked in these surfaces while the package is private and the non-production warning is active.
 
 Release source provenance is included in both surfaces. It reports the Git commit SHA, branch, repository URL from `package.json`, whether tracked source changes were present, and redaction flags. It ignores untracked files and does not print changed file paths or absolute local paths; if Git metadata is unavailable, provenance is marked unavailable without failing artifact generation.
 
@@ -90,6 +90,8 @@ Registry publish readiness is reported without leaking registry tokens. The rele
 Binary release readiness is reported without leaking local paths or signing secrets. `release:binary` writes `divinity.release_binary_artifacts.v1` metadata, Node launcher artifacts, and `SHA256SUMS` under `dist/binary/`; `test:binary` verifies those artifacts and runs the current-platform launcher against `divinity doctor`. These artifacts are not signed native binaries, so `binary_download` stays blocked until native binary packaging and signing gates are cleared.
 
 Release candidate bundle readiness is reported without leaking local paths or signing secrets. The bundle manifest stores only relative artifact paths, sha256 checksums, byte counts, release blockers, and redaction flags. It does not publish the package tarball or binary artifacts.
+
+Release attestation readiness is reported without leaking local paths or signing secrets. `dist/release-bundle/attestation.json` records package identity, source provenance, release metadata digest, subject artifact digests, release blockers, and blocked signing status so future signing work has a deterministic subject list. It is not a public release signature.
 
 The package remains marked `private` while the non-production warning is active. Published package and binary install paths are future release work.
 

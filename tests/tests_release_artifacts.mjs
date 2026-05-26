@@ -79,6 +79,30 @@ assert.deepEqual(artifact.release_candidate_bundle.blockers, [
 assert.equal(artifact.release_candidate_bundle.redacts_local_paths, true);
 assert.equal(artifact.release_candidate_bundle.redacts_signing_secrets, true);
 assert.equal(JSON.stringify(artifact.release_candidate_bundle).includes(process.cwd()), false);
+assert.equal(artifact.release_attestation.format, 'divinity.release_attestation_readiness.v1');
+assert.equal(artifact.release_attestation.status, 'blocked');
+assert.equal(artifact.release_attestation.artifact_format, 'divinity.release_attestation.v1');
+assert.equal(artifact.release_attestation.attestation_path, 'dist/release-bundle/attestation.json');
+assert.equal(artifact.release_attestation.build_command, 'pnpm run release:bundle');
+assert.equal(artifact.release_attestation.smoke_test_command, 'pnpm run test:release-bundle');
+assert.equal(artifact.release_attestation.signing_required, true);
+assert.equal(artifact.release_attestation.signing_status, 'blocked');
+assert.deepEqual(artifact.release_attestation.subject_kinds, [
+  'release_artifacts_manifest',
+  'package_tarball',
+  'binary_artifacts_manifest',
+  'binary_launcher',
+  'checksum_manifest'
+]);
+assert.deepEqual(artifact.release_attestation.blockers, [
+  'package_private',
+  'non_production_warning',
+  'native_binary_build_pending',
+  'signing_blocked'
+]);
+assert.equal(artifact.release_attestation.redacts_local_paths, true);
+assert.equal(artifact.release_attestation.redacts_signing_secrets, true);
+assert.equal(JSON.stringify(artifact.release_attestation).includes(process.cwd()), false);
 assert.equal(artifact.binary_release_readiness.format, 'divinity.release_binary_readiness.v1');
 assert.equal(artifact.binary_release_readiness.status, 'blocked');
 assert.equal(artifact.binary_release_readiness.artifact_id, 'binary_download');

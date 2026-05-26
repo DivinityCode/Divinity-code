@@ -84,7 +84,9 @@ node -e "const a=require('./dist/release-artifacts.json'); console.log(a.artifac
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.registry_publish_readiness.status, a.registry_publish_readiness.token_configured, a.registry_publish_readiness.blockers.join(','))"
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.binary_release_readiness.status, a.binary_release_readiness.supported_targets.length, a.binary_release_readiness.blockers.join(','))"
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.release_candidate_bundle.status, a.release_candidate_bundle.output_directory, a.release_candidate_bundle.blockers.join(','))"
+node -e "const a=require('./dist/release-artifacts.json'); console.log(a.release_attestation.status, a.release_attestation.attestation_path, a.release_attestation.blockers.join(','))"
 node -e "const b=require('./dist/release-bundle/manifest.json'); console.log(b.status, b.artifacts.length, b.blockers.join(','))"
+node -e "const t=require('./dist/release-bundle/attestation.json'); console.log(t.status, t.subject_count, t.signing.status)"
 ```
 
 - [ ] Confirm source provenance reports the expected commit and does not expose changed file paths or absolute local paths.
@@ -94,6 +96,7 @@ node -e "const b=require('./dist/release-bundle/manifest.json'); console.log(b.s
 - [ ] Confirm `divinity.release_binary_artifacts.v1` exists under `dist/binary/`, `SHA256SUMS` matches generated launcher bytes, and `manifest.json` stores no local absolute paths or signing secret references.
 - [ ] Confirm `divinity.release_binary_readiness.v1` lists generated Node launcher targets, blocked public-download status, checksum/signing requirements, and blockers; it must not expose local paths, signing key references, or generated binary contents.
 - [ ] Confirm `divinity.release_candidate_bundle.v1` exists under `dist/release-bundle/`, includes the package tarball, release metadata, binary metadata, and bundle `SHA256SUMS`, and stores no local absolute paths, `node_modules` paths, registry tokens, or signing secret references.
+- [ ] Confirm `divinity.release_attestation.v1` exists under `dist/release-bundle/attestation.json`, lists package/release/binary subjects with sha256 digests, reports blocked signing status, and stores no local absolute paths, `node_modules` paths, registry tokens, signing key references, or signing identities.
 - [ ] Do not publish package registry tarballs or signed binary downloads while `artifact_signing.status` is `blocked`.
 
 - [ ] Provider proxy and tool governance checks:

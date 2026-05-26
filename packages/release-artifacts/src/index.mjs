@@ -11,6 +11,8 @@ export const RELEASE_BINARY_READINESS_FORMAT = 'divinity.release_binary_readines
 export const RELEASE_BINARY_ARTIFACTS_FORMAT = 'divinity.release_binary_artifacts.v1';
 export const RELEASE_CANDIDATE_BUNDLE_FORMAT = 'divinity.release_candidate_bundle.v1';
 export const RELEASE_CANDIDATE_BUNDLE_READINESS_FORMAT = 'divinity.release_candidate_bundle_readiness.v1';
+export const RELEASE_ATTESTATION_FORMAT = 'divinity.release_attestation.v1';
+export const RELEASE_ATTESTATION_READINESS_FORMAT = 'divinity.release_attestation_readiness.v1';
 export const DEFAULT_RELEASE_ARTIFACT_OUTPUT = path.join('dist', 'release-artifacts.json');
 export const DEFAULT_RELEASE_BINARY_OUTPUT = path.join('dist', 'binary');
 export const DEFAULT_RELEASE_BUNDLE_OUTPUT = path.join('dist', 'release-bundle');
@@ -517,6 +519,36 @@ function buildReleaseCandidateBundleReadiness({
   };
 }
 
+function buildReleaseAttestationReadiness({
+  publishingBlocked,
+  warningActive = true
+} = {}) {
+  const blockers = releaseBundleBlockers({ publishingBlocked, warningActive });
+  return {
+    format: RELEASE_ATTESTATION_READINESS_FORMAT,
+    status: blockers.length ? 'blocked' : 'ready',
+    artifact_format: RELEASE_ATTESTATION_FORMAT,
+    attestation_path: `${DEFAULT_RELEASE_BUNDLE_OUTPUT.split(path.sep).join('/')}/attestation.json`,
+    build_command: 'pnpm run release:bundle',
+    smoke_test_command: 'pnpm run test:release-bundle',
+    signing_required: true,
+    signing_status: 'blocked',
+    subject_kinds: [
+      'release_artifacts_manifest',
+      'package_tarball',
+      'binary_artifacts_manifest',
+      'binary_launcher',
+      'checksum_manifest'
+    ],
+    blockers,
+    redacts_local_paths: true,
+    redacts_signing_secrets: true,
+    reason: blockers.length
+      ? 'Release attestation metadata can be generated for review, but signing and public distribution remain blocked by release gates.'
+      : 'Release attestation metadata is ready once release gates pass.'
+  };
+}
+
 export function buildReleaseArtifactsManifest({
   cwd = process.cwd(),
   generated_by = 'packages/release-artifacts',
@@ -548,6 +580,10 @@ export function buildReleaseArtifactsManifest({
     artifact_integrity: buildArtifactIntegrity(packageJson.files || [], root),
     artifact_signing: buildArtifactSigning({ publishingBlocked, warningReason, env }),
     release_candidate_bundle: buildReleaseCandidateBundleReadiness({
+      publishingBlocked,
+      warningActive: true
+    }),
+    release_attestation: buildReleaseAttestationReadiness({
       publishingBlocked,
       warningActive: true
     }),
@@ -813,6 +849,66 @@ function packPackageTarball({ cwd, outputDirectory, npmCommand }) {
   };
 }
 
+function attestationSubject(artifact) {
+  return {
+    artifact_id: artifact.artifact_id,
+    artifact_kind: artifact.artifact_kind,
+    path: artifact.path,
+    bytes: artifact.bytes,
+    sha256: artifact.sha256
+  };
+}
+
+function buildReleaseAttestation({
+  packageJson,
+  releaseArtifact,
+  releaseArtifactEntry,
+  subjects,
+  blockers
+}) {
+  return {
+    format: RELEASE_ATTESTATION_FORMAT,
+    generated_by: 'packages/release-artifacts',
+    status: 'generated',
+    predicate_type: 'divinity.release_candidate_bundle.provenance.v1',
+    public_release_ready: false,
+    package: {
+      name: packageJson.name,
+      version: packageJson.version,
+      private: packageJson.private === true
+    },
+    source_provenance: releaseArtifact.source_provenance,
+    release_metadata: {
+      path: releaseArtifactEntry.path,
+      sha256: releaseArtifactEntry.sha256,
+      bytes: releaseArtifactEntry.bytes,
+      format: releaseArtifact.format
+    },
+    build: {
+      build_type: 'local_release_candidate_bundle',
+      package_manager: packageJson.packageManager || '',
+      node_engine: packageJson.engines?.node || '',
+      commands: [
+        'pnpm run release:artifacts',
+        'npm pack --json --pack-destination package',
+        'pnpm run release:binary',
+        'pnpm run release:bundle'
+      ]
+    },
+    signing: {
+      required: true,
+      status: 'blocked',
+      blockers,
+      redacts_signing_secrets: true
+    },
+    blockers,
+    redacts_local_paths: true,
+    redacts_signing_secrets: true,
+    subject_count: subjects.length,
+    subjects
+  };
+}
+
 export function writeReleaseCandidateBundle({
   output = DEFAULT_RELEASE_BUNDLE_OUTPUT,
   cwd = process.cwd(),
@@ -835,13 +931,14 @@ export function writeReleaseCandidateBundle({
     output: path.join(outputDirectory, 'binary')
   });
 
-  const artifacts = [
-    bundleArtifactEntry({
-      bundleDirectory: outputDirectory,
-      filePath: releaseArtifactPath,
-      artifactId: 'release_artifacts_manifest',
-      artifactKind: 'release_artifacts_manifest'
-    }),
+  const releaseArtifactEntry = bundleArtifactEntry({
+    bundleDirectory: outputDirectory,
+    filePath: releaseArtifactPath,
+    artifactId: 'release_artifacts_manifest',
+    artifactKind: 'release_artifacts_manifest'
+  });
+  const initialArtifacts = [
+    releaseArtifactEntry,
     bundleArtifactEntry({
       bundleDirectory: outputDirectory,
       filePath: packResult.tarball_path,
@@ -878,6 +975,30 @@ export function writeReleaseCandidateBundle({
     }))
   ].sort((left, right) => left.path.localeCompare(right.path));
 
+  const blockers = releaseBundleBlockers({
+    publishingBlocked: packageJson.private === true,
+    warningActive: true
+  });
+  const attestationPath = path.join(outputDirectory, 'attestation.json');
+  const attestation = buildReleaseAttestation({
+    packageJson,
+    releaseArtifact,
+    releaseArtifactEntry,
+    subjects: initialArtifacts.map(attestationSubject),
+    blockers
+  });
+  writeFileSync(attestationPath, `${JSON.stringify(attestation, null, 2)}\n`);
+
+  const artifacts = [
+    ...initialArtifacts,
+    bundleArtifactEntry({
+      bundleDirectory: outputDirectory,
+      filePath: attestationPath,
+      artifactId: 'release_attestation',
+      artifactKind: 'release_attestation'
+    })
+  ].sort((left, right) => left.path.localeCompare(right.path));
+
   const checksumPath = path.join(outputDirectory, 'SHA256SUMS');
   writeFileSync(
     checksumPath,
@@ -899,10 +1020,7 @@ export function writeReleaseCandidateBundle({
     checksum_algorithm: 'sha256',
     redacts_local_paths: true,
     redacts_signing_secrets: true,
-    blockers: releaseBundleBlockers({
-      publishingBlocked: packageJson.private === true,
-      warningActive: true
-    }),
+    blockers,
     release_gates: [
       'pnpm run test:package-tarball',
       'pnpm run test:binary',
