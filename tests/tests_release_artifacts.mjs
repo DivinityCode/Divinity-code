@@ -5,6 +5,8 @@ import { existsSync, mkdtempSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 
+import { buildReleaseArtifactsManifest } from '../packages/release-artifacts/src/index.mjs';
+
 function sha256(filePath) {
   return createHash('sha256').update(readFileSync(filePath)).digest('hex');
 }
@@ -76,6 +78,8 @@ assert.equal(artifact.artifact_signing.status, 'blocked');
 assert.match(artifact.artifact_signing.reason, /non-production warning|private=true/);
 assert.equal(artifact.artifact_signing.key_source_required, true);
 assert.deepEqual(artifact.artifact_signing.allowed_algorithms, ['cosign', 'minisign', 'sigstore']);
+assert.equal(artifact.artifact_signing.configuration.status, 'not_configured');
+assert.equal(artifact.artifact_signing.configuration.ready_when_release_gates_clear, false);
 assert.ok(artifact.artifact_signing.targets.some(target => (
   target.artifact_id === 'source_integrity_manifest' &&
   target.digest_algorithm === 'sha256' &&
@@ -85,6 +89,36 @@ assert.ok(artifact.artifact_signing.targets.some(target => (
   target.artifact_id === 'binary_download' &&
   target.signature_status === 'blocked'
 )));
+
+const configuredSigningArtifact = buildReleaseArtifactsManifest({
+  cwd: process.cwd(),
+  env: {
+    DIVINITY_RELEASE_SIGNING_COMMAND: process.execPath,
+    DIVINITY_RELEASE_SIGNING_COMMAND_ARGS: JSON.stringify(['--version']),
+    DIVINITY_RELEASE_SIGNING_KEY_REF: 'secret://divinity/release/signing-key',
+    DIVINITY_RELEASE_SIGNING_IDENTITY: 'release@example.com'
+  }
+});
+assert.equal(configuredSigningArtifact.artifact_signing.status, 'blocked');
+assert.equal(configuredSigningArtifact.artifact_signing.configuration.status, 'configured');
+assert.equal(configuredSigningArtifact.artifact_signing.configuration.command_configured, true);
+assert.equal(configuredSigningArtifact.artifact_signing.configuration.command_absolute, true);
+assert.equal(configuredSigningArtifact.artifact_signing.configuration.command_args_configured, true);
+assert.equal(configuredSigningArtifact.artifact_signing.configuration.key_ref_configured, true);
+assert.equal(configuredSigningArtifact.artifact_signing.configuration.identity_configured, true);
+assert.equal(configuredSigningArtifact.artifact_signing.configuration.ready_when_release_gates_clear, true);
+assert.equal(JSON.stringify(configuredSigningArtifact).includes('secret://divinity/release/signing-key'), false);
+assert.equal(JSON.stringify(configuredSigningArtifact).includes('release@example.com'), false);
+
+const invalidSigningArtifact = buildReleaseArtifactsManifest({
+  cwd: process.cwd(),
+  env: {
+    DIVINITY_RELEASE_SIGNING_COMMAND: 'cosign',
+    DIVINITY_RELEASE_SIGNING_COMMAND_ARGS: JSON.stringify(['sign'])
+  }
+});
+assert.equal(invalidSigningArtifact.artifact_signing.configuration.status, 'invalid');
+assert.match(invalidSigningArtifact.artifact_signing.configuration.reason, /absolute executable path/);
 
 const installPathsById = new Map(artifact.install_paths.map(installPath => [installPath.install_path_id, installPath]));
 for (const installPathId of [

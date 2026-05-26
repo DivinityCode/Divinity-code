@@ -4,6 +4,10 @@ import path from 'path';
 
 export const RELEASE_ARTIFACTS_FORMAT = 'divinity.release_artifacts.v1';
 export const DEFAULT_RELEASE_ARTIFACT_OUTPUT = path.join('dist', 'release-artifacts.json');
+export const RELEASE_SIGNING_COMMAND_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND';
+export const RELEASE_SIGNING_COMMAND_ARGS_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND_ARGS';
+export const RELEASE_SIGNING_KEY_REF_ENV = 'DIVINITY_RELEASE_SIGNING_KEY_REF';
+export const RELEASE_SIGNING_IDENTITY_ENV = 'DIVINITY_RELEASE_SIGNING_IDENTITY';
 
 function cleanString(value) {
   return String(value || '').trim();
@@ -74,7 +78,84 @@ function buildArtifactIntegrity(packageFiles, cwd) {
   };
 }
 
-function buildArtifactSigning({ publishingBlocked, warningReason }) {
+function signingCommandArgsStatus({ env = process.env } = {}) {
+  const rawArgs = cleanString(env[RELEASE_SIGNING_COMMAND_ARGS_ENV]);
+  if (!rawArgs) {
+    return {
+      configured: false,
+      valid: true
+    };
+  }
+  try {
+    const parsed = JSON.parse(rawArgs);
+    if (!Array.isArray(parsed) || parsed.some(value => typeof value !== 'string')) {
+      return {
+        configured: true,
+        valid: false,
+        reason: `${RELEASE_SIGNING_COMMAND_ARGS_ENV} must be a JSON array of strings`
+      };
+    }
+  } catch {
+    return {
+      configured: true,
+      valid: false,
+      reason: `${RELEASE_SIGNING_COMMAND_ARGS_ENV} must be a JSON array of strings`
+    };
+  }
+  return {
+    configured: true,
+    valid: true
+  };
+}
+
+function buildSigningConfiguration({ env = process.env } = {}) {
+  const command = cleanString(env[RELEASE_SIGNING_COMMAND_ENV]);
+  const keyRefConfigured = Boolean(cleanString(env[RELEASE_SIGNING_KEY_REF_ENV]));
+  const identityConfigured = Boolean(cleanString(env[RELEASE_SIGNING_IDENTITY_ENV]));
+  const commandArgs = signingCommandArgsStatus({ env });
+  const commandConfigured = Boolean(command);
+  const commandAbsolute = commandConfigured ? path.isAbsolute(command) : false;
+
+  const base = {
+    command_env_var: RELEASE_SIGNING_COMMAND_ENV,
+    command_args_env_var: RELEASE_SIGNING_COMMAND_ARGS_ENV,
+    key_ref_env_var: RELEASE_SIGNING_KEY_REF_ENV,
+    identity_env_var: RELEASE_SIGNING_IDENTITY_ENV,
+    command_configured: commandConfigured,
+    command_absolute: commandAbsolute,
+    command_args_configured: commandArgs.configured,
+    key_ref_configured: keyRefConfigured,
+    identity_configured: identityConfigured
+  };
+
+  if (commandConfigured && !commandAbsolute) {
+    return {
+      ...base,
+      status: 'invalid',
+      ready_when_release_gates_clear: false,
+      reason: `${RELEASE_SIGNING_COMMAND_ENV} must be an absolute executable path`
+    };
+  }
+  if (!commandArgs.valid) {
+    return {
+      ...base,
+      status: 'invalid',
+      ready_when_release_gates_clear: false,
+      reason: commandArgs.reason
+    };
+  }
+  const configured = commandConfigured && keyRefConfigured && identityConfigured;
+  return {
+    ...base,
+    status: configured ? 'configured' : 'not_configured',
+    ready_when_release_gates_clear: configured,
+    reason: configured
+      ? 'Release signing inputs are configured but release gates still control publishing and signing.'
+      : 'Release signing command, key reference, and identity are not fully configured.'
+  };
+}
+
+function buildArtifactSigning({ publishingBlocked, warningReason, env = process.env }) {
   const blockedReason = publishingBlocked
     ? `package.json private=true and the non-production warning block signing release artifacts. ${warningReason}`
     : `The non-production warning blocks signing release artifacts. ${warningReason}`;
@@ -84,6 +165,7 @@ function buildArtifactSigning({ publishingBlocked, warningReason }) {
     reason: blockedReason,
     key_source_required: true,
     allowed_algorithms: ['cosign', 'minisign', 'sigstore'],
+    configuration: buildSigningConfiguration({ env }),
     targets: [
       {
         artifact_id: 'source_integrity_manifest',
@@ -111,7 +193,8 @@ function buildArtifactSigning({ publishingBlocked, warningReason }) {
 
 export function buildReleaseArtifactsManifest({
   cwd = process.cwd(),
-  generated_by = 'packages/release-artifacts'
+  generated_by = 'packages/release-artifacts',
+  env = process.env
 } = {}) {
   const root = path.resolve(cwd);
   const packageJson = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
@@ -133,7 +216,7 @@ export function buildReleaseArtifactsManifest({
     },
     non_production_warning_active: true,
     artifact_integrity: buildArtifactIntegrity(packageJson.files || [], root),
-    artifact_signing: buildArtifactSigning({ publishingBlocked, warningReason }),
+    artifact_signing: buildArtifactSigning({ publishingBlocked, warningReason, env }),
     install_paths: [
       {
         install_path_id: 'source_checkout',

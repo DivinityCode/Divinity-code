@@ -8,7 +8,11 @@ function runCli(args = [], options = {}) {
   const output = execFileSync(
     process.execPath,
     [path.resolve('apps/cli/src/index.mjs'), ...args],
-    { cwd: options.cwd || process.cwd(), encoding: 'utf8' }
+    {
+      cwd: options.cwd || process.cwd(),
+      encoding: 'utf8',
+      env: options.env || process.env
+    }
   );
   return JSON.parse(output);
 }
@@ -24,6 +28,7 @@ assert.equal(result.release.generated_by, 'packages/release-artifacts');
 assert.equal(result.release.package.private, true);
 assert.equal(result.release.non_production_warning_active, true);
 assert.equal(result.release.artifact_signing.status, 'blocked');
+assert.equal(result.release.artifact_signing.configuration.status, 'not_configured');
 
 const installPathsById = new Map(result.release.install_paths.map(installPath => [installPath.install_path_id, installPath]));
 assert.equal(installPathsById.get('source_checkout').status, 'available');
@@ -41,6 +46,22 @@ for (const command of [
     `missing release gate: ${command}`
   );
 }
+
+const configuredResult = runCli(['release-status'], {
+  cwd: mkdtempSync(path.join(tmpdir(), 'divinity-release-status-signing-')),
+  env: {
+    ...process.env,
+    DIVINITY_RELEASE_SIGNING_COMMAND: process.execPath,
+    DIVINITY_RELEASE_SIGNING_COMMAND_ARGS: JSON.stringify(['--version']),
+    DIVINITY_RELEASE_SIGNING_KEY_REF: 'secret://divinity/release/signing-key',
+    DIVINITY_RELEASE_SIGNING_IDENTITY: 'release@example.com'
+  }
+});
+assert.equal(configuredResult.release.artifact_signing.status, 'blocked');
+assert.equal(configuredResult.release.artifact_signing.configuration.status, 'configured');
+assert.equal(configuredResult.release.artifact_signing.configuration.ready_when_release_gates_clear, true);
+assert.equal(JSON.stringify(configuredResult).includes('secret://divinity/release/signing-key'), false);
+assert.equal(JSON.stringify(configuredResult).includes('release@example.com'), false);
 
 const serialized = JSON.stringify(result);
 for (const disallowed of [

@@ -122,6 +122,7 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: `divinity release-status` exposes the same release readiness, install-path, integrity, signing, package-private, and non-production warning metadata without writing files, guarded by `test:release-status`.
    - Bootstrap status: `test:deprecations` guards public docs, release artifact gates, and provider proxy token-field guidance against deprecated install/provider instructions.
    - Bootstrap status: release artifacts now include sha256 source integrity entries and explicit signing readiness metadata, blocked while the non-production warning and `private: true` gates remain active.
+   - Bootstrap status: release signing input readiness is now explicit and redacted through absolute signing command, JSON-array args, key-reference, and identity configuration metadata, without storing those values or unblocking publishing while gates remain active.
    - Next production slice: add actual published package and signed binary artifacts after the production warning and `private: true` release gates are cleared.
 4. Hosted/identity/billing boundary.
    - Non-goal for the current bootstrap: hosted identity, billing, and managed secret-store operations are not implemented until local provider/tool/runtime behavior is stable.
