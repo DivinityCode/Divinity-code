@@ -39,7 +39,7 @@ The API write path requires an `actor` and `reason` so operator-owned credential
 
 Secret storage uses an adapter boundary. The default adapter is `local_file`, backed by `DIVINITY_PROVIDER_SECRET_STORE_PATH` and `DIVINITY_PROVIDER_SECRET_STORE_KEY`. Hosted deployments can inject a hosted operator adapter into `storeProviderSecret()`, `providerSecretReadiness()`, and `createProviderCredentialResolver()` while preserving the same redacted response and audit shapes.
 
-`DIVINITY_PROVIDER_SECRET_STORE_BACKEND=hosted_memory` selects an in-memory hosted-style adapter for tests and local runtime harnesses. It is not a production secret manager. Production deployments should inject an approved managed secret-store adapter and keep the manifest as an allowlist of provider ids, secret refs, and credential environment variable names.
+`DIVINITY_PROVIDER_SECRET_STORE_BACKEND=hosted_memory` selects an in-memory hosted-style adapter only when `DIVINITY_ENABLE_TEST_SECRET_STORE_BACKEND=1` is also set. This path is for tests and local runtime harnesses only; it is not a production secret manager. Production deployments should inject an approved managed secret-store adapter and keep the manifest as an allowlist of provider ids, secret refs, and credential environment variable names.
 
 Readiness and write responses include `store_backend_id` and `store_backend_kind` so operators can tell which backend is active. They never include the resolved credential value.
 

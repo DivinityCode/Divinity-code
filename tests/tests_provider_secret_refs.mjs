@@ -4,6 +4,7 @@ import { tmpdir } from 'os';
 import path from 'path';
 
 import {
+  createConfiguredProviderSecretStoreAdapter,
   createProviderCredentialResolver,
   createHostedProviderSecretStoreAdapter,
   loadProviderSecretRefs,
@@ -177,6 +178,21 @@ try {
   });
   assert.deepEqual(hostedResolver.configuredSecretRefs(runtime), [secretRef]);
   assert.equal(hostedResolver.resolveCredential(runtime), 'hosted-adapter-secret');
+
+  assert.throws(
+    () => createConfiguredProviderSecretStoreAdapter({
+      env: { DIVINITY_PROVIDER_SECRET_STORE_BACKEND: 'hosted_memory' }
+    }),
+    /test-only provider secret store backend/
+  );
+  const configuredHostedAdapter = createConfiguredProviderSecretStoreAdapter({
+    env: {
+      DIVINITY_PROVIDER_SECRET_STORE_BACKEND: 'hosted_memory',
+      DIVINITY_ENABLE_TEST_SECRET_STORE_BACKEND: '1'
+    }
+  });
+  assert.equal(configuredHostedAdapter.backend_id, 'hosted_memory');
+  assert.equal(configuredHostedAdapter.backend_kind, 'hosted_operator');
 
   assert.throws(
     () => storeProviderSecret({

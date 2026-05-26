@@ -42,6 +42,7 @@ writeFileSync(providerCatalogPath, JSON.stringify({
 process.env.DIVINITY_API_AUTOSTART = '0';
 process.env.DIVINITY_PROVIDER_SECRET_REFS_PATH = secretRefsPath;
 process.env.DIVINITY_PROVIDER_SECRET_STORE_BACKEND = 'hosted_memory';
+process.env.DIVINITY_ENABLE_TEST_SECRET_STORE_BACKEND = '1';
 process.env.DIVINITY_PROVIDER_SECRET_STORE_PATH = secretStorePath;
 process.env.DIVINITY_PROVIDER_SECRET_STORE_KEY = 'api-route-secret-store-key';
 process.env.DIVINITY_PROVIDER_CATALOG_PATH = providerCatalogPath;
