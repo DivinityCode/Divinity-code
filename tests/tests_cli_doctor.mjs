@@ -77,6 +77,7 @@ assert.match(runtimeChecksById.get('cli_entrypoint').summary, /apps\/cli\/src\/i
 assert.match(runtimeChecksById.get('package_manager').summary, /(npm|pnpm)/);
 assert.match(runtimeChecksById.get('provider_catalog').summary, /providers/);
 assert.match(runtimeChecksById.get('provider_secret_store_backends').summary, /hashicorp_vault/);
+assert.match(runtimeChecksById.get('provider_secret_store_backends').summary, /onepassword_secrets_automation/);
 assert.match(runtimeChecksById.get('provider_secret_store_backends').summary, /production backends/);
 assert.match(runtimeChecksById.get('toolset_catalog').summary, /toolsets/);
 assert.match(runtimeChecksById.get('llm_provider_credentials').summary, /(configured|not configured)/);

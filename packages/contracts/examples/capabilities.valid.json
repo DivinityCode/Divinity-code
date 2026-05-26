@@ -75,6 +75,24 @@
       "redacts_secret_values": true,
       "redacts_deployment_secret_ids": true,
       "test_only": false
+    },
+    {
+      "format": "divinity.provider_secret_store_backend.v1",
+      "backend_id": "onepassword_secrets_automation",
+      "backend_kind": "managed_secret_store",
+      "display_name": "1Password Secrets Automation",
+      "description": "1Password broker-command adapter with public secret refs mapped to deployment secret ids.",
+      "production_ready": true,
+      "broker_command_required": true,
+      "configuration_env_vars": [
+        "DIVINITY_ONEPASSWORD_COMMAND",
+        "DIVINITY_ONEPASSWORD_COMMAND_ARGS",
+        "DIVINITY_ONEPASSWORD_TIMEOUT_MS",
+        "DIVINITY_ONEPASSWORD_SECRET_IDS"
+      ],
+      "redacts_secret_values": true,
+      "redacts_deployment_secret_ids": true,
+      "test_only": false
     }
   ],
   "toolsets": [

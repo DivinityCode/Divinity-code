@@ -52,6 +52,7 @@ try {
     'gcp_secret_manager',
     'azure_key_vault',
     'hashicorp_vault',
+    'onepassword_secrets_automation',
     'hosted_memory'
   ]);
   assert.ok(secretStoreBackends.every(backend => backend.format === 'divinity.provider_secret_store_backend.v1'));
@@ -536,6 +537,72 @@ try {
       }
     }).configuredSecretRefs(),
     /secret path mapping/
+  );
+
+  const onePasswordManagedStorePath = path.join(tmpRoot, 'onepassword-managed-store.json');
+  const onePasswordSecretId = 'op://Divinity/Providers/OpenRouter/API Key';
+  const onePasswordManagedEnv = {
+    DIVINITY_PROVIDER_SECRET_REFS_PATH: manifestPath,
+    DIVINITY_PROVIDER_SECRET_STORE_BACKEND: 'onepassword_secrets_automation',
+    DIVINITY_ONEPASSWORD_COMMAND: process.execPath,
+    DIVINITY_ONEPASSWORD_COMMAND_ARGS: JSON.stringify([
+      path.resolve('tests/fixtures/provider-secret-store-command.mjs')
+    ]),
+    DIVINITY_ONEPASSWORD_SECRET_IDS: JSON.stringify({
+      [secretRef]: onePasswordSecretId
+    }),
+    DIVINITY_TEST_MANAGED_SECRET_STORE_PATH: onePasswordManagedStorePath
+  };
+  const onePasswordManagedRecord = storeProviderSecret({
+    env: onePasswordManagedEnv,
+    provider_id: 'hosted_secret_mock',
+    secret_ref: secretRef,
+    credential_env_var: 'HOSTED_SECRET_MOCK_API_KEY',
+    secret_value: 'onepassword-managed-secret-value',
+    actor: 'operator@example.com',
+    reason: 'Authorized 1Password Secrets Automation onboarding',
+    updated_at: '2026-05-26T15:00:00.000Z'
+  });
+  assert.equal(onePasswordManagedRecord.format, 'divinity.provider_secret_store_record.v1');
+  assert.equal(onePasswordManagedRecord.store_backend_id, 'onepassword_secrets_automation');
+  assert.equal(onePasswordManagedRecord.store_backend_kind, 'managed_secret_store');
+  assert.equal(onePasswordManagedRecord.algorithm, 'managed-by-onepassword-secrets-automation');
+  assert.equal(JSON.stringify(onePasswordManagedRecord).includes('onepassword-managed-secret-value'), false);
+  assert.equal(JSON.stringify(onePasswordManagedRecord).includes(onePasswordSecretId), false);
+
+  const onePasswordManagedReadiness = providerSecretReadiness({
+    env: onePasswordManagedEnv
+  });
+  assert.equal(onePasswordManagedReadiness.store_configured, true);
+  assert.equal(onePasswordManagedReadiness.store_backend_id, 'onepassword_secrets_automation');
+  assert.equal(onePasswordManagedReadiness.store_backend_kind, 'managed_secret_store');
+  assert.equal(onePasswordManagedReadiness.providers[0].credential_configured, true);
+  assert.equal(onePasswordManagedReadiness.providers[0].credential_source, 'store');
+  assert.equal(JSON.stringify(onePasswordManagedReadiness).includes('onepassword-managed-secret-value'), false);
+  assert.equal(JSON.stringify(onePasswordManagedReadiness).includes(onePasswordSecretId), false);
+
+  const onePasswordManagedResolver = createProviderCredentialResolver({
+    env: onePasswordManagedEnv
+  });
+  assert.deepEqual(onePasswordManagedResolver.configuredSecretRefs(runtime), [secretRef]);
+  assert.equal(onePasswordManagedResolver.resolveCredential(runtime), 'onepassword-managed-secret-value');
+  assert.throws(
+    () => createConfiguredProviderSecretStoreAdapter({
+      env: {
+        ...onePasswordManagedEnv,
+        DIVINITY_ONEPASSWORD_COMMAND: 'op'
+      }
+    }).configuredSecretRefs(),
+    /absolute executable path/
+  );
+  assert.throws(
+    () => createConfiguredProviderSecretStoreAdapter({
+      env: {
+        ...onePasswordManagedEnv,
+        DIVINITY_ONEPASSWORD_SECRET_IDS: '{}'
+      }
+    }).configuredSecretRefs(),
+    /secret id mapping/
   );
 
   assert.throws(

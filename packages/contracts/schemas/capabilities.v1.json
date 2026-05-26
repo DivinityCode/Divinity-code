@@ -132,7 +132,7 @@
           "format": { "const": "divinity.provider_secret_store_backend.v1" },
           "backend_id": {
             "type": "string",
-            "enum": ["local_file", "external_command", "aws_secrets_manager", "gcp_secret_manager", "azure_key_vault", "hashicorp_vault", "hosted_memory"]
+            "enum": ["local_file", "external_command", "aws_secrets_manager", "gcp_secret_manager", "azure_key_vault", "hashicorp_vault", "onepassword_secrets_automation", "hosted_memory"]
           },
           "backend_kind": {
             "type": "string",
