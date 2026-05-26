@@ -74,11 +74,13 @@ pnpm run test:release-status
 
 ```bash
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.source_provenance.status, a.source_provenance.short_commit_sha, a.source_provenance.tracked_changes)"
+node -e "const a=require('./dist/release-artifacts.json'); console.log(a.release_sbom.status, a.release_sbom.component_count, a.release_sbom.redacts_local_paths)"
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.artifact_integrity.algorithm, a.artifact_integrity.files.length, a.artifact_signing.status)"
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.artifact_signing.configuration.status, a.artifact_signing.configuration.ready_when_release_gates_clear)"
 ```
 
 - [ ] Confirm source provenance reports the expected commit and does not expose changed file paths or absolute local paths.
+- [ ] Confirm `divinity.release_sbom.v1` was generated from `package.json` and `package-lock.json`, includes package/dependency names, versions, direct/transitive relationship, requested ranges, and license strings when present, and does not expose local absolute paths, `node_modules` paths, registry URLs, or lockfile integrity values.
 - [ ] If testing release signing readiness, configure `DIVINITY_RELEASE_SIGNING_COMMAND` as an absolute executable path, `DIVINITY_RELEASE_SIGNING_COMMAND_ARGS` as a JSON array of strings, and signing key/identity references through `DIVINITY_RELEASE_SIGNING_KEY_REF` and `DIVINITY_RELEASE_SIGNING_IDENTITY`. Confirm the generated metadata reports readiness without printing those values.
 - [ ] Do not publish package registry tarballs or signed binary downloads while `artifact_signing.status` is `blocked`.
 

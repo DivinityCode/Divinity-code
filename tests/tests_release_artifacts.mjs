@@ -12,6 +12,7 @@ function sha256(filePath) {
 }
 
 const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
+const packageLock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
 const tmpDir = mkdtempSync(path.join(tmpdir(), 'divinity-release-artifacts-'));
 const outputPath = path.join(tmpDir, 'release-artifacts.json');
 
@@ -50,6 +51,52 @@ assert.equal(typeof artifact.source_provenance.tracked_changes, 'boolean');
 assert.equal(artifact.source_provenance.untracked_files_ignored, true);
 assert.equal(artifact.source_provenance.redacts_paths, true);
 assert.equal(JSON.stringify(artifact.source_provenance).includes('tests/tests_release_artifacts.mjs'), false);
+
+assert.equal(artifact.release_sbom.format, 'divinity.release_sbom.v1');
+assert.equal(artifact.release_sbom.status, 'generated');
+assert.equal(artifact.release_sbom.source, 'package-lock.json');
+assert.equal(artifact.release_sbom.package_manager, 'npm');
+assert.equal(artifact.release_sbom.lockfile_version, packageLock.lockfileVersion);
+assert.equal(artifact.release_sbom.generated_from_package_files, true);
+assert.equal(artifact.release_sbom.redacts_local_paths, true);
+assert.equal(artifact.release_sbom.redacts_registry_urls, true);
+assert.equal(artifact.release_sbom.redacts_integrity_values, true);
+assert.equal(artifact.release_sbom.component_count, artifact.release_sbom.components.length);
+assert.ok(artifact.release_sbom.component_count >= 4);
+
+const sbomComponentsById = new Map(artifact.release_sbom.components.map(component => [component.component_id, component]));
+const rootComponent = sbomComponentsById.get('npm:divinity-code@0.1.0');
+assert.ok(rootComponent, 'missing root SBOM component');
+assert.equal(rootComponent.component_type, 'application');
+assert.equal(rootComponent.dependency_type, 'root');
+assert.equal(rootComponent.direct, false);
+
+const ajvComponent = artifact.release_sbom.components.find(component => component.name === 'ajv');
+assert.ok(ajvComponent, 'missing ajv SBOM component');
+assert.equal(ajvComponent.version, packageLock.packages['node_modules/ajv'].version);
+assert.equal(ajvComponent.component_type, 'library');
+assert.equal(ajvComponent.dependency_type, 'development');
+assert.equal(ajvComponent.direct, true);
+assert.equal(ajvComponent.requested_range, packageJson.devDependencies.ajv);
+
+const ajvFormatsComponent = artifact.release_sbom.components.find(component => component.name === 'ajv-formats');
+assert.ok(ajvFormatsComponent, 'missing ajv-formats SBOM component');
+assert.equal(ajvFormatsComponent.dependency_type, 'development');
+assert.equal(ajvFormatsComponent.direct, true);
+
+const transitiveComponent = artifact.release_sbom.components.find(component => component.name === 'fast-deep-equal');
+assert.ok(transitiveComponent, 'missing transitive SBOM component');
+assert.equal(transitiveComponent.dependency_type, 'transitive');
+assert.equal(transitiveComponent.direct, false);
+assert.equal(transitiveComponent.requested_range, '');
+
+const componentIds = artifact.release_sbom.components.map(component => component.component_id);
+assert.deepEqual([...componentIds].sort(), componentIds);
+for (const component of artifact.release_sbom.components) {
+  assert.equal(Object.hasOwn(component, 'path'), false);
+  assert.equal(Object.hasOwn(component, 'resolved'), false);
+  assert.equal(Object.hasOwn(component, 'integrity'), false);
+}
 
 const unavailableProvenanceArtifact = buildReleaseArtifactsManifest({
   cwd: process.cwd(),
@@ -184,7 +231,9 @@ for (const disallowed of [
   'npx divinity',
   'public shared key',
   'no-signup',
-  'bypass'
+  'bypass',
+  'node_modules/',
+  process.cwd()
 ]) {
   assert.equal(serialized.includes(disallowed), false, `release artifact must not include ${disallowed}`);
 }
