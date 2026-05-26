@@ -39,6 +39,9 @@ jobs:
       - name: Validate package tarball smoke
         run: npm run test:package-tarball
 
+      - name: Validate registry publish dry-run
+        run: npm run test:release-registry-dry-run
+
       - name: Validate binary artifact smoke
         run: npm run test:binary
 
