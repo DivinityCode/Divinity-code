@@ -121,6 +121,7 @@ try {
     'pnpm run test:release-bundle',
     'pnpm run test:release-artifacts',
     'pnpm run test:release-status',
+    'pnpm run test:release-promotion-execute',
     'pnpm run validate:contracts',
     'pnpm run test:smoke',
     'pnpm test'

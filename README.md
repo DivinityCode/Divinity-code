@@ -93,6 +93,8 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - Run `pnpm run test:release-signatures` to validate signature artifacts, checksum metadata, and signing-secret/path redaction without publishing.
 - Run `pnpm run release:promotion-preflight` to generate a blocked public-promotion preflight manifest before any package publish or signed binary release.
 - Run `pnpm run test:release-promotion` to validate promotion blockers, required artifacts, gate commands, and secret redaction.
+- Run `pnpm run release:promotion-execute` only in a cleared release environment; it stays blocked unless release gates clear and `DIVINITY_PUBLIC_RELEASE_CONFIRM=publish` is set.
+- Run `pnpm run test:release-promotion-execute` to validate the promotion execution guard and redacted mock publish/upload path.
 - Run `pnpm run test:release-artifacts` to validate the generated release artifact manifest, install-path gates, release gate clearance audit, public readiness audit, signing, registry publish, binary release readiness, bundle readiness metadata, attestation readiness metadata, and promotion preflight metadata.
 - Run `pnpm run test:release-status` to validate the CLI release readiness surface.
 - Run `pnpm run test:public-docs` to validate public install, quickstart, upgrade, and release checklist docs.

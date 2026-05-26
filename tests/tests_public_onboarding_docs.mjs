@@ -50,6 +50,7 @@ assertIncludes(install, 'pnpm run release:signed-native-binary', 'install guide'
 assertIncludes(install, 'pnpm run release:bundle', 'install guide');
 assertIncludes(install, 'pnpm run release:signatures', 'install guide');
 assertIncludes(install, 'pnpm run release:promotion-preflight', 'install guide');
+assertIncludes(install, 'pnpm run release:promotion-execute', 'install guide');
 assertIncludes(install, 'divinity.release_gate_clearance.v1', 'install guide');
 assertIncludes(install, 'pnpm run test:release-artifacts', 'install guide');
 assertIncludes(install, 'pnpm run test:public-readiness-audit', 'install guide');
@@ -60,6 +61,7 @@ assertIncludes(install, 'pnpm run test:signed-native-binary', 'install guide');
 assertIncludes(install, 'pnpm run test:release-bundle', 'install guide');
 assertIncludes(install, 'pnpm run test:release-signatures', 'install guide');
 assertIncludes(install, 'pnpm run test:release-promotion', 'install guide');
+assertIncludes(install, 'pnpm run test:release-promotion-execute', 'install guide');
 assertIncludes(install, 'pnpm test', 'install guide');
 assertIncludes(install, 'npm is optional', 'install guide');
 assertIncludes(install, 'doctor --profile source', 'install guide');
@@ -107,6 +109,7 @@ for (const item of [
   'pnpm run release:bundle',
   'pnpm run release:signatures',
   'pnpm run release:promotion-preflight',
+  'pnpm run release:promotion-execute',
   'pnpm run test:release-artifacts',
   'pnpm run test:public-readiness-audit',
   'pnpm run test:release-registry-dry-run',
@@ -116,6 +119,7 @@ for (const item of [
   'pnpm run test:release-bundle',
   'pnpm run test:release-signatures',
   'pnpm run test:release-promotion',
+  'pnpm run test:release-promotion-execute',
   'divinity.release_gate_clearance.v1',
   'divinity.release_public_readiness_audit.v1',
   'divinity.release_registry_publish_dry_run.v1',
@@ -123,6 +127,7 @@ for (const item of [
   'divinity.release_native_binary_artifacts.v1',
   'divinity.release_signed_native_binary_artifacts.v1',
   'divinity.release_signature_artifacts.v1',
+  'divinity.release_promotion_execution.v1',
   'release artifact integrity and signing readiness',
   'pnpm run validate:contracts',
   'pnpm run test:deprecations',

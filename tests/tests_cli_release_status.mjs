@@ -306,7 +306,49 @@ assert.ok(result.release.release_promotion_preflight.release_gates.some(gate => 
   gate.gate_id === 'release_signature_artifacts' &&
   gate.command === 'pnpm run test:release-signatures'
 )));
+assert.ok(result.release.release_promotion_preflight.release_gates.some(gate => (
+  gate.gate_id === 'promotion_execution_guard' &&
+  gate.command === 'pnpm run test:release-promotion-execute'
+)));
 assert.equal(JSON.stringify(result.release.release_promotion_preflight).includes(process.cwd()), false);
+assert.equal(result.release.release_promotion_execution.format, 'divinity.release_promotion_execution.v1');
+assert.equal(result.release.release_promotion_execution.status, 'blocked');
+assert.equal(result.release.release_promotion_execution.public_release_ready, false);
+assert.equal(result.release.release_promotion_execution.execution_attempted, false);
+assert.equal(result.release.release_promotion_execution.command, 'pnpm run release:promotion-execute');
+assert.equal(result.release.release_promotion_execution.smoke_test_command, 'pnpm run test:release-promotion-execute');
+assert.equal(result.release.release_promotion_execution.confirmation_configured, false);
+assert.equal(result.release.release_promotion_execution.registry_publish.token_configured, false);
+assert.equal(result.release.release_promotion_execution.binary_upload.token_configured, false);
+assert.equal(result.release.release_promotion_execution.binary_upload.release_tag_configured, false);
+for (const blocker of [
+  'package_private',
+  'non_production_warning',
+  'missing_registry_token',
+  'missing_github_release_token',
+  'missing_release_tag',
+  'native_binary_build_pending',
+  'signing_blocked',
+  'missing_public_release_confirmation'
+]) {
+  assert.ok(
+    result.release.release_promotion_execution.blockers.includes(blocker),
+    `missing release promotion execution blocker: ${blocker}`
+  );
+}
+assert.deepEqual(result.release.release_promotion_execution.steps.map(step => [step.step_id, step.status]), [
+  ['registry_publish', 'skipped'],
+  ['binary_attachment_upload', 'skipped']
+]);
+assert.equal(result.release.release_promotion_execution.does_not_publish_without_clearance, true);
+assert.equal(result.release.release_promotion_execution.does_not_upload_without_clearance, true);
+assert.equal(result.release.release_promotion_execution.redacts_registry_token, true);
+assert.equal(result.release.release_promotion_execution.redacts_github_token, true);
+assert.equal(result.release.release_promotion_execution.redacts_release_tag, true);
+assert.equal(result.release.release_promotion_execution.redacts_npm_output, true);
+assert.equal(result.release.release_promotion_execution.redacts_command_paths, true);
+assert.equal(result.release.release_promotion_execution.redacts_signing_secrets, true);
+assert.equal(JSON.stringify(result.release.release_promotion_execution).includes(process.cwd()), false);
 assert.equal(result.release.binary_release_readiness.format, 'divinity.release_binary_readiness.v1');
 assert.equal(result.release.binary_release_readiness.status, 'blocked');
 assert.equal(result.release.binary_release_readiness.artifact_id, 'binary_download');
@@ -426,6 +468,7 @@ for (const command of [
   'pnpm run test:signed-native-binary',
   'pnpm run test:release-bundle',
   'pnpm run test:release-promotion',
+  'pnpm run test:release-promotion-execute',
   'pnpm run test:release-signatures',
   'pnpm run test:smoke'
 ]) {

@@ -1,6 +1,6 @@
 import { execFileSync } from 'child_process';
 import { createHash } from 'crypto';
-import { chmodSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
 import path from 'path';
 
 export const RELEASE_ARTIFACTS_FORMAT = 'divinity.release_artifacts.v1';
@@ -18,6 +18,7 @@ export const RELEASE_CANDIDATE_BUNDLE_READINESS_FORMAT = 'divinity.release_candi
 export const RELEASE_ATTESTATION_FORMAT = 'divinity.release_attestation.v1';
 export const RELEASE_ATTESTATION_READINESS_FORMAT = 'divinity.release_attestation_readiness.v1';
 export const RELEASE_PROMOTION_PREFLIGHT_FORMAT = 'divinity.release_promotion_preflight.v1';
+export const RELEASE_PROMOTION_EXECUTION_FORMAT = 'divinity.release_promotion_execution.v1';
 export const RELEASE_GATE_CLEARANCE_FORMAT = 'divinity.release_gate_clearance.v1';
 export const RELEASE_PUBLIC_READINESS_AUDIT_FORMAT = 'divinity.release_public_readiness_audit.v1';
 export const RELEASE_SIGNATURE_ARTIFACTS_FORMAT = 'divinity.release_signature_artifacts.v1';
@@ -32,9 +33,11 @@ export const DEFAULT_RELEASE_SIGNED_NATIVE_BINARY_OUTPUT = path.join('dist', 'si
 export const DEFAULT_RELEASE_BUNDLE_OUTPUT = path.join('dist', 'release-bundle');
 export const DEFAULT_RELEASE_SIGNATURE_OUTPUT = path.join('dist', 'release-signatures');
 export const DEFAULT_RELEASE_PROMOTION_PREFLIGHT_OUTPUT = path.join('dist', 'release-promotion-preflight.json');
+export const DEFAULT_RELEASE_PROMOTION_EXECUTION_OUTPUT = path.join('dist', 'release-promotion-execution.json');
 export const NPM_TOKEN_ENV = 'NPM_TOKEN';
 export const GITHUB_RELEASE_TOKEN_ENVS = ['GITHUB_TOKEN', 'GH_TOKEN'];
 export const GITHUB_RELEASE_TAG_ENV = 'DIVINITY_RELEASE_TAG';
+export const PUBLIC_RELEASE_CONFIRM_ENV = 'DIVINITY_PUBLIC_RELEASE_CONFIRM';
 export const RELEASE_SIGNING_COMMAND_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND';
 export const RELEASE_SIGNING_COMMAND_ARGS_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND_ARGS';
 export const RELEASE_SIGNING_KEY_REF_ENV = 'DIVINITY_RELEASE_SIGNING_KEY_REF';
@@ -104,6 +107,10 @@ function cleanString(value) {
 
 function defaultNpmCommand() {
   return process.platform === 'win32' ? 'npm.cmd' : 'npm';
+}
+
+function defaultGhCommand() {
+  return process.platform === 'win32' ? 'gh.exe' : 'gh';
 }
 
 function normalizedRelativePath(from, to) {
@@ -931,7 +938,9 @@ function promotionPreflightBlockers({
   warningActive = true,
   tokenConfigured = false,
   githubReleaseTokenConfigured = false,
-  githubReleaseTagConfigured = false
+  githubReleaseTagConfigured = false,
+  nativeBinaryBlocked = true,
+  signingBlocked = true
 } = {}) {
   return [
     ...(publishingBlocked ? ['package_private'] : []),
@@ -939,8 +948,8 @@ function promotionPreflightBlockers({
     ...(!tokenConfigured ? ['missing_registry_token'] : []),
     ...(!githubReleaseTokenConfigured ? ['missing_github_release_token'] : []),
     ...(!githubReleaseTagConfigured ? ['missing_release_tag'] : []),
-    'native_binary_build_pending',
-    'signing_blocked'
+    ...(nativeBinaryBlocked ? ['native_binary_build_pending'] : []),
+    ...(signingBlocked ? ['signing_blocked'] : [])
   ];
 }
 
@@ -1069,6 +1078,11 @@ function releasePromotionGates() {
     {
       gate_id: 'release_status_surface',
       command: 'pnpm run test:release-status',
+      required: true
+    },
+    {
+      gate_id: 'promotion_execution_guard',
+      command: 'pnpm run test:release-promotion-execute',
       required: true
     },
     {
@@ -1289,7 +1303,9 @@ export function buildReleasePromotionPreflight({
   packageJson,
   publishingBlocked = packageJson?.private === true,
   warningActive = true,
-  env = process.env
+  env = process.env,
+  nativeBinaryBlocked = true,
+  signingBlocked = true
 } = {}) {
   const tokenConfigured = Boolean(cleanString(env[NPM_TOKEN_ENV]));
   const releaseTokenConfigured = githubReleaseTokenConfigured(env);
@@ -1299,7 +1315,9 @@ export function buildReleasePromotionPreflight({
     warningActive,
     tokenConfigured,
     githubReleaseTokenConfigured: releaseTokenConfigured,
-    githubReleaseTagConfigured: releaseTagConfigured
+    githubReleaseTagConfigured: releaseTagConfigured,
+    nativeBinaryBlocked,
+    signingBlocked
   });
   const signingConfiguration = redactedSigningConfiguration(buildSigningConfiguration({ env }));
   const binaryAttachmentPlan = buildReleaseBinaryAttachmentPlan({
@@ -1334,7 +1352,9 @@ export function buildReleasePromotionPreflight({
       token_configured: tokenConfigured
     },
     binary_distribution: {
-      status: 'blocked',
+      status: publishingBlocked || warningActive || !releaseTokenConfigured || !releaseTagConfigured || nativeBinaryBlocked || signingBlocked
+        ? 'blocked'
+        : 'ready',
       artifact_type: 'signed_native_binary',
       binary_name: 'divinity',
       build_command: 'pnpm run release:signed-native-binary',
@@ -1351,11 +1371,13 @@ export function buildReleasePromotionPreflight({
       release_tag_configured: binaryAttachmentPlan.release_tag_configured,
       token_env_vars: binaryAttachmentPlan.token_env_vars,
       token_configured: binaryAttachmentPlan.token_configured,
-      reason: 'Signed native binary distribution remains blocked until public release blockers clear.'
+      reason: publishingBlocked || warningActive || !releaseTokenConfigured || !releaseTagConfigured || nativeBinaryBlocked || signingBlocked
+        ? 'Signed native binary distribution remains blocked until public release blockers clear.'
+        : 'Signed native binary distribution is ready for operator-controlled upload.'
     },
     signing: {
       required: true,
-      status: 'blocked',
+      status: signingBlocked ? 'blocked' : 'ready',
       configuration: signingConfiguration,
       attestation_required: true,
       attestation_path: `${DEFAULT_RELEASE_BUNDLE_OUTPUT.split(path.sep).join('/')}/attestation.json`,
@@ -1364,7 +1386,9 @@ export function buildReleasePromotionPreflight({
         'binary_download',
         'release_attestation'
       ],
-      reason: 'Promotion signing remains blocked while the non-production warning and release gates are active.'
+      reason: signingBlocked
+        ? 'Promotion signing remains blocked while the non-production warning and release gates are active.'
+        : 'Promotion signing evidence is ready for public release.'
     },
     required_artifacts: releasePromotionRequiredArtifacts(),
     release_gates: releasePromotionGates(),
@@ -1376,6 +1400,204 @@ export function buildReleasePromotionPreflight({
     reason: blockers.length
       ? 'Public package and signed binary promotion remains blocked until release gates, package metadata, registry credentials, native binary packaging, and signing are ready.'
       : 'Release promotion preflight is ready.'
+  };
+}
+
+function releasePromotionExecutionBlockers({
+  publishingBlocked,
+  warningActive = true,
+  tokenConfigured = false,
+  githubReleaseTokenConfigured = false,
+  githubReleaseTagConfigured = false,
+  nativeBinaryBlocked = true,
+  signingBlocked = true,
+  confirmationConfigured = false
+} = {}) {
+  return [
+    ...promotionPreflightBlockers({
+      publishingBlocked,
+      warningActive,
+      tokenConfigured,
+      githubReleaseTokenConfigured,
+      githubReleaseTagConfigured,
+      nativeBinaryBlocked,
+      signingBlocked
+    }),
+    ...(!confirmationConfigured ? ['missing_public_release_confirmation'] : [])
+  ];
+}
+
+function releasePromotionPublishArgs() {
+  return [
+    'publish',
+    '--provenance',
+    '--access',
+    'public',
+    '--json'
+  ];
+}
+
+function releasePromotionUploadAssetPaths(root) {
+  const outputDirectory = path.resolve(root, DEFAULT_RELEASE_SIGNED_NATIVE_BINARY_OUTPUT);
+  if (!existsSync(outputDirectory)) return [];
+  const files = [];
+  const pending = [outputDirectory];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      const child = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        pending.push(child);
+      } else if (entry.isFile()) {
+        files.push(normalizedRelativePath(root, child));
+      }
+    }
+  }
+  return files.sort();
+}
+
+function releasePromotionUploadArgs({
+  repository,
+  env = process.env,
+  cwd = process.cwd(),
+  uploadAssetPaths = null
+}) {
+  const assetPaths = Array.isArray(uploadAssetPaths)
+    ? uploadAssetPaths
+    : releasePromotionUploadAssetPaths(cwd);
+  return [
+    'release',
+    'upload',
+    cleanString(env[GITHUB_RELEASE_TAG_ENV]) || `$${GITHUB_RELEASE_TAG_ENV}`,
+    ...(assetPaths.length ? assetPaths : [`${DEFAULT_RELEASE_SIGNED_NATIVE_BINARY_OUTPUT.split(path.sep).join('/')}/*`]),
+    '--repo',
+    repository || '<repository>',
+    '--clobber'
+  ];
+}
+
+function releasePromotionUploadCommand(repository) {
+  return `gh release upload "$${GITHUB_RELEASE_TAG_ENV}" ${DEFAULT_RELEASE_SIGNED_NATIVE_BINARY_OUTPUT.split(path.sep).join('/')}/* --repo ${repository || '<repository>'} --clobber`;
+}
+
+function promotionExecutionStep({ stepId, status, command, stdout = '' }) {
+  const base = {
+    step_id: stepId,
+    status,
+    command
+  };
+  if (status !== 'executed') return base;
+  return {
+    ...base,
+    exit_code: 0,
+    stdout_bytes: Buffer.byteLength(stdout, 'utf8'),
+    stdout_sha256: sha256Bytes(stdout)
+  };
+}
+
+export function buildReleasePromotionExecution({
+  packageJson,
+  publishingBlocked = packageJson?.private === true,
+  warningActive = true,
+  env = process.env,
+  nativeBinaryBlocked = true,
+  signingBlocked = true,
+  executionResults = []
+} = {}) {
+  const tokenConfigured = Boolean(cleanString(env[NPM_TOKEN_ENV]));
+  const releaseTokenConfigured = githubReleaseTokenConfigured(env);
+  const releaseTagConfigured = Boolean(cleanString(env[GITHUB_RELEASE_TAG_ENV]));
+  const confirmationConfigured = cleanString(env[PUBLIC_RELEASE_CONFIRM_ENV]) === 'publish';
+  const repository = githubRepositorySlug(packageJson);
+  const blockers = releasePromotionExecutionBlockers({
+    publishingBlocked,
+    warningActive,
+    tokenConfigured,
+    githubReleaseTokenConfigured: releaseTokenConfigured,
+    githubReleaseTagConfigured: releaseTagConfigured,
+    nativeBinaryBlocked,
+    signingBlocked,
+    confirmationConfigured
+  });
+  const executionResultsByStepId = new Map(executionResults.map(result => [result.step_id, result]));
+  const executionAttempted = executionResults.length > 0;
+  const status = executionAttempted
+    ? 'executed'
+    : blockers.length
+      ? 'blocked'
+      : 'ready';
+  const stepStatus = stepId => {
+    if (executionResultsByStepId.has(stepId)) return 'executed';
+    return blockers.length ? 'skipped' : 'ready';
+  };
+
+  return {
+    format: RELEASE_PROMOTION_EXECUTION_FORMAT,
+    generated_by: 'packages/release-artifacts',
+    status,
+    public_release_ready: blockers.length === 0,
+    execution_attempted: executionAttempted,
+    package: {
+      name: packageJson.name,
+      version: packageJson.version,
+      private: packageJson.private === true
+    },
+    command: 'pnpm run release:promotion-execute',
+    smoke_test_command: 'pnpm run test:release-promotion-execute',
+    confirmation_env_var: PUBLIC_RELEASE_CONFIRM_ENV,
+    confirmation_configured: confirmationConfigured,
+    registry_publish: {
+      status: publishingBlocked || warningActive || !tokenConfigured ? 'blocked' : 'ready',
+      registry_url: 'https://registry.npmjs.org/',
+      provenance_required: true,
+      token_env_var: NPM_TOKEN_ENV,
+      token_configured: tokenConfigured,
+      publish_command: 'npm publish --provenance --access public --json'
+    },
+    binary_upload: {
+      status: publishingBlocked || warningActive || !releaseTokenConfigured || !releaseTagConfigured || nativeBinaryBlocked || signingBlocked
+        ? 'blocked'
+        : 'ready',
+      provider: 'github_releases',
+      repository,
+      release_tag_env_var: GITHUB_RELEASE_TAG_ENV,
+      release_tag_configured: releaseTagConfigured,
+      token_env_vars: GITHUB_RELEASE_TOKEN_ENVS,
+      token_configured: releaseTokenConfigured,
+      upload_command: releasePromotionUploadCommand(repository),
+      asset_sources: [
+        `${DEFAULT_RELEASE_SIGNED_NATIVE_BINARY_OUTPUT.split(path.sep).join('/')}/*`
+      ]
+    },
+    steps: [
+      promotionExecutionStep({
+        stepId: 'registry_publish',
+        status: stepStatus('registry_publish'),
+        command: 'npm publish --provenance --access public --json',
+        stdout: executionResultsByStepId.get('registry_publish')?.stdout || ''
+      }),
+      promotionExecutionStep({
+        stepId: 'binary_attachment_upload',
+        status: stepStatus('binary_attachment_upload'),
+        command: releasePromotionUploadCommand(repository),
+        stdout: executionResultsByStepId.get('binary_attachment_upload')?.stdout || ''
+      })
+    ],
+    blockers,
+    does_not_publish_without_clearance: true,
+    does_not_upload_without_clearance: true,
+    redacts_local_paths: true,
+    redacts_registry_token: true,
+    redacts_github_token: true,
+    redacts_release_tag: true,
+    redacts_npm_output: true,
+    redacts_command_paths: true,
+    redacts_signing_secrets: true,
+    reason: executionAttempted
+      ? 'Public promotion commands executed after all blockers and confirmation gates cleared; raw outputs and secret values are redacted.'
+      : blockers.length
+        ? 'Public promotion execution remains blocked until release gates and explicit operator confirmation clear.'
+        : 'Public promotion execution is ready for operator-controlled execution.'
   };
 }
 
@@ -1435,6 +1657,12 @@ export function buildReleaseArtifactsManifest({
       env
     }),
     release_promotion_preflight: buildReleasePromotionPreflight({
+      packageJson,
+      publishingBlocked,
+      warningActive: true,
+      env
+    }),
+    release_promotion_execution: buildReleasePromotionExecution({
       packageJson,
       publishingBlocked,
       warningActive: true,
@@ -1547,6 +1775,11 @@ export function buildReleaseArtifactsManifest({
       {
         gate_id: 'release_promotion_preflight',
         command: 'pnpm run test:release-promotion',
+        required: true
+      },
+      {
+        gate_id: 'promotion_execution_guard',
+        command: 'pnpm run test:release-promotion-execute',
         required: true
       },
       {
@@ -1669,6 +1902,92 @@ export function writeReleasePromotionPreflight({
     warningActive: true,
     env
   });
+
+  mkdirSync(path.dirname(artifactPath), { recursive: true });
+  writeFileSync(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`);
+
+  return {
+    ok: true,
+    artifact_path: artifactPath,
+    artifact
+  };
+}
+
+export function writeReleasePromotionExecution({
+  output = DEFAULT_RELEASE_PROMOTION_EXECUTION_OUTPUT,
+  cwd = process.cwd(),
+  env = process.env,
+  packageJson = null,
+  publishingBlocked = null,
+  warningActive = true,
+  nativeBinaryBlocked = true,
+  signingBlocked = true,
+  npmCommand = defaultNpmCommand(),
+  npmCommandArgsPrefix = [],
+  ghCommand = defaultGhCommand(),
+  ghCommandArgsPrefix = [],
+  uploadAssetPaths = null
+} = {}) {
+  const root = path.resolve(cwd);
+  const artifactPath = path.resolve(root, cleanString(output) || DEFAULT_RELEASE_PROMOTION_EXECUTION_OUTPUT);
+  const releasePackageJson = packageJson || JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const releasePublishingBlocked = publishingBlocked === null
+    ? releasePackageJson.private === true
+    : publishingBlocked;
+  const initialArtifact = buildReleasePromotionExecution({
+    packageJson: releasePackageJson,
+    publishingBlocked: releasePublishingBlocked,
+    warningActive,
+    env,
+    nativeBinaryBlocked,
+    signingBlocked
+  });
+
+  let artifact = initialArtifact;
+  if (initialArtifact.blockers.length === 0) {
+    const repository = githubRepositorySlug(releasePackageJson);
+    const publishOutput = execFileSync(npmCommand, [
+      ...npmCommandArgsPrefix,
+      ...releasePromotionPublishArgs()
+    ], {
+      cwd: root,
+      env,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+    const uploadOutput = execFileSync(ghCommand, [
+      ...ghCommandArgsPrefix,
+      ...releasePromotionUploadArgs({
+        repository,
+        env,
+        cwd: root,
+        uploadAssetPaths
+      })
+    ], {
+      cwd: root,
+      env,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+    artifact = buildReleasePromotionExecution({
+      packageJson: releasePackageJson,
+      publishingBlocked: releasePublishingBlocked,
+      warningActive,
+      env,
+      nativeBinaryBlocked,
+      signingBlocked,
+      executionResults: [
+        {
+          step_id: 'registry_publish',
+          stdout: publishOutput
+        },
+        {
+          step_id: 'binary_attachment_upload',
+          stdout: uploadOutput
+        }
+      ]
+    });
+  }
 
   mkdirSync(path.dirname(artifactPath), { recursive: true });
   writeFileSync(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`);
