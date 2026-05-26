@@ -19,12 +19,14 @@ export const RELEASE_ATTESTATION_FORMAT = 'divinity.release_attestation.v1';
 export const RELEASE_ATTESTATION_READINESS_FORMAT = 'divinity.release_attestation_readiness.v1';
 export const RELEASE_PROMOTION_PREFLIGHT_FORMAT = 'divinity.release_promotion_preflight.v1';
 export const RELEASE_PROMOTION_EXECUTION_FORMAT = 'divinity.release_promotion_execution.v1';
+export const RELEASE_ENVIRONMENT_READINESS_FORMAT = 'divinity.release_environment_readiness.v1';
 export const RELEASE_GATE_CLEARANCE_FORMAT = 'divinity.release_gate_clearance.v1';
 export const RELEASE_PUBLIC_READINESS_AUDIT_FORMAT = 'divinity.release_public_readiness_audit.v1';
 export const RELEASE_SIGNATURE_ARTIFACTS_FORMAT = 'divinity.release_signature_artifacts.v1';
 export const RELEASE_SIGNATURE_ARTIFACTS_READINESS_FORMAT = 'divinity.release_signature_artifacts_readiness.v1';
 export const DEFAULT_RELEASE_ARTIFACT_OUTPUT = path.join('dist', 'release-artifacts.json');
 export const DEFAULT_RELEASE_PUBLIC_READINESS_AUDIT_OUTPUT = path.join('dist', 'release-public-readiness-audit.json');
+export const DEFAULT_RELEASE_ENVIRONMENT_READINESS_OUTPUT = path.join('dist', 'release-environment-readiness.json');
 export const DEFAULT_RELEASE_REGISTRY_PUBLISH_DRY_RUN_OUTPUT = path.join('dist', 'release-registry-dry-run.json');
 export const DEFAULT_RELEASE_BINARY_ATTACHMENT_PLAN_OUTPUT = path.join('dist', 'release-binary-attachments.json');
 export const DEFAULT_RELEASE_BINARY_OUTPUT = path.join('dist', 'binary');
@@ -968,6 +970,12 @@ function releasePromotionRequiredArtifacts() {
       required: true
     },
     {
+      artifact_id: 'release_environment_readiness',
+      path: DEFAULT_RELEASE_ENVIRONMENT_READINESS_OUTPUT.split(path.sep).join('/'),
+      command: 'pnpm run release:environment-readiness',
+      required: true
+    },
+    {
       artifact_id: 'registry_publish_dry_run_report',
       path: DEFAULT_RELEASE_REGISTRY_PUBLISH_DRY_RUN_OUTPUT.split(path.sep).join('/'),
       command: 'pnpm run release:registry-dry-run',
@@ -1028,6 +1036,11 @@ function releasePromotionGates() {
     {
       gate_id: 'public_readiness_audit',
       command: 'pnpm run test:public-readiness-audit',
+      required: true
+    },
+    {
+      gate_id: 'release_environment_readiness',
+      command: 'pnpm run test:release-environment-readiness',
       required: true
     },
     {
@@ -1112,6 +1125,142 @@ function redactedSigningConfiguration(configuration) {
     key_ref_configured: configuration.key_ref_configured,
     identity_configured: configuration.identity_configured,
     ready_when_release_gates_clear: configuration.ready_when_release_gates_clear
+  };
+}
+
+function redactedNativeBinaryBuildConfiguration(configuration) {
+  return {
+    status: configuration.status,
+    command_env_var: configuration.command_env_var,
+    command_args_env_var: configuration.command_args_env_var,
+    command_configured: configuration.command_configured,
+    command_absolute: configuration.command_absolute,
+    command_args_configured: configuration.command_args_configured,
+    reason: configuration.reason
+  };
+}
+
+function buildReleaseEnvironmentBlockers({
+  publishingBlocked,
+  warningActive = true,
+  tokenConfigured = false,
+  githubReleaseTokenConfigured = false,
+  githubReleaseTagConfigured = false,
+  nativeBinaryBuildConfigured = false,
+  signingConfigured = false,
+  confirmationConfigured = false
+} = {}) {
+  return [
+    ...(publishingBlocked ? ['package_private'] : []),
+    ...(warningActive ? ['non_production_warning'] : []),
+    ...(!tokenConfigured ? ['missing_registry_token'] : []),
+    ...(!githubReleaseTokenConfigured ? ['missing_github_release_token'] : []),
+    ...(!githubReleaseTagConfigured ? ['missing_release_tag'] : []),
+    ...(!nativeBinaryBuildConfigured ? ['native_binary_build_pending'] : []),
+    ...(!signingConfigured ? ['signing_blocked'] : []),
+    ...(!confirmationConfigured ? ['missing_public_release_confirmation'] : [])
+  ];
+}
+
+export function buildReleaseEnvironmentReadiness({
+  packageJson,
+  publishingBlocked = packageJson?.private === true,
+  warningActive = true,
+  env = process.env
+} = {}) {
+  const tokenConfigured = Boolean(cleanString(env[NPM_TOKEN_ENV]));
+  const releaseTokenConfigured = githubReleaseTokenConfigured(env);
+  const releaseTagConfigured = Boolean(cleanString(env[GITHUB_RELEASE_TAG_ENV]));
+  const confirmationConfigured = cleanString(env[PUBLIC_RELEASE_CONFIRM_ENV]) === 'publish';
+  const nativeBinaryBuildConfiguration = buildNativeBinaryBuildConfiguration({ env });
+  const signingConfiguration = buildSigningConfiguration({ env });
+  const nativeBinaryBuildConfigured = nativeBinaryBuildConfiguration.status === 'configured';
+  const signingConfigured = signingConfiguration.status === 'configured';
+  const blockers = buildReleaseEnvironmentBlockers({
+    publishingBlocked,
+    warningActive,
+    tokenConfigured,
+    githubReleaseTokenConfigured: releaseTokenConfigured,
+    githubReleaseTagConfigured: releaseTagConfigured,
+    nativeBinaryBuildConfigured,
+    signingConfigured,
+    confirmationConfigured
+  });
+  const status = blockers.length ? 'blocked' : 'ready';
+
+  return {
+    format: RELEASE_ENVIRONMENT_READINESS_FORMAT,
+    generated_by: 'packages/release-artifacts',
+    status,
+    public_release_ready: false,
+    environment_ready: blockers.length === 0,
+    package: {
+      name: packageJson.name,
+      version: packageJson.version,
+      private: packageJson.private === true
+    },
+    non_production_warning_active: warningActive === true,
+    command: 'pnpm run release:environment-readiness',
+    smoke_test_command: 'pnpm run test:release-environment-readiness',
+    package_privacy: {
+      status: publishingBlocked ? 'blocked' : 'ready',
+      current_state: publishingBlocked ? 'package.json private=true' : 'package publishing enabled',
+      required_state: 'package publishing is explicitly enabled by an approved public release decision'
+    },
+    production_warning: {
+      status: warningActive ? 'blocked' : 'ready',
+      current_state: warningActive ? 'README non-production warning active' : 'README production warning cleared',
+      required_state: 'README production warning is removed only after the public readiness audit passes'
+    },
+    registry_token: {
+      status: tokenConfigured ? 'ready' : 'blocked',
+      env_var: NPM_TOKEN_ENV,
+      configured: tokenConfigured,
+      required_state: 'operator-owned npm automation token is configured outside repository files',
+      redacts_value: true
+    },
+    github_release_token: {
+      status: releaseTokenConfigured ? 'ready' : 'blocked',
+      env_vars: GITHUB_RELEASE_TOKEN_ENVS,
+      configured: releaseTokenConfigured,
+      required_state: 'operator-owned GitHub release token is configured outside repository files',
+      redacts_values: true
+    },
+    github_release_tag: {
+      status: releaseTagConfigured ? 'ready' : 'blocked',
+      env_var: GITHUB_RELEASE_TAG_ENV,
+      configured: releaseTagConfigured,
+      required_state: 'release tag is selected outside repository files for GitHub Release binary attachment',
+      redacts_value: true
+    },
+    public_release_confirmation: {
+      status: confirmationConfigured ? 'ready' : 'blocked',
+      env_var: PUBLIC_RELEASE_CONFIRM_ENV,
+      configured: confirmationConfigured,
+      required_value: 'publish',
+      required_state: 'operator explicitly confirms public package publish and binary upload execution',
+      redacts_value: true
+    },
+    native_binary_build: redactedNativeBinaryBuildConfiguration(nativeBinaryBuildConfiguration),
+    release_signing: {
+      status: signingConfiguration.status,
+      required: true,
+      configuration: redactedSigningConfiguration(signingConfiguration),
+      redacts_signing_secrets: true,
+      reason: signingConfiguration.reason
+    },
+    blockers,
+    does_not_publish: true,
+    does_not_upload: true,
+    redacts_local_paths: true,
+    redacts_registry_token: true,
+    redacts_github_token: true,
+    redacts_release_tag: true,
+    redacts_command_paths: true,
+    redacts_signing_secrets: true,
+    reason: status === 'ready'
+      ? 'Release environment inputs are configured for final operator review; this metadata does not publish packages or upload binaries.'
+      : 'Release environment inputs remain blocked until package, warning, credential, release tag, native build, signing, and explicit confirmation gates are configured.'
   };
 }
 
@@ -1639,6 +1788,12 @@ export function buildReleaseArtifactsManifest({
       warningActive: true,
       env
     }),
+    release_environment_readiness: buildReleaseEnvironmentReadiness({
+      packageJson,
+      publishingBlocked,
+      warningActive: true,
+      env
+    }),
     source_provenance: buildSourceProvenance({ cwd: root, packageJson, gitCommand }),
     release_sbom: buildReleaseSbom({ packageJson, packageLock }),
     artifact_integrity: buildArtifactIntegrity(packageJson.files || [], root),
@@ -1735,6 +1890,11 @@ export function buildReleaseArtifactsManifest({
       {
         gate_id: 'public_readiness_audit',
         command: 'pnpm run test:public-readiness-audit',
+        required: true
+      },
+      {
+        gate_id: 'release_environment_readiness',
+        command: 'pnpm run test:release-environment-readiness',
         required: true
       },
       {
@@ -1872,6 +2032,37 @@ export function writeReleasePublicReadinessAudit({
     ? releasePackageJson.private === true
     : publishingBlocked;
   const artifact = buildReleasePublicReadinessAudit({
+    packageJson: releasePackageJson,
+    publishingBlocked: releasePublishingBlocked,
+    warningActive,
+    env
+  });
+
+  mkdirSync(path.dirname(artifactPath), { recursive: true });
+  writeFileSync(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`);
+
+  return {
+    ok: true,
+    artifact_path: artifactPath,
+    artifact
+  };
+}
+
+export function writeReleaseEnvironmentReadiness({
+  output = DEFAULT_RELEASE_ENVIRONMENT_READINESS_OUTPUT,
+  cwd = process.cwd(),
+  env = process.env,
+  packageJson = null,
+  publishingBlocked = null,
+  warningActive = true
+} = {}) {
+  const root = path.resolve(cwd);
+  const artifactPath = path.resolve(root, cleanString(output) || DEFAULT_RELEASE_ENVIRONMENT_READINESS_OUTPUT);
+  const releasePackageJson = packageJson || JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const releasePublishingBlocked = publishingBlocked === null
+    ? releasePackageJson.private === true
+    : publishingBlocked;
+  const artifact = buildReleaseEnvironmentReadiness({
     packageJson: releasePackageJson,
     publishingBlocked: releasePublishingBlocked,
     warningActive,

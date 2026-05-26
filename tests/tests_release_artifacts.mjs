@@ -28,6 +28,7 @@ const output = execFileSync(
       GITHUB_TOKEN: '',
       GH_TOKEN: '',
       DIVINITY_RELEASE_TAG: '',
+      DIVINITY_PUBLIC_RELEASE_CONFIRM: '',
       DIVINITY_NATIVE_BINARY_BUILD_COMMAND: '',
       DIVINITY_NATIVE_BINARY_BUILD_COMMAND_ARGS: '',
       DIVINITY_RELEASE_SIGNING_COMMAND: '',
@@ -156,6 +157,38 @@ assert.equal(artifact.release_public_readiness_audit.redacts_signing_secrets, tr
 assert.equal(JSON.stringify(artifact.release_public_readiness_audit).includes(process.cwd()), false);
 assert.equal(JSON.stringify(artifact.release_public_readiness_audit).includes('secret://'), false);
 assert.equal(JSON.stringify(artifact.release_public_readiness_audit).includes('npm-secret-token-value'), false);
+assert.equal(artifact.release_environment_readiness.format, 'divinity.release_environment_readiness.v1');
+assert.equal(artifact.release_environment_readiness.status, 'blocked');
+assert.equal(artifact.release_environment_readiness.public_release_ready, false);
+assert.equal(artifact.release_environment_readiness.environment_ready, false);
+assert.equal(artifact.release_environment_readiness.command, 'pnpm run release:environment-readiness');
+assert.equal(artifact.release_environment_readiness.smoke_test_command, 'pnpm run test:release-environment-readiness');
+assert.equal(artifact.release_environment_readiness.package.private, true);
+assert.equal(artifact.release_environment_readiness.registry_token.configured, false);
+assert.equal(artifact.release_environment_readiness.github_release_token.configured, false);
+assert.equal(artifact.release_environment_readiness.github_release_tag.configured, false);
+assert.equal(artifact.release_environment_readiness.public_release_confirmation.configured, false);
+assert.equal(artifact.release_environment_readiness.native_binary_build.status, 'not_configured');
+assert.equal(artifact.release_environment_readiness.release_signing.status, 'not_configured');
+assert.deepEqual(artifact.release_environment_readiness.blockers, [
+  'package_private',
+  'non_production_warning',
+  'missing_registry_token',
+  'missing_github_release_token',
+  'missing_release_tag',
+  'native_binary_build_pending',
+  'signing_blocked',
+  'missing_public_release_confirmation'
+]);
+assert.equal(artifact.release_environment_readiness.does_not_publish, true);
+assert.equal(artifact.release_environment_readiness.does_not_upload, true);
+assert.equal(artifact.release_environment_readiness.redacts_local_paths, true);
+assert.equal(artifact.release_environment_readiness.redacts_registry_token, true);
+assert.equal(artifact.release_environment_readiness.redacts_github_token, true);
+assert.equal(artifact.release_environment_readiness.redacts_release_tag, true);
+assert.equal(artifact.release_environment_readiness.redacts_command_paths, true);
+assert.equal(artifact.release_environment_readiness.redacts_signing_secrets, true);
+assert.equal(JSON.stringify(artifact.release_environment_readiness).includes(process.cwd()), false);
 assert.equal(artifact.registry_publish_readiness.format, 'divinity.release_registry_publish_readiness.v1');
 assert.equal(artifact.registry_publish_readiness.status, 'blocked');
 assert.equal(artifact.registry_publish_readiness.package_name, packageJson.name);
@@ -319,6 +352,10 @@ assert.ok(artifact.release_promotion_preflight.required_artifacts.some(required 
   required.path === 'dist/release-public-readiness-audit.json'
 )));
 assert.ok(artifact.release_promotion_preflight.required_artifacts.some(required => (
+  required.artifact_id === 'release_environment_readiness' &&
+  required.path === 'dist/release-environment-readiness.json'
+)));
+assert.ok(artifact.release_promotion_preflight.required_artifacts.some(required => (
   required.artifact_id === 'registry_publish_dry_run_report' &&
   required.path === 'dist/release-registry-dry-run.json'
 )));
@@ -345,6 +382,10 @@ assert.ok(artifact.release_promotion_preflight.release_gates.some(gate => (
 assert.ok(artifact.release_promotion_preflight.release_gates.some(gate => (
   gate.gate_id === 'public_readiness_audit' &&
   gate.command === 'pnpm run test:public-readiness-audit'
+)));
+assert.ok(artifact.release_promotion_preflight.release_gates.some(gate => (
+  gate.gate_id === 'release_environment_readiness' &&
+  gate.command === 'pnpm run test:release-environment-readiness'
 )));
 assert.ok(artifact.release_promotion_preflight.release_gates.some(gate => (
   gate.gate_id === 'registry_publish_dry_run' &&
@@ -636,6 +677,8 @@ assert.equal(configuredSigningArtifact.artifact_signing.configuration.identity_c
 assert.equal(configuredSigningArtifact.artifact_signing.configuration.ready_when_release_gates_clear, true);
 assert.equal(configuredSigningArtifact.release_signature_artifacts.signing_configuration.status, 'configured');
 assert.equal(configuredSigningArtifact.release_signature_artifacts.signing_configuration.ready_when_release_gates_clear, true);
+assert.equal(configuredSigningArtifact.release_environment_readiness.release_signing.status, 'configured');
+assert.equal(configuredSigningArtifact.release_environment_readiness.release_signing.configuration.ready_when_release_gates_clear, true);
 assert.equal(configuredSigningArtifact.binary_release_readiness.signed_native_binary_pipeline.status, 'not_configured');
 assert.equal(configuredSigningArtifact.binary_release_readiness.signed_native_binary_pipeline.signing_configured, true);
 assert.equal(configuredSigningArtifact.binary_release_readiness.signed_native_binary_pipeline.native_build_configured, false);
@@ -656,6 +699,7 @@ assert.equal(configuredNativeBinaryArtifact.binary_release_readiness.native_buil
 assert.equal(configuredNativeBinaryArtifact.binary_release_readiness.native_build_pipeline.command_configured, true);
 assert.equal(configuredNativeBinaryArtifact.binary_release_readiness.native_build_pipeline.command_absolute, true);
 assert.equal(configuredNativeBinaryArtifact.binary_release_readiness.native_build_pipeline.command_args_configured, true);
+assert.equal(configuredNativeBinaryArtifact.release_environment_readiness.native_binary_build.status, 'configured');
 assert.equal(configuredNativeBinaryArtifact.binary_release_readiness.signed_native_binary_pipeline.status, 'not_configured');
 assert.equal(configuredNativeBinaryArtifact.binary_release_readiness.signed_native_binary_pipeline.native_build_configured, true);
 assert.equal(configuredNativeBinaryArtifact.binary_release_readiness.signed_native_binary_pipeline.signing_configured, false);
@@ -686,6 +730,7 @@ const configuredPublishArtifact = buildReleaseArtifactsManifest({
 });
 assert.equal(configuredPublishArtifact.registry_publish_readiness.status, 'blocked');
 assert.equal(configuredPublishArtifact.registry_publish_readiness.token_configured, true);
+assert.equal(configuredPublishArtifact.release_environment_readiness.registry_token.configured, true);
 assert.equal(configuredPublishArtifact.release_registry_publish_dry_run.status, 'blocked');
 assert.equal(configuredPublishArtifact.release_registry_publish_dry_run.token_configured, true);
 assert.equal(configuredPublishArtifact.release_gate_clearance.clearance_items.find(
@@ -706,6 +751,8 @@ const configuredGitHubReleaseArtifact = buildReleaseArtifactsManifest({
 });
 assert.equal(configuredGitHubReleaseArtifact.release_binary_attachment_plan.token_configured, true);
 assert.equal(configuredGitHubReleaseArtifact.release_binary_attachment_plan.release_tag_configured, true);
+assert.equal(configuredGitHubReleaseArtifact.release_environment_readiness.github_release_token.configured, true);
+assert.equal(configuredGitHubReleaseArtifact.release_environment_readiness.github_release_tag.configured, true);
 assert.equal(configuredGitHubReleaseArtifact.release_gate_clearance.clearance_items.find(
   item => item.item_id === 'github_release_token'
 ).current_state, 'GitHub release token configured');
@@ -751,6 +798,7 @@ assert.match(installPathsById.get('binary_download').reason, /non-production war
 for (const command of [
   'pnpm run test:package',
   'pnpm run test:public-readiness-audit',
+  'pnpm run test:release-environment-readiness',
   'pnpm run test:package-tarball',
   'pnpm run test:release-registry-dry-run',
   'pnpm run test:release-binary-attachments',

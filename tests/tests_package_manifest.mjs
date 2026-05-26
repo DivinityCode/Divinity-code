@@ -17,6 +17,8 @@ assert.equal(packageJson.license, 'UNLICENSED');
 assert.equal(packageJson.scripts?.['test:package-tarball'], 'node tests/tests_package_tarball_smoke.mjs');
 assert.equal(packageJson.scripts?.['release:public-readiness-audit'], 'node tests/scripts_release_public_readiness_audit.mjs');
 assert.equal(packageJson.scripts?.['test:public-readiness-audit'], 'node tests/tests_release_public_readiness_audit.mjs');
+assert.equal(packageJson.scripts?.['release:environment-readiness'], 'node tests/scripts_release_environment_readiness.mjs');
+assert.equal(packageJson.scripts?.['test:release-environment-readiness'], 'node tests/tests_release_environment_readiness.mjs');
 assert.equal(packageJson.scripts?.['release:registry-dry-run'], 'node tests/scripts_release_registry_publish_dry_run.mjs');
 assert.equal(packageJson.scripts?.['test:release-registry-dry-run'], 'node tests/tests_release_registry_publish_dry_run.mjs');
 assert.equal(packageJson.scripts?.['release:binary-attachments'], 'node tests/scripts_release_binary_attachments.mjs');
@@ -37,6 +39,7 @@ assert.equal(packageJson.scripts?.['release:promotion-execute'], 'node tests/scr
 assert.equal(packageJson.scripts?.['test:release-promotion-execute'], 'node tests/tests_release_promotion_execution.mjs');
 assert.equal(packageJson.scripts?.['test:github-workflows'], 'node tests/tests_github_workflows.mjs');
 assert.ok(packageJson.scripts?.test.includes('node tests/tests_release_public_readiness_audit.mjs'));
+assert.ok(packageJson.scripts?.test.includes('node tests/tests_release_environment_readiness.mjs'));
 assert.ok(packageJson.scripts?.test.includes('node tests/tests_release_registry_publish_dry_run.mjs'));
 assert.ok(packageJson.scripts?.test.includes('node tests/tests_release_binary_attachments.mjs'));
 assert.ok(packageJson.scripts?.test.includes('node tests/tests_release_signed_native_binary_artifacts.mjs'));
