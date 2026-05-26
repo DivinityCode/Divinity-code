@@ -40,6 +40,7 @@ if (request.action === 'store') {
   nextSecrets.push({
     provider_id: request.provider_id,
     secret_ref: request.secret_ref,
+    secret_id: request.secret_id,
     credential_env_var: request.credential_env_var,
     secret_value: request.secret_value,
     updated_at: request.updated_at,
@@ -50,12 +51,18 @@ if (request.action === 'store') {
   writeStore(storePath, { secrets: nextSecrets });
   send({ ok: true });
 } else if (request.action === 'configured_refs') {
+  const secretIds = request.secret_ids && typeof request.secret_ids === 'object' ? request.secret_ids : null;
   send({
     ok: true,
-    secret_refs: store.secrets.map(secret => secret.secret_ref)
+    secret_refs: store.secrets
+      .filter(secret => !secretIds || secretIds[secret.secret_ref] === secret.secret_id)
+      .map(secret => secret.secret_ref)
   });
 } else if (request.action === 'resolve') {
-  const record = store.secrets.find(secret => secret.secret_ref === request.secret_ref);
+  const record = store.secrets.find(secret => (
+    secret.secret_ref === request.secret_ref &&
+    (!request.secret_id || secret.secret_id === request.secret_id)
+  ));
   send({
     ok: true,
     secret_value: record?.secret_value || ''

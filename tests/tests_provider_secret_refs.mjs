@@ -254,6 +254,72 @@ try {
     /JSON array of strings/
   );
 
+  const awsManagedStorePath = path.join(tmpRoot, 'aws-managed-store.json');
+  const awsManagedSecretId = 'arn:aws:secretsmanager:eu-west-1:111122223333:secret:divinity/openrouter';
+  const awsManagedEnv = {
+    DIVINITY_PROVIDER_SECRET_REFS_PATH: manifestPath,
+    DIVINITY_PROVIDER_SECRET_STORE_BACKEND: 'aws_secrets_manager',
+    DIVINITY_AWS_SECRETS_MANAGER_COMMAND: process.execPath,
+    DIVINITY_AWS_SECRETS_MANAGER_COMMAND_ARGS: JSON.stringify([
+      path.resolve('tests/fixtures/provider-secret-store-command.mjs')
+    ]),
+    DIVINITY_AWS_SECRETS_MANAGER_SECRET_IDS: JSON.stringify({
+      [secretRef]: awsManagedSecretId
+    }),
+    DIVINITY_TEST_MANAGED_SECRET_STORE_PATH: awsManagedStorePath
+  };
+  const awsManagedRecord = storeProviderSecret({
+    env: awsManagedEnv,
+    provider_id: 'hosted_secret_mock',
+    secret_ref: secretRef,
+    credential_env_var: 'HOSTED_SECRET_MOCK_API_KEY',
+    secret_value: 'aws-managed-secret-value',
+    actor: 'operator@example.com',
+    reason: 'Authorized AWS Secrets Manager onboarding',
+    updated_at: '2026-05-26T11:00:00.000Z'
+  });
+  assert.equal(awsManagedRecord.format, 'divinity.provider_secret_store_record.v1');
+  assert.equal(awsManagedRecord.store_backend_id, 'aws_secrets_manager');
+  assert.equal(awsManagedRecord.store_backend_kind, 'managed_secret_store');
+  assert.equal(awsManagedRecord.algorithm, 'managed-by-aws-secrets-manager');
+  assert.equal(JSON.stringify(awsManagedRecord).includes('aws-managed-secret-value'), false);
+  assert.equal(JSON.stringify(awsManagedRecord).includes(awsManagedSecretId), false);
+
+  const awsManagedReadiness = providerSecretReadiness({
+    env: awsManagedEnv
+  });
+  assert.equal(awsManagedReadiness.store_configured, true);
+  assert.equal(awsManagedReadiness.store_backend_id, 'aws_secrets_manager');
+  assert.equal(awsManagedReadiness.store_backend_kind, 'managed_secret_store');
+  assert.equal(awsManagedReadiness.providers[0].credential_configured, true);
+  assert.equal(awsManagedReadiness.providers[0].credential_source, 'store');
+  assert.equal(JSON.stringify(awsManagedReadiness).includes('aws-managed-secret-value'), false);
+  assert.equal(JSON.stringify(awsManagedReadiness).includes(awsManagedSecretId), false);
+
+  const awsManagedResolver = createProviderCredentialResolver({
+    env: awsManagedEnv
+  });
+  assert.deepEqual(awsManagedResolver.configuredSecretRefs(runtime), [secretRef]);
+  assert.equal(awsManagedResolver.resolveCredential(runtime), 'aws-managed-secret-value');
+  assert.throws(
+    () => createConfiguredProviderSecretStoreAdapter({
+      env: {
+        ...awsManagedEnv,
+        DIVINITY_AWS_SECRETS_MANAGER_COMMAND: 'aws'
+      }
+    }).configuredSecretRefs(),
+    /absolute executable path/
+  );
+  assert.throws(
+    () => createConfiguredProviderSecretStoreAdapter({
+      env: {
+        ...awsManagedEnv,
+        DIVINITY_AWS_SECRETS_MANAGER_SECRET_IDS: '{}'
+      }
+    }).configuredSecretRefs(),
+    /secret id mapping/
+  );
+
   assert.throws(
     () => storeProviderSecret({
       env: {

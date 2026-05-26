@@ -8,6 +8,7 @@ Provider secret-reference manifest loader and credential resolver factory for ho
 - Resolves real credential values from the encrypted local store first, then from the runtime environment when a matching provider is selected.
 - Resolves real credential values from an injected hosted operator secret-store adapter before falling back to environment variables.
 - Resolves real credential values from an `external_command` managed deployment adapter when `DIVINITY_PROVIDER_SECRET_STORE_COMMAND` is configured.
+- Resolves real credential values from an `aws_secrets_manager` managed deployment adapter when an approved broker command and secret id map are configured.
 - Writes encrypted local store records when `DIVINITY_PROVIDER_SECRET_STORE_PATH` and `DIVINITY_PROVIDER_SECRET_STORE_KEY` are configured.
 - Returns `configured_secret_refs` only when the referenced store record or environment variable is configured.
 - Builds `divinity.provider_secret_readiness.v1` metadata for operator checks without exposing secret values.
@@ -43,6 +44,8 @@ Secret storage uses an adapter boundary. The default adapter is `local_file`, ba
 `DIVINITY_PROVIDER_SECRET_STORE_BACKEND=hosted_memory` selects an in-memory hosted-style adapter only when `DIVINITY_ENABLE_TEST_SECRET_STORE_BACKEND=1` is also set. This path is for tests and local runtime harnesses only; it is not a production secret manager. Production deployments should inject an approved managed secret-store adapter and keep the manifest as an allowlist of provider ids, secret refs, and credential environment variable names.
 
 `DIVINITY_PROVIDER_SECRET_STORE_BACKEND=external_command` selects the managed command adapter for deployment secret managers. Configure `DIVINITY_PROVIDER_SECRET_STORE_COMMAND` with an absolute executable path and, when needed, `DIVINITY_PROVIDER_SECRET_STORE_COMMAND_ARGS` as a JSON array of argument strings. The command receives JSON on stdin for `store`, `configured_refs`, and `resolve`, and returns JSON on stdout. Divinity invokes the executable directly with no shell interpolation.
+
+`DIVINITY_PROVIDER_SECRET_STORE_BACKEND=aws_secrets_manager` selects the first provider-specific managed adapter. Configure `DIVINITY_AWS_SECRETS_MANAGER_COMMAND` with an absolute executable path to an approved deployment broker, `DIVINITY_AWS_SECRETS_MANAGER_COMMAND_ARGS` as an optional JSON array of argument strings, and `DIVINITY_AWS_SECRETS_MANAGER_SECRET_IDS` as a JSON object that maps public `secret://` refs to deployment-managed AWS Secrets Manager secret ids. Divinity sends JSON over stdin/stdout with no shell interpolation. Public readiness, write, route, and audit metadata expose only backend id/kind and the public `secret://` refs; they do not expose AWS secret ids or resolved credential values.
 
 Readiness and write responses include `store_backend_id` and `store_backend_kind` so operators can tell which backend is active. They never include the resolved credential value.
 
