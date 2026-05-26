@@ -27,6 +27,7 @@ assert.equal(existsSync(outputPath), true);
 const artifact = JSON.parse(readFileSync(outputPath, 'utf8'));
 assert.deepEqual(result.artifact, artifact);
 assert.equal(artifact.format, 'divinity.release_artifacts.v1');
+assert.equal(artifact.generated_by, 'packages/release-artifacts');
 assert.equal(artifact.package.name, packageJson.name);
 assert.equal(artifact.package.version, packageJson.version);
 assert.equal(artifact.package.private, packageJson.private);

@@ -31,11 +31,13 @@ import { providerCredentialReadiness, publicLlmProviders, resolveProviderRuntime
 import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
 import { evaluatePreflight, POLICY_PRESETS } from '../../../packages/policy-engine/src/index.mjs';
 import { publicStarterRecipes } from '../../../packages/recipes/src/index.mjs';
+import { buildReleaseArtifactsManifest } from '../../../packages/release-artifacts/src/index.mjs';
 import { publicToolsets, resolveToolsets } from '../../../packages/toolsets/src/index.mjs';
 
 const [, , command, ...args] = process.argv;
 const cwd = process.cwd();
 const cliEntrypointPath = fileURLToPath(import.meta.url);
+const packageRoot = path.resolve(path.dirname(cliEntrypointPath), '../../..');
 const configPath = path.join(cwd, '.divinity.json');
 const DEFAULT_ENABLED_TOOLSETS = resolveToolsets().toolsets.map(toolset => toolset.toolset_id);
 const DEFAULT_CONFIG = {
@@ -1950,6 +1952,18 @@ function doctor() {
   }
 }
 
+function releaseStatus() {
+  try {
+    print({
+      ok: true,
+      command: 'release-status',
+      release: buildReleaseArtifactsManifest({ cwd: packageRoot })
+    });
+  } catch (error) {
+    print({ ok: false, command: 'release-status', error: error.message });
+  }
+}
+
 function bug() {
   const summary = args.join(' ').trim() || 'Bug report';
   const diagnostics = doctorPayload();
@@ -1997,10 +2011,11 @@ switch (command) {
   case 'toolsets': toolsets(); break;
   case 'recipes': recipes(); break;
   case 'doctor': doctor(); break;
+  case 'release-status': releaseStatus(); break;
   case 'bug': bug(); break;
   default:
     print({
       ok: false,
-      usage: 'divinity <init|run|status|approvals|approval|approve|reject|approval-comment|approval-comments|approval-revision|approval-resubmit|goal-complete|capabilities|providers|provider-route|provider-chat|provider-tool-approval|provider-tool-execute|toolsets|recipes|doctor|bug> [args]'
+      usage: 'divinity <init|run|status|approvals|approval|approve|reject|approval-comment|approval-comments|approval-revision|approval-resubmit|goal-complete|capabilities|providers|provider-route|provider-chat|provider-tool-approval|provider-tool-execute|toolsets|recipes|doctor|release-status|bug> [args]'
     });
 }
