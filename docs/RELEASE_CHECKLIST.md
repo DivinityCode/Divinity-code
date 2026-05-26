@@ -66,6 +66,8 @@ pnpm run test:deprecations
 
 ```bash
 pnpm run release:artifacts
+pnpm run release:binary
+pnpm run test:binary
 pnpm run test:release-artifacts
 pnpm run test:release-status
 ```
@@ -85,7 +87,8 @@ node -e "const a=require('./dist/release-artifacts.json'); console.log(a.binary_
 - [ ] Confirm `divinity.release_sbom.v1` was generated from `package.json` and `package-lock.json`, includes package/dependency names, versions, direct/transitive relationship, requested ranges, and license strings when present, and does not expose local absolute paths, `node_modules` paths, registry URLs, or lockfile integrity values.
 - [ ] If testing release signing readiness, configure `DIVINITY_RELEASE_SIGNING_COMMAND` as an absolute executable path, `DIVINITY_RELEASE_SIGNING_COMMAND_ARGS` as a JSON array of strings, and signing key/identity references through `DIVINITY_RELEASE_SIGNING_KEY_REF` and `DIVINITY_RELEASE_SIGNING_IDENTITY`. Confirm the generated metadata reports readiness without printing those values.
 - [ ] If testing registry publish readiness, configure `NPM_TOKEN` in the environment and confirm the generated metadata reports only `token_configured: true`, never the token value.
-- [ ] Confirm `divinity.release_binary_readiness.v1` lists only target filenames, blocked status, checksum/signing requirements, and blockers; it must not expose local paths, signing key references, or generated binary contents.
+- [ ] Confirm `divinity.release_binary_artifacts.v1` exists under `dist/binary/`, `SHA256SUMS` matches generated launcher bytes, and `manifest.json` stores no local absolute paths or signing secret references.
+- [ ] Confirm `divinity.release_binary_readiness.v1` lists generated Node launcher targets, blocked public-download status, checksum/signing requirements, and blockers; it must not expose local paths, signing key references, or generated binary contents.
 - [ ] Do not publish package registry tarballs or signed binary downloads while `artifact_signing.status` is `blocked`.
 
 - [ ] Provider proxy and tool governance checks:

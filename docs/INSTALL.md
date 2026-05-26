@@ -63,6 +63,13 @@ Generate release-candidate install metadata with:
 pnpm run release:artifacts
 ```
 
+Generate local binary-launcher review artifacts with:
+
+```bash
+pnpm run release:binary
+pnpm run test:binary
+```
+
 `release-status` prints the same `divinity.release_artifacts.v1` metadata as JSON. `release:artifacts` writes `dist/release-artifacts.json` with source-checkout, local pnpm-link, package-registry, and binary-download paths. Registry and binary paths remain blocked in both surfaces while the package is private and the non-production warning is active.
 
 Release source provenance is included in both surfaces. It reports the Git commit SHA, branch, repository URL from `package.json`, whether tracked source changes were present, and redaction flags. It ignores untracked files and does not print changed file paths or absolute local paths; if Git metadata is unavailable, provenance is marked unavailable without failing artifact generation.
@@ -73,7 +80,7 @@ Release signing readiness is reported without leaking signing secrets. Configure
 
 Registry publish readiness is reported without leaking registry tokens. The release metadata records `npm publish --provenance --access public` and `npm publish --dry-run --provenance --access public` as the future registry commands, reports whether `NPM_TOKEN` is configured, and lists blockers while `private: true`, the non-production warning, or token readiness prevent publishing. It does not store the token value or local absolute paths.
 
-Binary release readiness is reported without leaking local paths or signing secrets. The release metadata records the future `pnpm run release:binary` build command and `pnpm run test:binary` smoke command, lists deterministic Linux, macOS, and Windows target filenames, and keeps `binary_download` blocked until a real binary build, smoke, checksum, and signing pipeline exists.
+Binary release readiness is reported without leaking local paths or signing secrets. `release:binary` writes `divinity.release_binary_artifacts.v1` metadata, Node launcher artifacts, and `SHA256SUMS` under `dist/binary/`; `test:binary` verifies those artifacts and runs the current-platform launcher against `divinity doctor`. These artifacts are not signed native binaries, so `binary_download` stays blocked until native binary packaging and signing gates are cleared.
 
 The package remains marked `private` while the non-production warning is active. Published package and binary install paths are future release work.
 
@@ -83,6 +90,7 @@ The package remains marked `private` while the non-production warning is active.
 node apps/cli/src/index.mjs doctor --profile source
 node apps/cli/src/index.mjs release-status
 pnpm run test:package
+pnpm run test:binary
 pnpm run test:release-artifacts
 pnpm run test:release-status
 pnpm run validate:contracts
