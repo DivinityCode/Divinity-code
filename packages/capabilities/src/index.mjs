@@ -1,6 +1,7 @@
 import { publicExecutionAdapters } from '../../execution/src/index.mjs';
 import { publicConnectorAdapters } from '../../connectors/src/index.mjs';
 import { publicLlmProviders } from '../../provider-runtime/src/index.mjs';
+import { publicProviderSecretStoreBackends } from '../../provider-secrets/src/index.mjs';
 import { POLICY_PRESETS } from '../../policy-engine/src/index.mjs';
 import { publicStarterRecipes } from '../../recipes/src/index.mjs';
 import { publicRunnerIsolationProfiles } from '../../runner-isolation/src/index.mjs';
@@ -33,6 +34,7 @@ export function createCapabilitiesCatalog({ generated_at = new Date().toISOStrin
     execution_adapters: publicExecutionAdapters(),
     runtime_adapters: publicRuntimeAdapters(),
     llm_providers: publicLlmProviders(),
+    provider_secret_store_backends: publicProviderSecretStoreBackends(),
     toolsets: publicToolsets(),
     runner_isolation_profiles: publicRunnerIsolationProfiles(),
     connector_adapters: publicConnectorAdapters(),

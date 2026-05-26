@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.44.0
+- Added `provider_secret_store_backends` to `CapabilitiesCatalog` so provider secret-store backend discovery is contract-visible without secret values, deployment secret ids, Vault paths, local store paths, or absolute local paths.
+
 ## v1.43.0
 - Expanded `ProviderToolExecution` and embedded Run execution adapter enums with `write_file` for operator-gated workspace writes that expose only redacted byte/line metadata.
 

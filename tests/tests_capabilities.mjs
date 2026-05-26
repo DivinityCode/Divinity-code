@@ -58,6 +58,19 @@ assert.ok(catalog.llm_providers.every(provider => provider.format === 'divinity.
 assert.ok(catalog.llm_providers.every(provider => provider.transport));
 assert.ok(catalog.llm_providers.every(provider => Array.isArray(provider.credential_env_vars)));
 
+assert.deepEqual(catalog.provider_secret_store_backends.map(backend => backend.backend_id), [
+  'local_file',
+  'external_command',
+  'aws_secrets_manager',
+  'gcp_secret_manager',
+  'azure_key_vault',
+  'hashicorp_vault',
+  'hosted_memory'
+]);
+assert.ok(catalog.provider_secret_store_backends.every(backend => backend.format === 'divinity.provider_secret_store_backend.v1'));
+assert.equal(catalog.provider_secret_store_backends.find(backend => backend.backend_id === 'hosted_memory').production_ready, false);
+assert.equal(catalog.provider_secret_store_backends.find(backend => backend.backend_id === 'external_command').broker_command_required, true);
+
 assert.deepEqual(catalog.toolsets.map(toolset => toolset.toolset_id), [
   'web',
   'file',

@@ -14,6 +14,7 @@ Provider secret-reference manifest loader and credential resolver factory for ho
 - Resolves real credential values from a `hashicorp_vault` managed deployment adapter when an approved broker command and Vault secret path map are configured.
 - Writes encrypted local store records when `DIVINITY_PROVIDER_SECRET_STORE_PATH` and `DIVINITY_PROVIDER_SECRET_STORE_KEY` are configured.
 - Returns `configured_secret_refs` only when the referenced store record or environment variable is configured.
+- Exposes `publicProviderSecretStoreBackends()` metadata for capabilities and diagnostics without exposing secret values, deployment secret ids, Vault paths, local store paths, or absolute local paths.
 - Builds `divinity.provider_secret_readiness.v1` metadata for operator checks without exposing secret values.
 - Rejects raw credential fields, public shared-key wording, no-signup key pools, and limit-bypass or evasion wording.
 
@@ -43,6 +44,8 @@ The API write path requires an `actor` and `reason` so operator-owned credential
 ## Store Adapters
 
 Secret storage uses an adapter boundary. The default adapter is `local_file`, backed by `DIVINITY_PROVIDER_SECRET_STORE_PATH` and `DIVINITY_PROVIDER_SECRET_STORE_KEY`. Hosted deployments can inject a hosted operator adapter into `storeProviderSecret()`, `providerSecretReadiness()`, and `createProviderCredentialResolver()` while preserving the same redacted response and audit shapes.
+
+`publicProviderSecretStoreBackends()` returns the public backend catalog used by `divinity capabilities`, API `GET /capabilities`, and `divinity doctor`. It lists backend ids, backend kind, production readiness, broker-command requirements, configuration environment variable names, and redaction guarantees only. It does not include configured secret values, deployment secret ids, Vault secret paths, local store file paths, or host absolute paths.
 
 `DIVINITY_PROVIDER_SECRET_STORE_BACKEND=hosted_memory` selects an in-memory hosted-style adapter only when `DIVINITY_ENABLE_TEST_SECRET_STORE_BACKEND=1` is also set. This path is for tests and local runtime harnesses only; it is not a production secret manager. Production deployments should inject an approved managed secret-store adapter and keep the manifest as an allowlist of provider ids, secret refs, and credential environment variable names.
 

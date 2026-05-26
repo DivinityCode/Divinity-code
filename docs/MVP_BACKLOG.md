@@ -47,7 +47,7 @@
 - CLI `init` supports default, flag-driven, and prompt-driven project config creation for policy preset, soft/hard budget caps, and org/project scope.
 - CLI `doctor` defaults to runtime-safe setup diagnostics for installed or linked package use, while `doctor --profile source` adds source-checkout checks for installed dependencies, AJV validator dependencies, package manifest, and API server source readiness.
 - CLI `bug` emits `divinity.bug_report.v1` with a GitHub-ready Markdown body, environment details, git status, and local doctor diagnostics for in-workflow issue reporting.
-- CLI `capabilities` reports supported policy presets, runtime adapters, execution adapters, runner isolation profiles, connector adapters, and starter recipes for extension discovery.
+- CLI `capabilities` reports supported policy presets, runtime adapters, execution adapters, runner isolation profiles, connector adapters, LLM providers, provider secret-store backends, toolsets, and starter recipes for extension discovery.
 - IDE extension scaffold contributes task run, dashboard launch, and doctor commands that delegate to the repo-local CLI.
 - API exposes `POST /preflight`; `POST /tasks` records preflight metadata and moves high-risk allowed work to `awaiting_approval`.
 - API `POST /tasks` preserves submitted task success criteria through run storage and retrieval.
@@ -56,7 +56,7 @@
 - Preflight and step-gate decisions evaluate policy-pack pre-execution hooks into deterministic hook outcomes, warnings, blocks, and observed evidence before execution adapters run.
 - CLI/API run payloads include budget incident records when soft or hard budget caps are exceeded, and API audit export records those incidents as immutable evidence.
 - API exposes `GET /runs`, `GET /approvals`, `GET /runs/:id/approval`, `POST /runs/:id/approval`, `/runs/:id/approval/comments`, `/runs/:id/approval/revision`, and `/runs/:id/approval/resubmit` for dashboard loading, approval snapshots, approve/reject transitions, revision/resubmission transitions, and approval review context.
-- API exposes `GET /capabilities` for policy, runtime adapter, execution adapter, runner isolation profile, connector adapter, and starter recipe discovery.
+- API exposes `GET /capabilities` for policy, runtime adapter, execution adapter, runner isolation profile, connector adapter, LLM provider, provider secret-store backend, toolset, and starter recipe discovery.
 - API exposes `GET /runs/:id/connectors` and `POST /runs/:id/connectors` for run-level ticket/docs/CI context attachments.
 - API run state can be backed by a file snapshot when `DIVINITY_RUN_STORE_PATH` is set; the default remains in-memory for local deterministic demos.
 - API exposes `POST /runs/:id/steps` to run policy and budget gates before a step can enter pending execution.

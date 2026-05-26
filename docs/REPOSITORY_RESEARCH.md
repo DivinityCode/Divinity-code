@@ -103,7 +103,7 @@ The 2026-05-26 refresh confirmed Claude Code `v2.1.150`, Codex `rust-v0.133.0`, 
 8. Emit structured bug reports from the CLI so support evidence is generated from the same local checks operators already run.
 9. Carry task success criteria in the shared Task contract so goal/subgoal-style acceptance signals survive across CLI, API, and run storage.
 10. Promote success criteria into durable goal records before adding mutable goal routes, so budget accounting and completion evidence stay contract-visible.
-11. Keep LLM provider and toolset discovery contract-visible before implementing live provider invocation, so public clients can inspect supported runtime shape without handling secrets.
+11. Keep LLM provider, provider secret-store backend, and toolset discovery contract-visible before implementing live provider invocation, so public clients can inspect supported runtime shape without handling secrets.
 
 ## Build Slices Adopted From Research
 1. **Approval queue:** implemented run storage with an in-memory default, opt-in file-backed persistence, approval-required runs, and approve/reject transitions.
@@ -114,7 +114,7 @@ The 2026-05-26 refresh confirmed Claude Code `v2.1.150`, Codex `rust-v0.133.0`, 
 6. **Diagnostics:** implemented `divinity doctor` for Node, optional npm, pnpm/Corepack fallback, aggregate package-manager readiness, optional Docker runtime readiness for container-sandbox execution, installed dependencies, AJV validator dependencies, git, package manifest, and API server source readiness checks.
 7. **Operator observability:** implemented run health, budget utilization, approval backlog, and policy/budget/execution failure taxonomy summaries in the API and dashboard.
 8. **Execution adapter expansion:** implemented constrained package-script execution for Node-based package scripts without shell interpolation.
-9. **Capability discovery:** implemented a shared `divinity.capabilities.v1` catalog so clients can discover policy presets, runtime adapters, execution adapters, runner isolation profiles, connector adapters, and starter recipes.
+9. **Capability discovery:** implemented a shared `divinity.capabilities.v1` catalog so clients can discover policy presets, runtime adapters, execution adapters, runner isolation profiles, connector adapters, LLM providers, provider secret-store backends, toolsets, and starter recipes.
 10. **Post-execution verification:** implemented `divinity.verification.v1` records so executed steps carry verifier results through run state, events, audit, and dashboard rendering.
 11. **Observable agent activity:** implemented `divinity.agent_activity.v1` records so planner, executor, and verifier work carries actor, reason, evidence, status, and budget estimates.
 12. **Run heartbeats:** implemented `divinity.heartbeat.v1` records, `POST /runs/:id/heartbeat`, liveness fields in observability summaries, and a dashboard liveness card for heartbeat and stale-run visibility.
@@ -172,3 +172,4 @@ The 2026-05-26 refresh confirmed Claude Code `v2.1.150`, Codex `rust-v0.133.0`, 
 64. **Release source provenance:** added redacted Git source provenance to release artifacts and CLI release status, including commit SHA, branch, tracked-change state, and unavailable-Git fallback without exposing changed file paths or absolute local paths.
 65. **HashiCorp Vault secret store adapter:** added `hashicorp_vault` provider secret-store backend support using the same approved absolute broker-command contract plus explicit `secret://` ref to Vault secret path mapping, while preserving redacted write/readiness/route/audit metadata and keeping Vault paths out of public responses.
 66. **Release SBOM metadata:** added deterministic `divinity.release_sbom.v1` metadata to release artifacts and CLI release status from `package.json` plus `package-lock.json`, exposing package/dependency inventory without local paths, `node_modules` paths, registry URLs, or lockfile integrity values.
+67. **Provider secret-store backend discovery:** exposed redacted provider secret-store backend metadata through capabilities and `doctor`, listing local, command, managed cloud, Vault, and test-only backends without secret values, deployment secret ids, Vault paths, local store paths, or absolute local paths.
