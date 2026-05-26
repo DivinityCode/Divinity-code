@@ -96,7 +96,8 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: API `POST /provider-secrets/store` can write AES-256-GCM encrypted local store records with required actor/reason metadata, returning and auditing only redacted `divinity.provider_secret_store_record.v1` metadata.
    - Bootstrap status: provider secret storage is now behind a pluggable adapter boundary; the local AES-256-GCM file store remains the default bootstrap, and hosted operator adapters can be injected while preserving the same redacted route/readiness/write/audit metadata.
    - Bootstrap status: the test-only `hosted_memory` secret-store backend is blocked from runtime configuration unless `DIVINITY_ENABLE_TEST_SECRET_STORE_BACKEND=1` is explicitly set for tests or local harnesses.
-   - Next production slice: bind the hosted adapter boundary to an approved deployment secret manager.
+   - Bootstrap status: `DIVINITY_PROVIDER_SECRET_STORE_BACKEND=external_command` binds the API to an approved deployment secret manager command through JSON stdin/stdout, absolute executable paths, no shell interpolation, and the same redacted public metadata.
+   - Next production slice: add provider-specific adapters for selected managed secret stores while preserving the same adapter contract.
 2. Toolset governance.
    - Bootstrap status: public toolset metadata and default resolution are exposed through capabilities, CLI `toolsets`, API `/toolsets`, and `doctor`.
    - Bootstrap status: CLI/API task assembly carries toolset resolution metadata on task/run payloads.

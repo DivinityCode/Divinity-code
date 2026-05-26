@@ -194,6 +194,66 @@ try {
   assert.equal(configuredHostedAdapter.backend_id, 'hosted_memory');
   assert.equal(configuredHostedAdapter.backend_kind, 'hosted_operator');
 
+  const managedCommandStorePath = path.join(tmpRoot, 'managed-command-store.json');
+  const managedCommandEnv = {
+    DIVINITY_PROVIDER_SECRET_REFS_PATH: manifestPath,
+    DIVINITY_PROVIDER_SECRET_STORE_BACKEND: 'external_command',
+    DIVINITY_PROVIDER_SECRET_STORE_COMMAND: process.execPath,
+    DIVINITY_PROVIDER_SECRET_STORE_COMMAND_ARGS: JSON.stringify([
+      path.resolve('tests/fixtures/provider-secret-store-command.mjs')
+    ]),
+    DIVINITY_TEST_MANAGED_SECRET_STORE_PATH: managedCommandStorePath
+  };
+  const managedCommandRecord = storeProviderSecret({
+    env: managedCommandEnv,
+    provider_id: 'hosted_secret_mock',
+    secret_ref: secretRef,
+    credential_env_var: 'HOSTED_SECRET_MOCK_API_KEY',
+    secret_value: 'managed-command-secret',
+    actor: 'operator@example.com',
+    reason: 'Authorized managed secret command onboarding',
+    updated_at: '2026-05-26T10:00:00.000Z'
+  });
+  assert.equal(managedCommandRecord.format, 'divinity.provider_secret_store_record.v1');
+  assert.equal(managedCommandRecord.store_backend_id, 'external_command');
+  assert.equal(managedCommandRecord.store_backend_kind, 'managed_command');
+  assert.equal(managedCommandRecord.algorithm, 'managed-by-external-command');
+  assert.equal(JSON.stringify(managedCommandRecord).includes('managed-command-secret'), false);
+
+  const managedCommandReadiness = providerSecretReadiness({
+    env: managedCommandEnv
+  });
+  assert.equal(managedCommandReadiness.store_configured, true);
+  assert.equal(managedCommandReadiness.store_backend_id, 'external_command');
+  assert.equal(managedCommandReadiness.store_backend_kind, 'managed_command');
+  assert.equal(managedCommandReadiness.providers[0].credential_configured, true);
+  assert.equal(managedCommandReadiness.providers[0].credential_source, 'store');
+  assert.equal(JSON.stringify(managedCommandReadiness).includes('managed-command-secret'), false);
+
+  const managedCommandResolver = createProviderCredentialResolver({
+    env: managedCommandEnv
+  });
+  assert.deepEqual(managedCommandResolver.configuredSecretRefs(runtime), [secretRef]);
+  assert.equal(managedCommandResolver.resolveCredential(runtime), 'managed-command-secret');
+  assert.throws(
+    () => createConfiguredProviderSecretStoreAdapter({
+      env: {
+        ...managedCommandEnv,
+        DIVINITY_PROVIDER_SECRET_STORE_COMMAND: 'node'
+      }
+    }).configuredSecretRefs(),
+    /absolute executable path/
+  );
+  assert.throws(
+    () => createConfiguredProviderSecretStoreAdapter({
+      env: {
+        ...managedCommandEnv,
+        DIVINITY_PROVIDER_SECRET_STORE_COMMAND_ARGS: '"--eval"'
+      }
+    }).configuredSecretRefs(),
+    /JSON array of strings/
+  );
+
   assert.throws(
     () => storeProviderSecret({
       env: {
