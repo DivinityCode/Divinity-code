@@ -267,7 +267,7 @@ if rg -n '^(<{7}|={7}|>{7})' . --glob '!node_modules'; then exit 1; else test "$
 root_files=$(find . -maxdepth 1 -type f \( -name 'tests_*.mjs' -o -name 'scripts_*.mjs' \) -print); test -z "$root_files" && test ! -e .divinity.json && test ! -e .divinity-provider-limits.json && test ! -e .divinity-provider-usage.json
 ```
 
-- [ ] Commit as `ci: add release readiness workflow`.
-- [ ] Push branch `codex/release-readiness-ci`.
-- [ ] Open a ready PR against `main`.
-- [ ] Wait for GitHub `Contracts Validation` and `Release Readiness` checks, merge only when green, sync local `main`, and rerun `pnpm run test:github-workflows`.
+- [x] Commit as `ci: add release readiness workflow`.
+- [x] Push branch `codex/release-readiness-ci-workflow`.
+- [x] Open a ready PR against `main`.
+- [x] Wait for GitHub `Contracts Validation` and `Release Readiness` checks, merge only when green, sync local `main`, and rerun `pnpm run test:github-workflows`.
