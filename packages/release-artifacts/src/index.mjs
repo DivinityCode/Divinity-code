@@ -7,12 +7,41 @@ export const RELEASE_ARTIFACTS_FORMAT = 'divinity.release_artifacts.v1';
 export const SOURCE_PROVENANCE_FORMAT = 'divinity.release_source_provenance.v1';
 export const RELEASE_SBOM_FORMAT = 'divinity.release_sbom.v1';
 export const RELEASE_REGISTRY_PUBLISH_READINESS_FORMAT = 'divinity.release_registry_publish_readiness.v1';
+export const RELEASE_BINARY_READINESS_FORMAT = 'divinity.release_binary_readiness.v1';
 export const DEFAULT_RELEASE_ARTIFACT_OUTPUT = path.join('dist', 'release-artifacts.json');
 export const NPM_TOKEN_ENV = 'NPM_TOKEN';
 export const RELEASE_SIGNING_COMMAND_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND';
 export const RELEASE_SIGNING_COMMAND_ARGS_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND_ARGS';
 export const RELEASE_SIGNING_KEY_REF_ENV = 'DIVINITY_RELEASE_SIGNING_KEY_REF';
 export const RELEASE_SIGNING_IDENTITY_ENV = 'DIVINITY_RELEASE_SIGNING_IDENTITY';
+
+const BINARY_RELEASE_TARGETS = [
+  {
+    platform: 'linux',
+    arch: 'x64',
+    filename: 'divinity-linux-x64'
+  },
+  {
+    platform: 'linux',
+    arch: 'arm64',
+    filename: 'divinity-linux-arm64'
+  },
+  {
+    platform: 'darwin',
+    arch: 'x64',
+    filename: 'divinity-darwin-x64'
+  },
+  {
+    platform: 'darwin',
+    arch: 'arm64',
+    filename: 'divinity-darwin-arm64'
+  },
+  {
+    platform: 'win32',
+    arch: 'x64',
+    filename: 'divinity-win32-x64.exe'
+  }
+];
 
 function cleanString(value) {
   return String(value || '').trim();
@@ -390,6 +419,33 @@ function buildRegistryPublishReadiness({
   };
 }
 
+function buildBinaryReleaseReadiness({ warningActive = true } = {}) {
+  const blockers = [
+    ...(warningActive ? ['non_production_warning'] : []),
+    'missing_binary_build_pipeline',
+    'missing_binary_smoke_gate',
+    'signing_blocked'
+  ];
+  return {
+    format: RELEASE_BINARY_READINESS_FORMAT,
+    status: 'blocked',
+    artifact_id: 'binary_download',
+    binary_name: 'divinity',
+    build_command: 'pnpm run release:binary',
+    smoke_test_command: 'pnpm run test:binary',
+    signing_required: true,
+    checksums_required: true,
+    supported_targets: BINARY_RELEASE_TARGETS.map(target => ({
+      ...target,
+      status: 'blocked'
+    })),
+    blockers,
+    redacts_local_paths: true,
+    redacts_signing_secrets: true,
+    reason: 'Signed binary downloads remain blocked until the production warning is cleared and a binary build, smoke, checksum, and signing pipeline exists.'
+  };
+}
+
 export function buildReleaseArtifactsManifest({
   cwd = process.cwd(),
   generated_by = 'packages/release-artifacts',
@@ -420,6 +476,7 @@ export function buildReleaseArtifactsManifest({
     release_sbom: buildReleaseSbom({ packageJson, packageLock }),
     artifact_integrity: buildArtifactIntegrity(packageJson.files || [], root),
     artifact_signing: buildArtifactSigning({ publishingBlocked, warningReason, env }),
+    binary_release_readiness: buildBinaryReleaseReadiness({ warningActive: true }),
     registry_publish_readiness: buildRegistryPublishReadiness({
       packageJson,
       publishingBlocked,

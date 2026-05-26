@@ -73,6 +73,8 @@ Release signing readiness is reported without leaking signing secrets. Configure
 
 Registry publish readiness is reported without leaking registry tokens. The release metadata records `npm publish --provenance --access public` and `npm publish --dry-run --provenance --access public` as the future registry commands, reports whether `NPM_TOKEN` is configured, and lists blockers while `private: true`, the non-production warning, or token readiness prevent publishing. It does not store the token value or local absolute paths.
 
+Binary release readiness is reported without leaking local paths or signing secrets. The release metadata records the future `pnpm run release:binary` build command and `pnpm run test:binary` smoke command, lists deterministic Linux, macOS, and Windows target filenames, and keeps `binary_download` blocked until a real binary build, smoke, checksum, and signing pipeline exists.
+
 The package remains marked `private` while the non-production warning is active. Published package and binary install paths are future release work.
 
 ## Verify The Install
