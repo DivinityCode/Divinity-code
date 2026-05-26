@@ -48,6 +48,9 @@ jobs:
       - name: Validate release promotion preflight
         run: npm run test:release-promotion
 
+      - name: Validate release signatures
+        run: npm run test:release-signatures
+
       - name: Validate release artifact metadata
         run: npm run test:release-artifacts
 
