@@ -66,47 +66,69 @@ assert.equal(artifact.binary_release_readiness.build_command, 'pnpm run release:
 assert.equal(artifact.binary_release_readiness.smoke_test_command, 'pnpm run test:binary');
 assert.equal(artifact.binary_release_readiness.signing_required, true);
 assert.equal(artifact.binary_release_readiness.checksums_required, true);
+assert.equal(artifact.binary_release_readiness.checksum_status, 'generated');
 assert.equal(artifact.binary_release_readiness.redacts_local_paths, true);
 assert.equal(artifact.binary_release_readiness.redacts_signing_secrets, true);
+assert.deepEqual(artifact.binary_release_readiness.build_pipeline, {
+  status: 'available',
+  command: 'pnpm run release:binary',
+  artifact_format: 'divinity.release_binary_artifacts.v1',
+  artifact_type: 'node_launcher',
+  native_binary: false,
+  redacts_local_paths: true
+});
+assert.deepEqual(artifact.binary_release_readiness.smoke_gate, {
+  status: 'available',
+  command: 'pnpm run test:binary'
+});
 assert.deepEqual(artifact.binary_release_readiness.supported_targets, [
   {
     platform: 'linux',
     arch: 'x64',
     filename: 'divinity-linux-x64',
-    status: 'blocked'
+    status: 'generated',
+    native_binary: false,
+    public_download_status: 'blocked'
   },
   {
     platform: 'linux',
     arch: 'arm64',
     filename: 'divinity-linux-arm64',
-    status: 'blocked'
+    status: 'generated',
+    native_binary: false,
+    public_download_status: 'blocked'
   },
   {
     platform: 'darwin',
     arch: 'x64',
     filename: 'divinity-darwin-x64',
-    status: 'blocked'
+    status: 'generated',
+    native_binary: false,
+    public_download_status: 'blocked'
   },
   {
     platform: 'darwin',
     arch: 'arm64',
     filename: 'divinity-darwin-arm64',
-    status: 'blocked'
+    status: 'generated',
+    native_binary: false,
+    public_download_status: 'blocked'
   },
   {
     platform: 'win32',
     arch: 'x64',
-    filename: 'divinity-win32-x64.exe',
-    status: 'blocked'
+    filename: 'divinity-win32-x64.cmd',
+    status: 'generated',
+    native_binary: false,
+    public_download_status: 'blocked'
   }
 ]);
 assert.deepEqual(artifact.binary_release_readiness.blockers, [
   'non_production_warning',
-  'missing_binary_build_pipeline',
-  'missing_binary_smoke_gate',
+  'native_binary_build_pending',
   'signing_blocked'
 ]);
-assert.match(artifact.binary_release_readiness.reason, /binary build, smoke, checksum, and signing pipeline/);
+assert.match(artifact.binary_release_readiness.reason, /signed native binary downloads remain blocked/);
 assert.equal(JSON.stringify(artifact.binary_release_readiness).includes(process.cwd()), false);
 assert.equal(artifact.source_provenance.format, 'divinity.release_source_provenance.v1');
 assert.equal(artifact.source_provenance.status, 'available');
@@ -291,6 +313,7 @@ assert.match(installPathsById.get('binary_download').reason, /non-production war
 for (const command of [
   'pnpm run test:package',
   'pnpm run test:package-tarball',
+  'pnpm run test:binary',
   'node apps/cli/src/index.mjs doctor',
   'node apps/cli/src/index.mjs doctor --profile source',
   'pnpm run test:deprecations',

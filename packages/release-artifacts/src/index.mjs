@@ -1,6 +1,6 @@
 import { execFileSync } from 'child_process';
 import { createHash } from 'crypto';
-import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
+import { chmodSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
 import path from 'path';
 
 export const RELEASE_ARTIFACTS_FORMAT = 'divinity.release_artifacts.v1';
@@ -8,7 +8,9 @@ export const SOURCE_PROVENANCE_FORMAT = 'divinity.release_source_provenance.v1';
 export const RELEASE_SBOM_FORMAT = 'divinity.release_sbom.v1';
 export const RELEASE_REGISTRY_PUBLISH_READINESS_FORMAT = 'divinity.release_registry_publish_readiness.v1';
 export const RELEASE_BINARY_READINESS_FORMAT = 'divinity.release_binary_readiness.v1';
+export const RELEASE_BINARY_ARTIFACTS_FORMAT = 'divinity.release_binary_artifacts.v1';
 export const DEFAULT_RELEASE_ARTIFACT_OUTPUT = path.join('dist', 'release-artifacts.json');
+export const DEFAULT_RELEASE_BINARY_OUTPUT = path.join('dist', 'binary');
 export const NPM_TOKEN_ENV = 'NPM_TOKEN';
 export const RELEASE_SIGNING_COMMAND_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND';
 export const RELEASE_SIGNING_COMMAND_ARGS_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND_ARGS';
@@ -39,7 +41,7 @@ const BINARY_RELEASE_TARGETS = [
   {
     platform: 'win32',
     arch: 'x64',
-    filename: 'divinity-win32-x64.exe'
+    filename: 'divinity-win32-x64.cmd'
   }
 ];
 
@@ -96,6 +98,10 @@ function packageFileEntries(packageFiles, cwd) {
 
 function sha256File(cwd, filePath) {
   return createHash('sha256').update(readFileSync(path.resolve(cwd, filePath))).digest('hex');
+}
+
+function sha256Bytes(value) {
+  return createHash('sha256').update(value).digest('hex');
 }
 
 function buildArtifactIntegrity(packageFiles, cwd) {
@@ -422,8 +428,7 @@ function buildRegistryPublishReadiness({
 function buildBinaryReleaseReadiness({ warningActive = true } = {}) {
   const blockers = [
     ...(warningActive ? ['non_production_warning'] : []),
-    'missing_binary_build_pipeline',
-    'missing_binary_smoke_gate',
+    'native_binary_build_pending',
     'signing_blocked'
   ];
   return {
@@ -435,14 +440,29 @@ function buildBinaryReleaseReadiness({ warningActive = true } = {}) {
     smoke_test_command: 'pnpm run test:binary',
     signing_required: true,
     checksums_required: true,
+    checksum_status: 'generated',
+    build_pipeline: {
+      status: 'available',
+      command: 'pnpm run release:binary',
+      artifact_format: RELEASE_BINARY_ARTIFACTS_FORMAT,
+      artifact_type: 'node_launcher',
+      native_binary: false,
+      redacts_local_paths: true
+    },
+    smoke_gate: {
+      status: 'available',
+      command: 'pnpm run test:binary'
+    },
     supported_targets: BINARY_RELEASE_TARGETS.map(target => ({
       ...target,
-      status: 'blocked'
+      status: 'generated',
+      native_binary: false,
+      public_download_status: 'blocked'
     })),
     blockers,
     redacts_local_paths: true,
     redacts_signing_secrets: true,
-    reason: 'Signed binary downloads remain blocked until the production warning is cleared and a binary build, smoke, checksum, and signing pipeline exists.'
+    reason: 'Local Node launcher artifacts and checksums can be generated, but signed native binary downloads remain blocked until the production warning is cleared and release signing is configured.'
   };
 }
 
@@ -534,6 +554,11 @@ export function buildReleaseArtifactsManifest({
         required: true
       },
       {
+        gate_id: 'binary_artifact_smoke',
+        command: 'pnpm run test:binary',
+        required: true
+      },
+      {
         gate_id: 'runtime_doctor',
         command: 'node apps/cli/src/index.mjs doctor',
         required: true
@@ -600,5 +625,99 @@ export function writeReleaseArtifactsManifest({
     ok: true,
     artifact_path: artifactPath,
     artifact
+  };
+}
+
+function posixLauncherContent() {
+  return [
+    '#!/usr/bin/env sh',
+    'set -eu',
+    'SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)',
+    'SOURCE_ROOT="${DIVINITY_BINARY_SOURCE_ROOT:-$(CDPATH= cd "$SCRIPT_DIR/../.." && pwd)}"',
+    'exec node "$SOURCE_ROOT/apps/cli/src/index.mjs" "$@"',
+    ''
+  ].join('\n');
+}
+
+function windowsLauncherContent() {
+  return [
+    '@echo off',
+    'setlocal',
+    'if "%DIVINITY_BINARY_SOURCE_ROOT%"=="" (',
+    '  set "SOURCE_ROOT=%~dp0\\..\\.."',
+    ') else (',
+    '  set "SOURCE_ROOT=%DIVINITY_BINARY_SOURCE_ROOT%"',
+    ')',
+    'node "%SOURCE_ROOT%\\apps\\cli\\src\\index.mjs" %*',
+    ''
+  ].join('\r\n');
+}
+
+function launcherKind(target) {
+  return target.platform === 'win32' ? 'windows_cmd' : 'posix_shell';
+}
+
+function launcherContent(target) {
+  return launcherKind(target) === 'windows_cmd' ? windowsLauncherContent() : posixLauncherContent();
+}
+
+export function writeReleaseBinaryArtifacts({
+  output = DEFAULT_RELEASE_BINARY_OUTPUT,
+  cwd = process.cwd()
+} = {}) {
+  const root = path.resolve(cwd);
+  const outputDirectory = path.resolve(root, cleanString(output) || DEFAULT_RELEASE_BINARY_OUTPUT);
+  mkdirSync(outputDirectory, { recursive: true });
+
+  const artifacts = BINARY_RELEASE_TARGETS.map(target => {
+    const content = launcherContent(target);
+    const artifactPath = path.join(outputDirectory, target.filename);
+    writeFileSync(artifactPath, content);
+    if (launcherKind(target) === 'posix_shell') chmodSync(artifactPath, 0o755);
+    const bytes = statSync(artifactPath).size;
+    return {
+      ...target,
+      path: target.filename,
+      launcher_kind: launcherKind(target),
+      artifact_type: 'node_launcher',
+      native_binary: false,
+      status: 'generated',
+      bytes,
+      sha256: sha256Bytes(readFileSync(artifactPath))
+    };
+  });
+
+  const checksumPath = path.join(outputDirectory, 'SHA256SUMS');
+  writeFileSync(
+    checksumPath,
+    `${artifacts.map(artifact => `${artifact.sha256}  ${artifact.filename}`).join('\n')}\n`
+  );
+
+  const manifest = {
+    format: RELEASE_BINARY_ARTIFACTS_FORMAT,
+    generated_by: 'packages/release-artifacts',
+    status: 'generated',
+    artifact_type: 'node_launcher',
+    native_binary: false,
+    public_download_ready: false,
+    binary_name: 'divinity',
+    output_directory: DEFAULT_RELEASE_BINARY_OUTPUT.split(path.sep).join('/'),
+    checksums_file: 'SHA256SUMS',
+    checksum_algorithm: 'sha256',
+    redacts_local_paths: true,
+    redacts_signing_secrets: true,
+    reason: 'Generated artifacts are local Node launchers for release-candidate smoke checks; signed native binary downloads are still blocked by release gates.',
+    artifacts
+  };
+
+  const manifestPath = path.join(outputDirectory, 'manifest.json');
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  return {
+    ok: true,
+    output_directory: outputDirectory,
+    checksum_path: checksumPath,
+    manifest_path: manifestPath,
+    manifest
   };
 }

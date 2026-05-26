@@ -43,25 +43,41 @@ assert.equal(result.release.binary_release_readiness.build_command, 'pnpm run re
 assert.equal(result.release.binary_release_readiness.smoke_test_command, 'pnpm run test:binary');
 assert.equal(result.release.binary_release_readiness.signing_required, true);
 assert.equal(result.release.binary_release_readiness.checksums_required, true);
+assert.equal(result.release.binary_release_readiness.checksum_status, 'generated');
 assert.equal(result.release.binary_release_readiness.redacts_local_paths, true);
 assert.equal(result.release.binary_release_readiness.redacts_signing_secrets, true);
+assert.deepEqual(result.release.binary_release_readiness.build_pipeline, {
+  status: 'available',
+  command: 'pnpm run release:binary',
+  artifact_format: 'divinity.release_binary_artifacts.v1',
+  artifact_type: 'node_launcher',
+  native_binary: false,
+  redacts_local_paths: true
+});
+assert.deepEqual(result.release.binary_release_readiness.smoke_gate, {
+  status: 'available',
+  command: 'pnpm run test:binary'
+});
 assert.equal(result.release.binary_release_readiness.supported_targets.length, 5);
 assert.ok(result.release.binary_release_readiness.supported_targets.some(target => (
   target.platform === 'linux' &&
   target.arch === 'x64' &&
   target.filename === 'divinity-linux-x64' &&
-  target.status === 'blocked'
+  target.status === 'generated' &&
+  target.native_binary === false &&
+  target.public_download_status === 'blocked'
 )));
 assert.ok(result.release.binary_release_readiness.supported_targets.some(target => (
   target.platform === 'win32' &&
   target.arch === 'x64' &&
-  target.filename === 'divinity-win32-x64.exe' &&
-  target.status === 'blocked'
+  target.filename === 'divinity-win32-x64.cmd' &&
+  target.status === 'generated' &&
+  target.native_binary === false &&
+  target.public_download_status === 'blocked'
 )));
 for (const blocker of [
   'non_production_warning',
-  'missing_binary_build_pipeline',
-  'missing_binary_smoke_gate',
+  'native_binary_build_pending',
   'signing_blocked'
 ]) {
   assert.ok(
@@ -100,6 +116,7 @@ assert.equal(installPathsById.get('binary_download').status, 'blocked');
 for (const command of [
   'pnpm test',
   'pnpm run test:providers',
+  'pnpm run test:binary',
   'pnpm run test:smoke'
 ]) {
   assert.ok(
