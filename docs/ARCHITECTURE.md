@@ -50,12 +50,13 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 - This keeps bug reporting inside the builder workflow without opening a browser or mutating repository state.
 
 ## Release Readiness
-- `packages/release-artifacts` builds `divinity.release_artifacts.v1` metadata from the package manifest, package file allowlist, redacted Git source provenance, release SBOM metadata, sha256 integrity scan, install paths, release gates, and signing readiness.
+- `packages/release-artifacts` builds `divinity.release_artifacts.v1` metadata from the package manifest, package file allowlist, redacted Git source provenance, release SBOM metadata, sha256 integrity scan, install paths, release gates, signing readiness, and registry publish readiness.
 - CLI `release-status` returns that manifest as a read-only status surface without writing `dist/release-artifacts.json`.
 - `pnpm run release:artifacts` writes the same manifest for release-candidate review; registry and binary download paths remain blocked while `private: true` and the non-production warning are active.
 - Source provenance records commit SHA, branch, tracked-change status, repository URL from package metadata, and redaction flags. It ignores untracked files, never includes changed file paths or absolute local paths, and reports `status: "unavailable"` instead of failing artifact generation when Git metadata is unavailable.
 - Release SBOM records `divinity.release_sbom.v1` package/dependency inventory from `package.json` and `package-lock.json`, including names, versions, direct/transitive relationship, requested ranges, and license strings when present. It omits local absolute paths, `node_modules` paths, registry URLs, and lockfile integrity values, and it does not unblock publishing while release gates remain blocked.
 - Release signing readiness is explicit but redacted: `DIVINITY_RELEASE_SIGNING_COMMAND` must be an absolute executable path, `DIVINITY_RELEASE_SIGNING_COMMAND_ARGS` must be a JSON array of strings, and `DIVINITY_RELEASE_SIGNING_KEY_REF` plus `DIVINITY_RELEASE_SIGNING_IDENTITY` are reported only as configured booleans. Release metadata never stores command args, signing key references, identities, key material, package signatures, or binary signatures while release gates remain blocked.
+- Registry publish readiness is explicit but redacted: release metadata records the future `npm publish --provenance --access public` command, dry-run command, `NPM_TOKEN` configured state, and blockers without storing registry token values or local absolute paths.
 
 ## Capability Discovery
 - CLI `capabilities` and API `GET /capabilities` expose `divinity.capabilities.v1`.

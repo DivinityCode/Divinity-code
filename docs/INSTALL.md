@@ -71,6 +71,8 @@ Release SBOM metadata is included in both surfaces as `divinity.release_sbom.v1`
 
 Release signing readiness is reported without leaking signing secrets. Configure `DIVINITY_RELEASE_SIGNING_COMMAND` as an absolute executable path, `DIVINITY_RELEASE_SIGNING_COMMAND_ARGS` as an optional JSON array of strings, and `DIVINITY_RELEASE_SIGNING_KEY_REF` plus `DIVINITY_RELEASE_SIGNING_IDENTITY` as deployment-managed signing references. The generated metadata reports only configured booleans and validation status; it does not store command args, key refs, identities, key material, package signatures, or binary signatures.
 
+Registry publish readiness is reported without leaking registry tokens. The release metadata records `npm publish --provenance --access public` and `npm publish --dry-run --provenance --access public` as the future registry commands, reports whether `NPM_TOKEN` is configured, and lists blockers while `private: true`, the non-production warning, or token readiness prevent publishing. It does not store the token value or local absolute paths.
+
 The package remains marked `private` while the non-production warning is active. Published package and binary install paths are future release work.
 
 ## Verify The Install

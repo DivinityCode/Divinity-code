@@ -40,6 +40,24 @@ assert.equal(artifact.package.node_engine, packageJson.engines.node);
 assert.equal(artifact.package.package_manager, packageJson.packageManager);
 assert.deepEqual(artifact.package.bin, packageJson.bin);
 assert.equal(artifact.non_production_warning_active, true);
+assert.equal(artifact.registry_publish_readiness.format, 'divinity.release_registry_publish_readiness.v1');
+assert.equal(artifact.registry_publish_readiness.status, 'blocked');
+assert.equal(artifact.registry_publish_readiness.package_name, packageJson.name);
+assert.equal(artifact.registry_publish_readiness.package_version, packageJson.version);
+assert.equal(artifact.registry_publish_readiness.registry_url, 'https://registry.npmjs.org/');
+assert.equal(artifact.registry_publish_readiness.provenance_required, true);
+assert.equal(artifact.registry_publish_readiness.publish_command, 'npm publish --provenance --access public');
+assert.equal(artifact.registry_publish_readiness.dry_run_command, 'npm publish --dry-run --provenance --access public');
+assert.equal(artifact.registry_publish_readiness.token_env_var, 'NPM_TOKEN');
+assert.equal(artifact.registry_publish_readiness.token_configured, false);
+assert.equal(artifact.registry_publish_readiness.redacts_token, true);
+assert.equal(artifact.registry_publish_readiness.redacts_local_paths, true);
+assert.deepEqual(artifact.registry_publish_readiness.blockers, [
+  'package_private',
+  'non_production_warning',
+  'missing_registry_token'
+]);
+assert.equal(JSON.stringify(artifact.registry_publish_readiness).includes(process.cwd()), false);
 assert.equal(artifact.source_provenance.format, 'divinity.release_source_provenance.v1');
 assert.equal(artifact.source_provenance.status, 'available');
 assert.equal(artifact.source_provenance.vcs, 'git');
@@ -174,6 +192,18 @@ assert.equal(configuredSigningArtifact.artifact_signing.configuration.identity_c
 assert.equal(configuredSigningArtifact.artifact_signing.configuration.ready_when_release_gates_clear, true);
 assert.equal(JSON.stringify(configuredSigningArtifact).includes('secret://divinity/release/signing-key'), false);
 assert.equal(JSON.stringify(configuredSigningArtifact).includes('release@example.com'), false);
+
+const configuredPublishArtifact = buildReleaseArtifactsManifest({
+  cwd: process.cwd(),
+  env: { NPM_TOKEN: 'npm-secret-token-value' }
+});
+assert.equal(configuredPublishArtifact.registry_publish_readiness.status, 'blocked');
+assert.equal(configuredPublishArtifact.registry_publish_readiness.token_configured, true);
+assert.deepEqual(configuredPublishArtifact.registry_publish_readiness.blockers, [
+  'package_private',
+  'non_production_warning'
+]);
+assert.equal(JSON.stringify(configuredPublishArtifact).includes('npm-secret-token-value'), false);
 
 const invalidSigningArtifact = buildReleaseArtifactsManifest({
   cwd: process.cwd(),
