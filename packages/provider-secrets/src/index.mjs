@@ -22,6 +22,10 @@ export const GCP_SECRET_MANAGER_COMMAND_ENV = 'DIVINITY_GCP_SECRET_MANAGER_COMMA
 export const GCP_SECRET_MANAGER_COMMAND_ARGS_ENV = 'DIVINITY_GCP_SECRET_MANAGER_COMMAND_ARGS';
 export const GCP_SECRET_MANAGER_TIMEOUT_MS_ENV = 'DIVINITY_GCP_SECRET_MANAGER_TIMEOUT_MS';
 export const GCP_SECRET_MANAGER_SECRET_IDS_ENV = 'DIVINITY_GCP_SECRET_MANAGER_SECRET_IDS';
+export const AZURE_KEY_VAULT_COMMAND_ENV = 'DIVINITY_AZURE_KEY_VAULT_COMMAND';
+export const AZURE_KEY_VAULT_COMMAND_ARGS_ENV = 'DIVINITY_AZURE_KEY_VAULT_COMMAND_ARGS';
+export const AZURE_KEY_VAULT_TIMEOUT_MS_ENV = 'DIVINITY_AZURE_KEY_VAULT_TIMEOUT_MS';
+export const AZURE_KEY_VAULT_SECRET_IDS_ENV = 'DIVINITY_AZURE_KEY_VAULT_SECRET_IDS';
 
 const RAW_CREDENTIAL_FIELD_NAMES = new Set([
   'api_key',
@@ -203,6 +207,59 @@ function gcpSecretIdMapFrom({ env = process.env } = {}) {
     const cleanSecretId = cleanString(secretId);
     if (!SECRET_REF_PATTERN.test(cleanSecretRef) || !cleanSecretId) {
       throw new Error(`${GCP_SECRET_MANAGER_SECRET_IDS_ENV} secret id mapping entries must use secret:// refs and non-empty secret ids`);
+    }
+    normalized[cleanSecretRef] = cleanSecretId;
+  }
+  return normalized;
+}
+
+function azureCommandFrom({ env = process.env } = {}) {
+  return cleanString(env[AZURE_KEY_VAULT_COMMAND_ENV]);
+}
+
+function azureCommandArgsFrom({ env = process.env } = {}) {
+  const rawArgs = cleanString(env[AZURE_KEY_VAULT_COMMAND_ARGS_ENV]);
+  if (!rawArgs) return [];
+  let parsed;
+  try {
+    parsed = JSON.parse(rawArgs);
+  } catch {
+    throw new Error(`${AZURE_KEY_VAULT_COMMAND_ARGS_ENV} must be a JSON array of strings`);
+  }
+  if (!Array.isArray(parsed) || parsed.some(value => typeof value !== 'string')) {
+    throw new Error(`${AZURE_KEY_VAULT_COMMAND_ARGS_ENV} must be a JSON array of strings`);
+  }
+  return parsed;
+}
+
+function azureCommandTimeoutFrom({ env = process.env } = {}) {
+  const rawTimeout = cleanString(env[AZURE_KEY_VAULT_TIMEOUT_MS_ENV]);
+  if (!rawTimeout) return 5000;
+  const timeout = Number(rawTimeout);
+  if (!Number.isInteger(timeout) || timeout < 100 || timeout > 30000) {
+    throw new Error(`${AZURE_KEY_VAULT_TIMEOUT_MS_ENV} must be an integer between 100 and 30000`);
+  }
+  return timeout;
+}
+
+function azureSecretIdMapFrom({ env = process.env } = {}) {
+  const rawMap = cleanString(env[AZURE_KEY_VAULT_SECRET_IDS_ENV]);
+  if (!rawMap) throw new Error(`${AZURE_KEY_VAULT_SECRET_IDS_ENV} secret id mapping is required`);
+  let parsed;
+  try {
+    parsed = JSON.parse(rawMap);
+  } catch {
+    throw new Error(`${AZURE_KEY_VAULT_SECRET_IDS_ENV} secret id mapping must be a JSON object`);
+  }
+  if (!isPlainObject(parsed) || Object.keys(parsed).length === 0) {
+    throw new Error(`${AZURE_KEY_VAULT_SECRET_IDS_ENV} secret id mapping must be a non-empty JSON object`);
+  }
+  const normalized = {};
+  for (const [secretRef, secretId] of Object.entries(parsed)) {
+    const cleanSecretRef = cleanString(secretRef);
+    const cleanSecretId = cleanString(secretId);
+    if (!SECRET_REF_PATTERN.test(cleanSecretRef) || !cleanSecretId) {
+      throw new Error(`${AZURE_KEY_VAULT_SECRET_IDS_ENV} secret id mapping entries must use secret:// refs and non-empty secret ids`);
     }
     normalized[cleanSecretRef] = cleanSecretId;
   }
@@ -881,6 +938,119 @@ export function createGcpSecretManagerProviderSecretStoreAdapter({ env = process
   };
 }
 
+function runAzureSecretStoreCommand({ env, action, payload }) {
+  const commandPath = azureCommandFrom({ env });
+  if (!commandPath) throw new Error(`${AZURE_KEY_VAULT_COMMAND_ENV} is required for azure_key_vault provider secret store backend`);
+  if (!path.isAbsolute(commandPath)) {
+    throw new Error(`${AZURE_KEY_VAULT_COMMAND_ENV} must be an absolute executable path`);
+  }
+
+  const request = {
+    action,
+    provider: 'azure_key_vault',
+    ...payload
+  };
+  const commandArgs = azureCommandArgsFrom({ env });
+  const commandTimeoutMs = azureCommandTimeoutFrom({ env });
+
+  let output;
+  try {
+    output = execFileSync(commandPath, commandArgs, {
+      input: `${JSON.stringify(request)}\n`,
+      encoding: 'utf8',
+      timeout: commandTimeoutMs,
+      maxBuffer: 1024 * 1024,
+      env
+    });
+  } catch {
+    throw new Error(`Azure Key Vault command failed for action ${action}`);
+  }
+
+  let result;
+  try {
+    result = JSON.parse(output || '{}');
+  } catch {
+    throw new Error(`Azure Key Vault command returned invalid JSON for action ${action}`);
+  }
+  if (result.ok !== true) {
+    throw new Error(`Azure Key Vault command failed for action ${action}`);
+  }
+  return result;
+}
+
+export function createAzureKeyVaultProviderSecretStoreAdapter({ env = process.env } = {}) {
+  return {
+    backend_id: 'azure_key_vault',
+    backend_kind: 'managed_secret_store',
+    storeConfigured() {
+      if (!azureCommandFrom({ env })) return false;
+      return Object.keys(azureSecretIdMapFrom({ env })).length > 0;
+    },
+    configuredSecretRefs() {
+      if (!this.storeConfigured()) return new Set();
+      const secretIdMap = azureSecretIdMapFrom({ env });
+      const allowedSecretRefs = new Set(Object.keys(secretIdMap));
+      const result = runAzureSecretStoreCommand({
+        env,
+        action: 'configured_refs',
+        payload: { secret_ids: secretIdMap }
+      });
+      const secretRefs = Array.isArray(result.secret_refs) ? result.secret_refs : [];
+      return new Set(secretRefs.map(cleanString).filter(secretRef => allowedSecretRefs.has(secretRef)));
+    },
+    resolveSecret(secretRef) {
+      if (!this.storeConfigured()) return '';
+      const cleanSecretRef = cleanString(secretRef);
+      const secretIdMap = azureSecretIdMapFrom({ env });
+      const secretId = secretIdMap[cleanSecretRef];
+      if (!secretId) return '';
+      const result = runAzureSecretStoreCommand({
+        env,
+        action: 'resolve',
+        payload: {
+          secret_ref: cleanSecretRef,
+          secret_id: secretId
+        }
+      });
+      return cleanString(result.secret_value);
+    },
+    storeSecret({
+      provider,
+      secret_value,
+      actor,
+      reason,
+      updated_at
+    }) {
+      const secretIdMap = azureSecretIdMapFrom({ env });
+      const secretId = secretIdMap[provider.secret_ref];
+      if (!secretId) {
+        throw new Error(`${AZURE_KEY_VAULT_SECRET_IDS_ENV} secret id mapping is required for ${provider.secret_ref}`);
+      }
+      runAzureSecretStoreCommand({
+        env,
+        action: 'store',
+        payload: {
+          provider_id: provider.provider_id,
+          secret_ref: provider.secret_ref,
+          secret_id: secretId,
+          credential_env_var: provider.credential_env_var,
+          secret_value,
+          actor,
+          reason,
+          updated_at
+        }
+      });
+      return publicStoreRecord({
+        ...provider,
+        algorithm: 'managed-by-azure-key-vault',
+        updated_at,
+        updated_by: actor,
+        reason
+      }, this);
+    }
+  };
+}
+
 export function createConfiguredProviderSecretStoreAdapter({ env = process.env } = {}) {
   const backend = storeBackendFrom({ env });
   if (backend === 'local_file') {
@@ -902,6 +1072,9 @@ export function createConfiguredProviderSecretStoreAdapter({ env = process.env }
   }
   if (backend === 'gcp_secret_manager') {
     return createGcpSecretManagerProviderSecretStoreAdapter({ env });
+  }
+  if (backend === 'azure_key_vault') {
+    return createAzureKeyVaultProviderSecretStoreAdapter({ env });
   }
   throw new Error(`unsupported provider secret store backend: ${backend}`);
 }

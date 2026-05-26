@@ -9,7 +9,7 @@ const managedSecretStorePath = path.join(tmpRoot, 'managed-provider-secret-store
 const providerCatalogPath = path.join(tmpRoot, 'provider-catalog.json');
 const apiResolverSecret = 'api-route-resolver-secret';
 const apiResolverSecretRef = 'secret://divinity/providers/api-secret-ref-mock/api-key';
-const apiResolverGcpSecretId = 'projects/divinity-test/secrets/api-secret-ref-mock/versions/latest';
+const apiResolverAzureSecretId = 'https://divinity-test.vault.azure.net/secrets/api-secret-ref-mock';
 
 writeFileSync(secretRefsPath, JSON.stringify({
   format: 'divinity.provider_secret_refs.v1',
@@ -42,13 +42,13 @@ writeFileSync(providerCatalogPath, JSON.stringify({
 
 process.env.DIVINITY_API_AUTOSTART = '0';
 process.env.DIVINITY_PROVIDER_SECRET_REFS_PATH = secretRefsPath;
-process.env.DIVINITY_PROVIDER_SECRET_STORE_BACKEND = 'gcp_secret_manager';
-process.env.DIVINITY_GCP_SECRET_MANAGER_COMMAND = process.execPath;
-process.env.DIVINITY_GCP_SECRET_MANAGER_COMMAND_ARGS = JSON.stringify([
+process.env.DIVINITY_PROVIDER_SECRET_STORE_BACKEND = 'azure_key_vault';
+process.env.DIVINITY_AZURE_KEY_VAULT_COMMAND = process.execPath;
+process.env.DIVINITY_AZURE_KEY_VAULT_COMMAND_ARGS = JSON.stringify([
   path.resolve('tests/fixtures/provider-secret-store-command.mjs')
 ]);
-process.env.DIVINITY_GCP_SECRET_MANAGER_SECRET_IDS = JSON.stringify({
-  [apiResolverSecretRef]: apiResolverGcpSecretId
+process.env.DIVINITY_AZURE_KEY_VAULT_SECRET_IDS = JSON.stringify({
+  [apiResolverSecretRef]: apiResolverAzureSecretId
 });
 process.env.DIVINITY_TEST_MANAGED_SECRET_STORE_PATH = managedSecretStorePath;
 process.env.DIVINITY_PROVIDER_CATALOG_PATH = providerCatalogPath;
@@ -86,19 +86,19 @@ try {
   assert.equal(writeSecretBody.secret.format, 'divinity.provider_secret_store_record.v1');
   assert.equal(writeSecretBody.secret.provider_id, 'api_secret_ref_mock');
   assert.equal(writeSecretBody.secret.secret_ref, apiResolverSecretRef);
-  assert.equal(writeSecretBody.secret.store_backend_id, 'gcp_secret_manager');
+  assert.equal(writeSecretBody.secret.store_backend_id, 'azure_key_vault');
   assert.equal(writeSecretBody.secret.store_backend_kind, 'managed_secret_store');
   assert.equal(writeSecretBody.secret.updated_by, 'operator@example.com');
   assert.equal(writeSecretBody.secret.reason, 'Configure API provider secret store fixture');
   assert.equal(JSON.stringify(writeSecretBody).includes(apiResolverSecret), false);
-  assert.equal(JSON.stringify(writeSecretBody).includes(apiResolverGcpSecretId), false);
+  assert.equal(JSON.stringify(writeSecretBody).includes(apiResolverAzureSecretId), false);
 
   const { response: readinessResponse, body: readinessBody } = await requestJson(`${baseUrl}/provider-secrets/readiness`);
   assert.equal(readinessResponse.status, 200);
   assert.equal(readinessBody.readiness.format, 'divinity.provider_secret_readiness.v1');
   assert.equal(readinessBody.readiness.manifest_configured, true);
   assert.equal(readinessBody.readiness.store_configured, true);
-  assert.equal(readinessBody.readiness.store_backend_id, 'gcp_secret_manager');
+  assert.equal(readinessBody.readiness.store_backend_id, 'azure_key_vault');
   assert.equal(readinessBody.readiness.store_backend_kind, 'managed_secret_store');
   assert.equal(readinessBody.readiness.any_configured, true);
   assert.deepEqual(readinessBody.readiness.providers, [
@@ -111,7 +111,7 @@ try {
     }
   ]);
   assert.equal(JSON.stringify(readinessBody).includes(apiResolverSecret), false);
-  assert.equal(JSON.stringify(readinessBody).includes(apiResolverGcpSecretId), false);
+  assert.equal(JSON.stringify(readinessBody).includes(apiResolverAzureSecretId), false);
 
   const { response: secretRefResponse, body: secretRefBody } = await requestJson(`${baseUrl}/provider-proxy/route`, {
     method: 'POST',
@@ -128,7 +128,7 @@ try {
   assert.deepEqual(secretRefBody.route.candidate_results[0].configured_env_vars, []);
   assert.deepEqual(secretRefBody.route.candidate_results[0].configured_secret_refs, [apiResolverSecretRef]);
   assert.equal(JSON.stringify(secretRefBody).includes(apiResolverSecret), false);
-  assert.equal(JSON.stringify(secretRefBody).includes(apiResolverGcpSecretId), false);
+  assert.equal(JSON.stringify(secretRefBody).includes(apiResolverAzureSecretId), false);
 
   const { body: audit } = await requestJson(`${baseUrl}/audit`);
   assert.ok(audit.records.some(record => (
@@ -137,7 +137,7 @@ try {
       && record.payload.format === 'divinity.provider_secret_write_audit.v1'
       && record.payload.provider_id === 'api_secret_ref_mock'
       && record.payload.secret_ref === apiResolverSecretRef
-      && record.payload.store_backend_id === 'gcp_secret_manager'
+      && record.payload.store_backend_id === 'azure_key_vault'
       && record.payload.store_backend_kind === 'managed_secret_store'
       && record.payload.updated_by === 'operator@example.com'
       && record.payload.reason === 'Configure API provider secret store fixture'
@@ -162,7 +162,7 @@ try {
       && record.payload.configured_secret_refs.includes(apiResolverSecretRef)
   )));
   assert.equal(JSON.stringify(audit).includes(apiResolverSecret), false);
-  assert.equal(JSON.stringify(audit).includes(apiResolverGcpSecretId), false);
+  assert.equal(JSON.stringify(audit).includes(apiResolverAzureSecretId), false);
 
   const { response, body } = await requestJson(`${baseUrl}/provider-proxy/route`, {
     method: 'POST',
