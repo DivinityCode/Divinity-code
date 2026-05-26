@@ -156,7 +156,7 @@ git diff --check
 rg -n '^(<{7}|={7}|>{7})'
 ```
 
-- [ ] **Step 4: Commit and publish**
+- [x] **Step 4: Commit and publish**
 
 Commit message: `feat: add managed secret command adapter`
 
