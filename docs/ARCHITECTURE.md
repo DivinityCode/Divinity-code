@@ -49,6 +49,11 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 - Bug reports include local environment details, git branch/head/status, and the same structured diagnostics used by `divinity doctor`.
 - This keeps bug reporting inside the builder workflow without opening a browser or mutating repository state.
 
+## Release Readiness
+- `packages/release-artifacts` builds `divinity.release_artifacts.v1` metadata from the package manifest, package file allowlist, sha256 integrity scan, install paths, release gates, and signing readiness.
+- CLI `release-status` returns that manifest as a read-only status surface without writing `dist/release-artifacts.json`.
+- `pnpm run release:artifacts` writes the same manifest for release-candidate review; registry and binary download paths remain blocked while `private: true` and the non-production warning are active.
+
 ## Capability Discovery
 - CLI `capabilities` and API `GET /capabilities` expose `divinity.capabilities.v1`.
 - The catalog lists policy presets, runtime adapters, constrained execution adapters, runner isolation profiles, connector adapters, LLM providers, toolsets, and starter recipe summaries from the shared package layer.

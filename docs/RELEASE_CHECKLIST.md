@@ -40,6 +40,7 @@ git check-ignore -q dist/release-artifacts.json
 ```bash
 node apps/cli/src/index.mjs doctor
 node apps/cli/src/index.mjs doctor --profile source
+node apps/cli/src/index.mjs release-status
 ```
 
 - [ ] Contract validation:
@@ -66,6 +67,7 @@ pnpm run test:deprecations
 ```bash
 pnpm run release:artifacts
 pnpm run test:release-artifacts
+pnpm run test:release-status
 ```
 
 - [ ] Review release artifact integrity and signing readiness:

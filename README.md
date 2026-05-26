@@ -5,7 +5,7 @@ Divinity Code is an AI engineering platform designed to combine best-in-class co
 > ⚠️ **WARNING: Divinity Code is under heavy active development and is not yet ready for production use. It should only be used if you know what you're doing.**
 
 ## Current Status
-Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows with explicit task success criteria, durable goal records with verifier-backed completion, policy and budget gates, budget incident records, policy-pack pre-execution hook checks, approval transitions, approval comments, approval revision/resubmission records, execution locks, bounded execution retries, execution adapter and verifier records, observable planner/executor/verifier activity, run heartbeats, isolated local and Git URL execution workspaces with cleanup, runner isolation profiles with Docker-backed constrained command execution, patch/log/summary/PR-summary artifacts, structured bug reports, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, team policy packs, constrained package-script execution, discoverable runtime, connector, LLM provider, toolset governance, provider route-planning, and provider chat-execution surfaces, run-level connector references, org/project observability rollups, a shared capabilities catalog, and opt-in file-backed API run storage.
+Bootstrap development is integrated on `main`. The repo now includes contract validation, CLI/API run flows with explicit task success criteria, durable goal records with verifier-backed completion, policy and budget gates, budget incident records, policy-pack pre-execution hook checks, approval transitions, approval comments, approval revision/resubmission records, execution locks, bounded execution retries, execution adapter and verifier records, observable planner/executor/verifier activity, run heartbeats, isolated local and Git URL execution workspaces with cleanup, runner isolation profiles with Docker-backed constrained command execution, patch/log/summary/PR-summary artifacts, structured bug reports, release status metadata, audit export, operator dashboard surfaces, starter recipes, diagnostics, orchestration traces, memory provenance, team policy packs, constrained package-script execution, discoverable runtime, connector, LLM provider, toolset governance, provider route-planning, and provider chat-execution surfaces, run-level connector references, org/project observability rollups, a shared capabilities catalog, and opt-in file-backed API run storage.
 
 ## Documents
 - [Install Guide](docs/INSTALL.md)
@@ -24,7 +24,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - [Week 1 Execution Plan](docs/WEEK1_EXECUTION_PLAN.md)
 
 ## Implemented Surfaces
-1. Builder CLI: `init`, `run`, API-backed `status`, `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `approval-revision`, `approval-resubmit`, `goal-complete`, `capabilities`, `providers`, `provider-route`, `provider-chat`, `provider-tool-approval`, `provider-tool-execute`, `toolsets`, `recipes`, `doctor`, and `bug`. `init` and `run` carry provider/tool runtime metadata without storing secret values; `provider-chat` enforces selected toolset compatibility before upstream calls and can add redacted approved tool execution summaries as continuation context.
+1. Builder CLI: `init`, `run`, API-backed `status`, `approvals`, `approval`, `approve`, `reject`, `approval-comment`, `approval-comments`, `approval-revision`, `approval-resubmit`, `goal-complete`, `capabilities`, `providers`, `provider-route`, `provider-chat`, `provider-tool-approval`, `provider-tool-execute`, `toolsets`, `recipes`, `doctor`, `release-status`, and `bug`. `init` and `run` carry provider/tool runtime metadata without storing secret values; `provider-chat` enforces selected toolset compatibility before upstream calls and can add redacted approved tool execution summaries as continuation context.
 2. IDE extension scaffold: task run, dashboard launch, and doctor commands delegated to the repo-local CLI.
 3. Control Plane API: health, capabilities, provider and toolset catalogs, provider route planning, provider chat execution, preflight, task creation, run retrieval, approvals, approval comments, approval revisions, goal completion, step gates and execution locks, verifier evidence, run heartbeats, connector references, artifacts, audit export, and live run streams.
 4. Operator dashboard: run queue, approvals, approval comments, approval revisions, run timeline, decision trace, goal records, connector references, agent activity, execution and verification evidence with retry attempts, liveness summary, artifacts, audit metadata, and API-backed live updates.
@@ -60,6 +60,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - `packages/approval-comments` - structured approval review comments for run approval workflows
 - `packages/approval-revisions` - structured approval revision request and resubmission records
 - `packages/recipes` - guided starter recipes
+- `packages/release-artifacts` - release readiness manifest and status metadata
 - `packages/orchestration` - planner/executor/verifier traces
 - `packages/memory` - session/project/team memory entries with provenance
 - `packages/policy-packs` - org-scoped team policy pack metadata and pre-execution hook declarations
@@ -72,8 +73,10 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - If `pnpm` is unavailable but cached Corepack pnpm is present, run scripts with `node ~/.cache/node/corepack/v1/pnpm/<version>/bin/pnpm.cjs <script>`.
 - Run `pnpm run validate:contracts` to validate schema examples and CI contract checks.
 - Run `pnpm run test:package` to validate package metadata and the `divinity` CLI bin target.
+- Run `node apps/cli/src/index.mjs release-status` for a read-only release readiness view.
 - Run `pnpm run release:artifacts` to generate `dist/release-artifacts.json` for release-candidate review.
 - Run `pnpm run test:release-artifacts` to validate the generated release artifact manifest and install-path gates.
+- Run `pnpm run test:release-status` to validate the CLI release readiness surface.
 - Run `pnpm run test:public-docs` to validate public install, quickstart, upgrade, and release checklist docs.
 - Run `pnpm run test:smoke` for the local MVP demo flow plus CLI/API smoke path.
 - Run `pnpm run test:providers` for focused LLM provider catalog coverage.
