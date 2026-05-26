@@ -84,6 +84,8 @@ pnpm run release:signatures
 pnpm run test:release-signatures
 pnpm run release:promotion-preflight
 pnpm run test:release-promotion
+pnpm run release:promotion-execute
+pnpm run test:release-promotion-execute
 pnpm run test:release-artifacts
 pnpm run test:release-status
 ```
@@ -114,6 +116,7 @@ node -e "const n=require('./dist/native-binary/manifest.json'); console.log(n.st
 node -e "const sn=require('./dist/signed-native-binary/manifest.json'); console.log(sn.status, sn.signatures.length, sn.blockers.join(','))"
 node -e "const r=require('./dist/release-public-readiness-audit.json'); console.log(r.status, r.decision_required, r.blockers.join(','))"
 node -e "const p=require('./dist/release-promotion-preflight.json'); console.log(p.status, p.release_gates.length, p.blockers.join(','))"
+node -e "const x=require('./dist/release-promotion-execution.json'); console.log(x.status, x.execution_attempted, x.blockers.join(','))"
 ```
 
 - [ ] Confirm source provenance reports the expected commit and does not expose changed file paths or absolute local paths.
@@ -133,6 +136,7 @@ node -e "const p=require('./dist/release-promotion-preflight.json'); console.log
 - [ ] Confirm `divinity.release_attestation.v1` exists under `dist/release-bundle/attestation.json`, lists package/release/binary subjects with sha256 digests, reports blocked signing status, and stores no local absolute paths, `node_modules` paths, registry tokens, signing key references, or signing identities.
 - [ ] Confirm `divinity.release_signature_artifacts.v1` exists under `dist/release-signatures/`, lists detached signatures for release metadata, package tarball, binary metadata, checksums, and attestation subjects, and stores no local absolute paths, signing command paths, signing key references, signing identities, registry tokens, or provider credentials.
 - [ ] Confirm `divinity.release_promotion_preflight.v1` exists under `dist/release-promotion-preflight.json`, lists required artifacts, the public readiness audit, and release gates, reports `public_release_ready: false` while blockers remain, and stores no local absolute paths, registry tokens, GitHub release tokens, signing key references, signing identities, or provider credentials.
+- [ ] Confirm `divinity.release_promotion_execution.v1` exists under `dist/release-promotion-execution.json`, refuses to run publish/upload commands while blockers or missing `DIVINITY_PUBLIC_RELEASE_CONFIRM=publish` remain, and stores no local absolute paths, registry tokens, GitHub release tokens, release tag values, raw npm output, command paths, signing key references, signing identities, or provider credentials.
 - [ ] Do not publish package registry tarballs, create GitHub releases, or upload signed binary downloads while `artifact_signing.status` is `blocked`.
 
 - [ ] Provider proxy and tool governance checks:
@@ -169,7 +173,7 @@ pnpm run test:public-docs
 
 - [ ] Open a pull request against `main`.
 - [ ] Wait for GitHub Actions to pass, including `Contracts Validation` and `Release Readiness`.
-- [ ] Confirm `.github/workflows/release-readiness.yml` ran the release-readiness command set: `npm run validate:contracts`, public docs, deprecations, providers, package/tarball, public readiness audit, registry dry-run, binary attachment planning, binary, native binary, signed native binary, release bundle, release signatures, release promotion, release artifacts, release status, smoke, and full `npm test`.
+- [ ] Confirm `.github/workflows/release-readiness.yml` ran the release-readiness command set: `npm run validate:contracts`, public docs, deprecations, providers, package/tarball, public readiness audit, registry dry-run, binary attachment planning, binary, native binary, signed native binary, release bundle, release signatures, release promotion preflight, release promotion execution guard, release artifacts, release status, smoke, and full `npm test`.
 - [ ] Run the local workflow guard:
 
 ```bash

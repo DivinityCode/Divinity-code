@@ -33,11 +33,14 @@ assert.equal(packageJson.scripts?.['release:signatures'], 'node tests/scripts_re
 assert.equal(packageJson.scripts?.['test:release-signatures'], 'node tests/tests_release_signature_artifacts.mjs');
 assert.equal(packageJson.scripts?.['release:promotion-preflight'], 'node tests/scripts_release_promotion_preflight.mjs');
 assert.equal(packageJson.scripts?.['test:release-promotion'], 'node tests/tests_release_promotion_preflight.mjs');
+assert.equal(packageJson.scripts?.['release:promotion-execute'], 'node tests/scripts_release_promotion_execution.mjs');
+assert.equal(packageJson.scripts?.['test:release-promotion-execute'], 'node tests/tests_release_promotion_execution.mjs');
 assert.equal(packageJson.scripts?.['test:github-workflows'], 'node tests/tests_github_workflows.mjs');
 assert.ok(packageJson.scripts?.test.includes('node tests/tests_release_public_readiness_audit.mjs'));
 assert.ok(packageJson.scripts?.test.includes('node tests/tests_release_registry_publish_dry_run.mjs'));
 assert.ok(packageJson.scripts?.test.includes('node tests/tests_release_binary_attachments.mjs'));
 assert.ok(packageJson.scripts?.test.includes('node tests/tests_release_signed_native_binary_artifacts.mjs'));
+assert.ok(packageJson.scripts?.test.includes('node tests/tests_release_promotion_execution.mjs'));
 assert.ok(packageJson.files.includes('apps'));
 assert.ok(packageJson.files.includes('packages'));
 assert.ok(packageJson.files.includes('docs'));
