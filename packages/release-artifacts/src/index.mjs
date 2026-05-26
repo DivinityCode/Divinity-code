@@ -1,8 +1,10 @@
+import { execFileSync } from 'child_process';
 import { createHash } from 'crypto';
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
 import path from 'path';
 
 export const RELEASE_ARTIFACTS_FORMAT = 'divinity.release_artifacts.v1';
+export const SOURCE_PROVENANCE_FORMAT = 'divinity.release_source_provenance.v1';
 export const DEFAULT_RELEASE_ARTIFACT_OUTPUT = path.join('dist', 'release-artifacts.json');
 export const RELEASE_SIGNING_COMMAND_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND';
 export const RELEASE_SIGNING_COMMAND_ARGS_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND_ARGS';
@@ -75,6 +77,58 @@ function buildArtifactIntegrity(packageFiles, cwd) {
     generated_from_package_files: true,
     redacts_secrets: true,
     files
+  };
+}
+
+function gitText({ cwd, gitCommand = 'git', args = [] } = {}) {
+  try {
+    return cleanString(execFileSync(gitCommand, args, {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore']
+    }));
+  } catch {
+    return '';
+  }
+}
+
+function buildSourceProvenance({ cwd, packageJson, gitCommand = 'git' }) {
+  const commitSha = gitText({ cwd, gitCommand, args: ['rev-parse', 'HEAD'] });
+  if (!/^[a-f0-9]{40}$/.test(commitSha)) {
+    return {
+      format: SOURCE_PROVENANCE_FORMAT,
+      status: 'unavailable',
+      vcs: 'git',
+      repository_url: packageJson.repository?.url || '',
+      commit_sha: '',
+      short_commit_sha: '',
+      branch: '',
+      tracked_changes: false,
+      untracked_files_ignored: true,
+      redacts_paths: true,
+      reason: 'Git source provenance is unavailable for this release artifact context.'
+    };
+  }
+  const branch = gitText({ cwd, gitCommand, args: ['rev-parse', '--abbrev-ref', 'HEAD'] });
+  const trackedStatus = gitText({
+    cwd,
+    gitCommand,
+    args: ['status', '--porcelain', '--untracked-files=no']
+  });
+  return {
+    format: SOURCE_PROVENANCE_FORMAT,
+    status: 'available',
+    vcs: 'git',
+    repository_url: packageJson.repository?.url || '',
+    commit_sha: commitSha,
+    short_commit_sha: commitSha.slice(0, 12),
+    branch,
+    tracked_changes: Boolean(trackedStatus),
+    untracked_files_ignored: true,
+    redacts_paths: true,
+    reason: trackedStatus
+      ? 'Tracked source changes were present when release metadata was generated; file paths are redacted.'
+      : 'No tracked source changes were present when release metadata was generated.'
   };
 }
 
@@ -194,7 +248,8 @@ function buildArtifactSigning({ publishingBlocked, warningReason, env = process.
 export function buildReleaseArtifactsManifest({
   cwd = process.cwd(),
   generated_by = 'packages/release-artifacts',
-  env = process.env
+  env = process.env,
+  gitCommand = 'git'
 } = {}) {
   const root = path.resolve(cwd);
   const packageJson = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
@@ -215,6 +270,7 @@ export function buildReleaseArtifactsManifest({
       bin: packageJson.bin || {}
     },
     non_production_warning_active: true,
+    source_provenance: buildSourceProvenance({ cwd: root, packageJson, gitCommand }),
     artifact_integrity: buildArtifactIntegrity(packageJson.files || [], root),
     artifact_signing: buildArtifactSigning({ publishingBlocked, warningReason, env }),
     install_paths: [
