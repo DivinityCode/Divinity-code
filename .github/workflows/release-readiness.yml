@@ -45,6 +45,9 @@ jobs:
       - name: Validate native binary artifacts
         run: npm run test:native-binary
 
+      - name: Validate signed native binary artifacts
+        run: npm run test:signed-native-binary
+
       - name: Validate release bundle
         run: npm run test:release-bundle
 
