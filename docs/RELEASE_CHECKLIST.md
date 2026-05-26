@@ -137,7 +137,14 @@ pnpm run test:public-docs
 ## GitHub Gates
 
 - [ ] Open a pull request against `main`.
-- [ ] Wait for GitHub Actions to pass.
+- [ ] Wait for GitHub Actions to pass, including `Contracts Validation` and `Release Readiness`.
+- [ ] Confirm `.github/workflows/release-readiness.yml` ran the release-readiness command set: `npm run validate:contracts`, public docs, deprecations, providers, package/tarball, binary, release bundle, release promotion, release artifacts, release status, smoke, and full `npm test`.
+- [ ] Run the local workflow guard:
+
+```bash
+pnpm run test:github-workflows
+```
+
 - [ ] Confirm the PR head SHA before merging.
 - [ ] Squash-merge only after local and GitHub checks are green.
 - [ ] Sync local `main` after merge and rerun focused verification for the changed area.

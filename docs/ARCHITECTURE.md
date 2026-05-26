@@ -62,6 +62,7 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 - `pnpm run release:bundle` writes `divinity.release_candidate_bundle.v1` under `dist/release-bundle/` with the package tarball, release metadata, binary launcher metadata, and bundle checksums. The manifest stores only relative paths and redacted readiness metadata while package publishing and signed native binary downloads remain blocked.
 - The release bundle also writes `divinity.release_attestation.v1` as `attestation.json`, recording package identity, source provenance, release metadata digest, subject artifact digests, and blocked signing status without local paths, registry tokens, or signing secret references.
 - `pnpm run release:promotion-preflight` writes `divinity.release_promotion_preflight.v1` under `dist/release-promotion-preflight.json`, listing required artifacts, release gates, registry token readiness, signing readiness, and blockers without publishing, signing, uploading, or storing secret values.
+- GitHub Actions includes a `Release Readiness` workflow at `.github/workflows/release-readiness.yml`. It runs on Node 22 after `npm ci` and covers contracts, public docs, deprecations, provider governance, package metadata, tarball smoke, binary smoke, release bundle, release promotion, release artifacts, release status, CLI/API smoke, and the full suite before PR integration.
 
 ## Capability Discovery
 - CLI `capabilities` and API `GET /capabilities` expose `divinity.capabilities.v1`.
