@@ -27,6 +27,14 @@ assert.equal(result.release.format, 'divinity.release_artifacts.v1');
 assert.equal(result.release.generated_by, 'packages/release-artifacts');
 assert.equal(result.release.package.private, true);
 assert.equal(result.release.non_production_warning_active, true);
+assert.equal(result.release.registry_publish_readiness.format, 'divinity.release_registry_publish_readiness.v1');
+assert.equal(result.release.registry_publish_readiness.status, 'blocked');
+assert.equal(result.release.registry_publish_readiness.provenance_required, true);
+assert.equal(result.release.registry_publish_readiness.token_env_var, 'NPM_TOKEN');
+assert.equal(result.release.registry_publish_readiness.token_configured, false);
+assert.equal(result.release.registry_publish_readiness.redacts_token, true);
+assert.ok(result.release.registry_publish_readiness.blockers.includes('package_private'));
+assert.ok(result.release.registry_publish_readiness.blockers.includes('non_production_warning'));
 assert.equal(result.release.source_provenance.format, 'divinity.release_source_provenance.v1');
 assert.equal(result.release.source_provenance.status, 'available');
 assert.match(result.release.source_provenance.commit_sha, /^[a-f0-9]{40}$/);
@@ -80,6 +88,16 @@ assert.equal(configuredResult.release.artifact_signing.configuration.status, 'co
 assert.equal(configuredResult.release.artifact_signing.configuration.ready_when_release_gates_clear, true);
 assert.equal(JSON.stringify(configuredResult).includes('secret://divinity/release/signing-key'), false);
 assert.equal(JSON.stringify(configuredResult).includes('release@example.com'), false);
+
+const tokenConfiguredResult = runCli(['release-status'], {
+  cwd: mkdtempSync(path.join(tmpdir(), 'divinity-release-status-registry-token-')),
+  env: {
+    ...process.env,
+    NPM_TOKEN: 'npm-secret-token-value'
+  }
+});
+assert.equal(tokenConfiguredResult.release.registry_publish_readiness.token_configured, true);
+assert.equal(JSON.stringify(tokenConfiguredResult).includes('npm-secret-token-value'), false);
 
 const serialized = JSON.stringify(result);
 for (const disallowed of [

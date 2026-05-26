@@ -6,7 +6,9 @@ import path from 'path';
 export const RELEASE_ARTIFACTS_FORMAT = 'divinity.release_artifacts.v1';
 export const SOURCE_PROVENANCE_FORMAT = 'divinity.release_source_provenance.v1';
 export const RELEASE_SBOM_FORMAT = 'divinity.release_sbom.v1';
+export const RELEASE_REGISTRY_PUBLISH_READINESS_FORMAT = 'divinity.release_registry_publish_readiness.v1';
 export const DEFAULT_RELEASE_ARTIFACT_OUTPUT = path.join('dist', 'release-artifacts.json');
+export const NPM_TOKEN_ENV = 'NPM_TOKEN';
 export const RELEASE_SIGNING_COMMAND_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND';
 export const RELEASE_SIGNING_COMMAND_ARGS_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND_ARGS';
 export const RELEASE_SIGNING_KEY_REF_ENV = 'DIVINITY_RELEASE_SIGNING_KEY_REF';
@@ -356,6 +358,38 @@ function buildArtifactSigning({ publishingBlocked, warningReason, env = process.
   };
 }
 
+function buildRegistryPublishReadiness({
+  packageJson,
+  publishingBlocked,
+  warningActive = true,
+  env = process.env
+}) {
+  const tokenConfigured = Boolean(cleanString(env[NPM_TOKEN_ENV]));
+  const blockers = [];
+  if (publishingBlocked) blockers.push('package_private');
+  if (warningActive) blockers.push('non_production_warning');
+  if (!tokenConfigured) blockers.push('missing_registry_token');
+  const status = blockers.length ? 'blocked' : 'ready';
+  return {
+    format: RELEASE_REGISTRY_PUBLISH_READINESS_FORMAT,
+    status,
+    package_name: packageJson.name,
+    package_version: packageJson.version,
+    registry_url: 'https://registry.npmjs.org/',
+    provenance_required: true,
+    publish_command: 'npm publish --provenance --access public',
+    dry_run_command: 'npm publish --dry-run --provenance --access public',
+    token_env_var: NPM_TOKEN_ENV,
+    token_configured: tokenConfigured,
+    redacts_token: true,
+    redacts_local_paths: true,
+    blockers,
+    reason: status === 'ready'
+      ? 'Registry publishing metadata is ready once release gates pass.'
+      : 'Registry publishing remains blocked until package privacy, production warning, and token readiness gates clear.'
+  };
+}
+
 export function buildReleaseArtifactsManifest({
   cwd = process.cwd(),
   generated_by = 'packages/release-artifacts',
@@ -386,6 +420,12 @@ export function buildReleaseArtifactsManifest({
     release_sbom: buildReleaseSbom({ packageJson, packageLock }),
     artifact_integrity: buildArtifactIntegrity(packageJson.files || [], root),
     artifact_signing: buildArtifactSigning({ publishingBlocked, warningReason, env }),
+    registry_publish_readiness: buildRegistryPublishReadiness({
+      packageJson,
+      publishingBlocked,
+      warningActive: true,
+      env
+    }),
     install_paths: [
       {
         install_path_id: 'source_checkout',
