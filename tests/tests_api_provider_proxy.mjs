@@ -1,11 +1,11 @@
 import assert from 'assert/strict';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 
 const tmpRoot = mkdtempSync(path.join(tmpdir(), 'divinity-api-provider-proxy-route-'));
 const secretRefsPath = path.join(tmpRoot, 'provider-secret-refs.json');
-const secretStorePath = path.join(tmpRoot, 'provider-secret-store.json');
+const managedSecretStorePath = path.join(tmpRoot, 'managed-provider-secret-store.json');
 const providerCatalogPath = path.join(tmpRoot, 'provider-catalog.json');
 const apiResolverSecret = 'api-route-resolver-secret';
 const apiResolverSecretRef = 'secret://divinity/providers/api-secret-ref-mock/api-key';
@@ -41,10 +41,12 @@ writeFileSync(providerCatalogPath, JSON.stringify({
 
 process.env.DIVINITY_API_AUTOSTART = '0';
 process.env.DIVINITY_PROVIDER_SECRET_REFS_PATH = secretRefsPath;
-process.env.DIVINITY_PROVIDER_SECRET_STORE_BACKEND = 'hosted_memory';
-process.env.DIVINITY_ENABLE_TEST_SECRET_STORE_BACKEND = '1';
-process.env.DIVINITY_PROVIDER_SECRET_STORE_PATH = secretStorePath;
-process.env.DIVINITY_PROVIDER_SECRET_STORE_KEY = 'api-route-secret-store-key';
+process.env.DIVINITY_PROVIDER_SECRET_STORE_BACKEND = 'external_command';
+process.env.DIVINITY_PROVIDER_SECRET_STORE_COMMAND = process.execPath;
+process.env.DIVINITY_PROVIDER_SECRET_STORE_COMMAND_ARGS = JSON.stringify([
+  path.resolve('tests/fixtures/provider-secret-store-command.mjs')
+]);
+process.env.DIVINITY_TEST_MANAGED_SECRET_STORE_PATH = managedSecretStorePath;
 process.env.DIVINITY_PROVIDER_CATALOG_PATH = providerCatalogPath;
 delete process.env.API_SECRET_REF_MOCK_API_KEY;
 process.env.OPENROUTER_API_KEY = 'openrouter-secret';
@@ -80,20 +82,19 @@ try {
   assert.equal(writeSecretBody.secret.format, 'divinity.provider_secret_store_record.v1');
   assert.equal(writeSecretBody.secret.provider_id, 'api_secret_ref_mock');
   assert.equal(writeSecretBody.secret.secret_ref, apiResolverSecretRef);
-  assert.equal(writeSecretBody.secret.store_backend_id, 'hosted_memory');
-  assert.equal(writeSecretBody.secret.store_backend_kind, 'hosted_operator');
+  assert.equal(writeSecretBody.secret.store_backend_id, 'external_command');
+  assert.equal(writeSecretBody.secret.store_backend_kind, 'managed_command');
   assert.equal(writeSecretBody.secret.updated_by, 'operator@example.com');
   assert.equal(writeSecretBody.secret.reason, 'Configure API provider secret store fixture');
   assert.equal(JSON.stringify(writeSecretBody).includes(apiResolverSecret), false);
-  assert.equal(existsSync(secretStorePath) && readFileSync(secretStorePath, 'utf8').includes(apiResolverSecret), false);
 
   const { response: readinessResponse, body: readinessBody } = await requestJson(`${baseUrl}/provider-secrets/readiness`);
   assert.equal(readinessResponse.status, 200);
   assert.equal(readinessBody.readiness.format, 'divinity.provider_secret_readiness.v1');
   assert.equal(readinessBody.readiness.manifest_configured, true);
   assert.equal(readinessBody.readiness.store_configured, true);
-  assert.equal(readinessBody.readiness.store_backend_id, 'hosted_memory');
-  assert.equal(readinessBody.readiness.store_backend_kind, 'hosted_operator');
+  assert.equal(readinessBody.readiness.store_backend_id, 'external_command');
+  assert.equal(readinessBody.readiness.store_backend_kind, 'managed_command');
   assert.equal(readinessBody.readiness.any_configured, true);
   assert.deepEqual(readinessBody.readiness.providers, [
     {
@@ -129,8 +130,8 @@ try {
       && record.payload.format === 'divinity.provider_secret_write_audit.v1'
       && record.payload.provider_id === 'api_secret_ref_mock'
       && record.payload.secret_ref === apiResolverSecretRef
-      && record.payload.store_backend_id === 'hosted_memory'
-      && record.payload.store_backend_kind === 'hosted_operator'
+      && record.payload.store_backend_id === 'external_command'
+      && record.payload.store_backend_kind === 'managed_command'
       && record.payload.updated_by === 'operator@example.com'
       && record.payload.reason === 'Configure API provider secret store fixture'
   )));

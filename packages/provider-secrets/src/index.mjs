@@ -1,3 +1,4 @@
+import { execFileSync } from 'child_process';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs';
 import path from 'path';
@@ -10,6 +11,9 @@ export const PROVIDER_SECRET_STORE_PATH_ENV = 'DIVINITY_PROVIDER_SECRET_STORE_PA
 export const PROVIDER_SECRET_STORE_KEY_ENV = 'DIVINITY_PROVIDER_SECRET_STORE_KEY';
 export const PROVIDER_SECRET_STORE_BACKEND_ENV = 'DIVINITY_PROVIDER_SECRET_STORE_BACKEND';
 export const PROVIDER_SECRET_STORE_TEST_BACKEND_ENV = 'DIVINITY_ENABLE_TEST_SECRET_STORE_BACKEND';
+export const PROVIDER_SECRET_STORE_COMMAND_ENV = 'DIVINITY_PROVIDER_SECRET_STORE_COMMAND';
+export const PROVIDER_SECRET_STORE_COMMAND_ARGS_ENV = 'DIVINITY_PROVIDER_SECRET_STORE_COMMAND_ARGS';
+export const PROVIDER_SECRET_STORE_COMMAND_TIMEOUT_MS_ENV = 'DIVINITY_PROVIDER_SECRET_STORE_COMMAND_TIMEOUT_MS';
 
 const RAW_CREDENTIAL_FIELD_NAMES = new Set([
   'api_key',
@@ -60,6 +64,35 @@ function storeKeyFrom({ storeKey = '', env = process.env } = {}) {
 
 function storeBackendFrom({ env = process.env, storeBackend = '' } = {}) {
   return cleanString(storeBackend || env[PROVIDER_SECRET_STORE_BACKEND_ENV] || 'local_file');
+}
+
+function storeCommandFrom({ env = process.env } = {}) {
+  return cleanString(env[PROVIDER_SECRET_STORE_COMMAND_ENV]);
+}
+
+function storeCommandArgsFrom({ env = process.env } = {}) {
+  const rawArgs = cleanString(env[PROVIDER_SECRET_STORE_COMMAND_ARGS_ENV]);
+  if (!rawArgs) return [];
+  let parsed;
+  try {
+    parsed = JSON.parse(rawArgs);
+  } catch {
+    throw new Error(`${PROVIDER_SECRET_STORE_COMMAND_ARGS_ENV} must be a JSON array of strings`);
+  }
+  if (!Array.isArray(parsed) || parsed.some(value => typeof value !== 'string')) {
+    throw new Error(`${PROVIDER_SECRET_STORE_COMMAND_ARGS_ENV} must be a JSON array of strings`);
+  }
+  return parsed;
+}
+
+function storeCommandTimeoutFrom({ env = process.env } = {}) {
+  const rawTimeout = cleanString(env[PROVIDER_SECRET_STORE_COMMAND_TIMEOUT_MS_ENV]);
+  if (!rawTimeout) return 5000;
+  const timeout = Number(rawTimeout);
+  if (!Number.isInteger(timeout) || timeout < 100 || timeout > 30000) {
+    throw new Error(`${PROVIDER_SECRET_STORE_COMMAND_TIMEOUT_MS_ENV} must be an integer between 100 and 30000`);
+  }
+  return timeout;
 }
 
 function testBackendEnabled({ env = process.env } = {}) {
@@ -412,6 +445,102 @@ export function createHostedProviderSecretStoreAdapter({ backend_id = 'hosted_me
   };
 }
 
+function runSecretStoreCommand({ env, action, payload }) {
+  const commandPath = storeCommandFrom({ env });
+  if (!commandPath) throw new Error(`${PROVIDER_SECRET_STORE_COMMAND_ENV} is required for external_command provider secret store backend`);
+  if (!path.isAbsolute(commandPath)) {
+    throw new Error(`${PROVIDER_SECRET_STORE_COMMAND_ENV} must be an absolute executable path`);
+  }
+
+  const request = {
+    action,
+    ...payload
+  };
+  const commandArgs = storeCommandArgsFrom({ env });
+  const commandTimeoutMs = storeCommandTimeoutFrom({ env });
+
+  let output;
+  try {
+    output = execFileSync(commandPath, commandArgs, {
+      input: `${JSON.stringify(request)}\n`,
+      encoding: 'utf8',
+      timeout: commandTimeoutMs,
+      maxBuffer: 1024 * 1024,
+      env
+    });
+  } catch {
+    throw new Error(`provider secret store command failed for action ${action}`);
+  }
+
+  let result;
+  try {
+    result = JSON.parse(output || '{}');
+  } catch {
+    throw new Error(`provider secret store command returned invalid JSON for action ${action}`);
+  }
+  if (result.ok !== true) {
+    throw new Error(`provider secret store command failed for action ${action}`);
+  }
+  return result;
+}
+
+export function createExternalCommandProviderSecretStoreAdapter({ env = process.env } = {}) {
+  return {
+    backend_id: 'external_command',
+    backend_kind: 'managed_command',
+    storeConfigured() {
+      return Boolean(storeCommandFrom({ env }));
+    },
+    configuredSecretRefs() {
+      if (!this.storeConfigured()) return new Set();
+      const result = runSecretStoreCommand({
+        env,
+        action: 'configured_refs',
+        payload: {}
+      });
+      const secretRefs = Array.isArray(result.secret_refs) ? result.secret_refs : [];
+      return new Set(secretRefs.map(cleanString).filter(Boolean));
+    },
+    resolveSecret(secretRef) {
+      if (!this.storeConfigured()) return '';
+      const result = runSecretStoreCommand({
+        env,
+        action: 'resolve',
+        payload: { secret_ref: cleanString(secretRef) }
+      });
+      return cleanString(result.secret_value);
+    },
+    storeSecret({
+      provider,
+      secret_value,
+      actor,
+      reason,
+      updated_at
+    }) {
+      runSecretStoreCommand({
+        env,
+        action: 'store',
+        payload: {
+          provider_id: provider.provider_id,
+          secret_ref: provider.secret_ref,
+          credential_env_var: provider.credential_env_var,
+          secret_value,
+          actor,
+          reason,
+          updated_at
+        }
+      });
+      return publicStoreRecord({
+        ...provider,
+        algorithm: 'managed-by-external-command',
+        updated_at,
+        updated_by: actor,
+        reason
+      }, this);
+    }
+  };
+}
+
 export function createConfiguredProviderSecretStoreAdapter({ env = process.env } = {}) {
   const backend = storeBackendFrom({ env });
   if (backend === 'local_file') {
@@ -424,6 +553,9 @@ export function createConfiguredProviderSecretStoreAdapter({ env = process.env }
       );
     }
     return createHostedProviderSecretStoreAdapter({ backend_id: backend });
+  }
+  if (backend === 'external_command') {
+    return createExternalCommandProviderSecretStoreAdapter({ env });
   }
   throw new Error(`unsupported provider secret store backend: ${backend}`);
 }
