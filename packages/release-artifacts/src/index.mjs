@@ -13,9 +13,11 @@ export const RELEASE_CANDIDATE_BUNDLE_FORMAT = 'divinity.release_candidate_bundl
 export const RELEASE_CANDIDATE_BUNDLE_READINESS_FORMAT = 'divinity.release_candidate_bundle_readiness.v1';
 export const RELEASE_ATTESTATION_FORMAT = 'divinity.release_attestation.v1';
 export const RELEASE_ATTESTATION_READINESS_FORMAT = 'divinity.release_attestation_readiness.v1';
+export const RELEASE_PROMOTION_PREFLIGHT_FORMAT = 'divinity.release_promotion_preflight.v1';
 export const DEFAULT_RELEASE_ARTIFACT_OUTPUT = path.join('dist', 'release-artifacts.json');
 export const DEFAULT_RELEASE_BINARY_OUTPUT = path.join('dist', 'binary');
 export const DEFAULT_RELEASE_BUNDLE_OUTPUT = path.join('dist', 'release-bundle');
+export const DEFAULT_RELEASE_PROMOTION_PREFLIGHT_OUTPUT = path.join('dist', 'release-promotion-preflight.json');
 export const NPM_TOKEN_ENV = 'NPM_TOKEN';
 export const RELEASE_SIGNING_COMMAND_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND';
 export const RELEASE_SIGNING_COMMAND_ARGS_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND_ARGS';
@@ -549,6 +551,178 @@ function buildReleaseAttestationReadiness({
   };
 }
 
+function promotionPreflightBlockers({ publishingBlocked, warningActive = true, tokenConfigured = false } = {}) {
+  return [
+    ...(publishingBlocked ? ['package_private'] : []),
+    ...(warningActive ? ['non_production_warning'] : []),
+    ...(!tokenConfigured ? ['missing_registry_token'] : []),
+    'native_binary_build_pending',
+    'signing_blocked'
+  ];
+}
+
+function releasePromotionRequiredArtifacts() {
+  return [
+    {
+      artifact_id: 'release_artifacts_manifest',
+      path: DEFAULT_RELEASE_ARTIFACT_OUTPUT.split(path.sep).join('/'),
+      command: 'pnpm run release:artifacts',
+      required: true
+    },
+    {
+      artifact_id: 'release_candidate_bundle_manifest',
+      path: `${DEFAULT_RELEASE_BUNDLE_OUTPUT.split(path.sep).join('/')}/manifest.json`,
+      command: 'pnpm run release:bundle',
+      required: true
+    },
+    {
+      artifact_id: 'release_attestation',
+      path: `${DEFAULT_RELEASE_BUNDLE_OUTPUT.split(path.sep).join('/')}/attestation.json`,
+      command: 'pnpm run release:bundle',
+      required: true
+    },
+    {
+      artifact_id: 'binary_artifacts_manifest',
+      path: `${DEFAULT_RELEASE_BINARY_OUTPUT.split(path.sep).join('/')}/manifest.json`,
+      command: 'pnpm run release:binary',
+      required: true
+    }
+  ];
+}
+
+function releasePromotionGates() {
+  return [
+    {
+      gate_id: 'package_manifest',
+      command: 'pnpm run test:package',
+      required: true
+    },
+    {
+      gate_id: 'package_tarball_smoke',
+      command: 'pnpm run test:package-tarball',
+      required: true
+    },
+    {
+      gate_id: 'binary_artifact_smoke',
+      command: 'pnpm run test:binary',
+      required: true
+    },
+    {
+      gate_id: 'release_candidate_bundle_smoke',
+      command: 'pnpm run test:release-bundle',
+      required: true
+    },
+    {
+      gate_id: 'release_artifacts_manifest',
+      command: 'pnpm run test:release-artifacts',
+      required: true
+    },
+    {
+      gate_id: 'release_status_surface',
+      command: 'pnpm run test:release-status',
+      required: true
+    },
+    {
+      gate_id: 'contracts',
+      command: 'pnpm run validate:contracts',
+      required: true
+    },
+    {
+      gate_id: 'smoke',
+      command: 'pnpm run test:smoke',
+      required: true
+    },
+    {
+      gate_id: 'full_suite',
+      command: 'pnpm test',
+      required: true
+    }
+  ];
+}
+
+function redactedSigningConfiguration(configuration) {
+  return {
+    status: configuration.status,
+    command_configured: configuration.command_configured,
+    command_absolute: configuration.command_absolute,
+    command_args_configured: configuration.command_args_configured,
+    key_ref_configured: configuration.key_ref_configured,
+    identity_configured: configuration.identity_configured,
+    ready_when_release_gates_clear: configuration.ready_when_release_gates_clear
+  };
+}
+
+export function buildReleasePromotionPreflight({
+  packageJson,
+  publishingBlocked = packageJson?.private === true,
+  warningActive = true,
+  env = process.env
+} = {}) {
+  const tokenConfigured = Boolean(cleanString(env[NPM_TOKEN_ENV]));
+  const blockers = promotionPreflightBlockers({
+    publishingBlocked,
+    warningActive,
+    tokenConfigured
+  });
+  const signingConfiguration = redactedSigningConfiguration(buildSigningConfiguration({ env }));
+  return {
+    format: RELEASE_PROMOTION_PREFLIGHT_FORMAT,
+    generated_by: 'packages/release-artifacts',
+    status: blockers.length ? 'blocked' : 'ready',
+    public_release_ready: blockers.length === 0,
+    package: {
+      name: packageJson.name,
+      version: packageJson.version,
+      private: packageJson.private === true,
+      repository_url: packageJson.repository?.url || ''
+    },
+    command: 'pnpm run release:promotion-preflight',
+    smoke_test_command: 'pnpm run test:release-promotion',
+    registry_publish: {
+      status: publishingBlocked || warningActive || !tokenConfigured ? 'blocked' : 'ready',
+      package_name: packageJson.name,
+      package_version: packageJson.version,
+      registry_url: 'https://registry.npmjs.org/',
+      provenance_required: true,
+      publish_command: 'npm publish --provenance --access public',
+      dry_run_command: 'npm publish --dry-run --provenance --access public',
+      token_env_var: NPM_TOKEN_ENV,
+      token_configured: tokenConfigured
+    },
+    binary_distribution: {
+      status: 'blocked',
+      artifact_type: 'signed_native_binary',
+      binary_name: 'divinity',
+      build_command: 'pnpm run release:binary',
+      attestation_path: `${DEFAULT_RELEASE_BUNDLE_OUTPUT.split(path.sep).join('/')}/attestation.json`,
+      public_download_status: 'blocked',
+      reason: 'Signed native binary distribution remains blocked until native packaging and signing gates are implemented and release blockers clear.'
+    },
+    signing: {
+      required: true,
+      status: 'blocked',
+      configuration: signingConfiguration,
+      attestation_required: true,
+      attestation_path: `${DEFAULT_RELEASE_BUNDLE_OUTPUT.split(path.sep).join('/')}/attestation.json`,
+      signed_artifacts: [
+        'package_tarball',
+        'binary_download',
+        'release_attestation'
+      ],
+      reason: 'Promotion signing remains blocked while the non-production warning and release gates are active.'
+    },
+    required_artifacts: releasePromotionRequiredArtifacts(),
+    release_gates: releasePromotionGates(),
+    blockers,
+    redacts_local_paths: true,
+    redacts_registry_token: true,
+    redacts_signing_secrets: true,
+    reason: blockers.length
+      ? 'Public package and signed binary promotion remains blocked until release gates, package metadata, registry credentials, native binary packaging, and signing are ready.'
+      : 'Release promotion preflight is ready.'
+  };
+}
+
 export function buildReleaseArtifactsManifest({
   cwd = process.cwd(),
   generated_by = 'packages/release-artifacts',
@@ -586,6 +760,12 @@ export function buildReleaseArtifactsManifest({
     release_attestation: buildReleaseAttestationReadiness({
       publishingBlocked,
       warningActive: true
+    }),
+    release_promotion_preflight: buildReleasePromotionPreflight({
+      packageJson,
+      publishingBlocked,
+      warningActive: true,
+      env
     }),
     binary_release_readiness: buildBinaryReleaseReadiness({ warningActive: true }),
     registry_publish_readiness: buildRegistryPublishReadiness({
@@ -655,6 +835,11 @@ export function buildReleaseArtifactsManifest({
         required: true
       },
       {
+        gate_id: 'release_promotion_preflight',
+        command: 'pnpm run test:release-promotion',
+        required: true
+      },
+      {
         gate_id: 'runtime_doctor',
         command: 'node apps/cli/src/index.mjs doctor',
         required: true
@@ -713,6 +898,31 @@ export function writeReleaseArtifactsManifest({
   const root = path.resolve(cwd);
   const artifactPath = path.resolve(root, cleanString(output) || DEFAULT_RELEASE_ARTIFACT_OUTPUT);
   const artifact = buildReleaseArtifactsManifest({ cwd: root });
+
+  mkdirSync(path.dirname(artifactPath), { recursive: true });
+  writeFileSync(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`);
+
+  return {
+    ok: true,
+    artifact_path: artifactPath,
+    artifact
+  };
+}
+
+export function writeReleasePromotionPreflight({
+  output = DEFAULT_RELEASE_PROMOTION_PREFLIGHT_OUTPUT,
+  cwd = process.cwd(),
+  env = process.env
+} = {}) {
+  const root = path.resolve(cwd);
+  const artifactPath = path.resolve(root, cleanString(output) || DEFAULT_RELEASE_PROMOTION_PREFLIGHT_OUTPUT);
+  const packageJson = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const artifact = buildReleasePromotionPreflight({
+    packageJson,
+    publishingBlocked: packageJson.private === true,
+    warningActive: true,
+    env
+  });
 
   mkdirSync(path.dirname(artifactPath), { recursive: true });
   writeFileSync(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`);

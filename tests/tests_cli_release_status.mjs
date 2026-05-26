@@ -80,6 +80,33 @@ for (const blocker of [
 assert.equal(result.release.release_attestation.redacts_local_paths, true);
 assert.equal(result.release.release_attestation.redacts_signing_secrets, true);
 assert.equal(JSON.stringify(result.release.release_attestation).includes(process.cwd()), false);
+assert.equal(result.release.release_promotion_preflight.format, 'divinity.release_promotion_preflight.v1');
+assert.equal(result.release.release_promotion_preflight.status, 'blocked');
+assert.equal(result.release.release_promotion_preflight.public_release_ready, false);
+assert.equal(result.release.release_promotion_preflight.command, 'pnpm run release:promotion-preflight');
+assert.equal(result.release.release_promotion_preflight.smoke_test_command, 'pnpm run test:release-promotion');
+for (const blocker of [
+  'package_private',
+  'non_production_warning',
+  'missing_registry_token',
+  'native_binary_build_pending',
+  'signing_blocked'
+]) {
+  assert.ok(
+    result.release.release_promotion_preflight.blockers.includes(blocker),
+    `missing release promotion blocker: ${blocker}`
+  );
+}
+assert.equal(result.release.release_promotion_preflight.registry_publish.token_configured, false);
+assert.equal(result.release.release_promotion_preflight.signing.status, 'blocked');
+assert.equal(result.release.release_promotion_preflight.redacts_local_paths, true);
+assert.equal(result.release.release_promotion_preflight.redacts_registry_token, true);
+assert.equal(result.release.release_promotion_preflight.redacts_signing_secrets, true);
+assert.ok(result.release.release_promotion_preflight.required_artifacts.some(required => (
+  required.artifact_id === 'release_attestation' &&
+  required.path === 'dist/release-bundle/attestation.json'
+)));
+assert.equal(JSON.stringify(result.release.release_promotion_preflight).includes(process.cwd()), false);
 assert.equal(result.release.binary_release_readiness.format, 'divinity.release_binary_readiness.v1');
 assert.equal(result.release.binary_release_readiness.status, 'blocked');
 assert.equal(result.release.binary_release_readiness.artifact_id, 'binary_download');
@@ -163,6 +190,7 @@ for (const command of [
   'pnpm run test:providers',
   'pnpm run test:binary',
   'pnpm run test:release-bundle',
+  'pnpm run test:release-promotion',
   'pnpm run test:smoke'
 ]) {
   assert.ok(

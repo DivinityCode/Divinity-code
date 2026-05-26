@@ -43,8 +43,10 @@ assertIncludes(install, 'pnpm install', 'install guide');
 assertIncludes(install, 'pnpm run validate:contracts', 'install guide');
 assertIncludes(install, 'pnpm run release:artifacts', 'install guide');
 assertIncludes(install, 'pnpm run release:bundle', 'install guide');
+assertIncludes(install, 'pnpm run release:promotion-preflight', 'install guide');
 assertIncludes(install, 'pnpm run test:release-artifacts', 'install guide');
 assertIncludes(install, 'pnpm run test:release-bundle', 'install guide');
+assertIncludes(install, 'pnpm run test:release-promotion', 'install guide');
 assertIncludes(install, 'pnpm test', 'install guide');
 assertIncludes(install, 'npm is optional', 'install guide');
 assertIncludes(install, 'doctor --profile source', 'install guide');
@@ -85,8 +87,10 @@ for (const item of [
   'node apps/cli/src/index.mjs doctor --profile source',
   'pnpm run release:artifacts',
   'pnpm run release:bundle',
+  'pnpm run release:promotion-preflight',
   'pnpm run test:release-artifacts',
   'pnpm run test:release-bundle',
+  'pnpm run test:release-promotion',
   'release artifact integrity and signing readiness',
   'pnpm run validate:contracts',
   'pnpm run test:deprecations',
