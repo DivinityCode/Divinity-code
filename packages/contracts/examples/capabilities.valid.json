@@ -42,6 +42,41 @@
       "source": "hermes_runtime_provider_reference"
     }
   ],
+  "provider_secret_store_backends": [
+    {
+      "format": "divinity.provider_secret_store_backend.v1",
+      "backend_id": "local_file",
+      "backend_kind": "local_file",
+      "display_name": "Local encrypted file store",
+      "description": "AES-256-GCM encrypted local bootstrap store for evaluation and local API runtimes.",
+      "production_ready": false,
+      "broker_command_required": false,
+      "configuration_env_vars": [
+        "DIVINITY_PROVIDER_SECRET_STORE_PATH",
+        "DIVINITY_PROVIDER_SECRET_STORE_KEY"
+      ],
+      "redacts_secret_values": true,
+      "redacts_deployment_secret_ids": true,
+      "test_only": false
+    },
+    {
+      "format": "divinity.provider_secret_store_backend.v1",
+      "backend_id": "external_command",
+      "backend_kind": "managed_command",
+      "display_name": "External managed secret command",
+      "description": "Deployment-managed command adapter using JSON stdin/stdout with no shell interpolation.",
+      "production_ready": true,
+      "broker_command_required": true,
+      "configuration_env_vars": [
+        "DIVINITY_PROVIDER_SECRET_STORE_COMMAND",
+        "DIVINITY_PROVIDER_SECRET_STORE_COMMAND_ARGS",
+        "DIVINITY_PROVIDER_SECRET_STORE_COMMAND_TIMEOUT_MS"
+      ],
+      "redacts_secret_values": true,
+      "redacts_deployment_secret_ids": true,
+      "test_only": false
+    }
+  ],
   "toolsets": [
     {
       "format": "divinity.toolset.v1",

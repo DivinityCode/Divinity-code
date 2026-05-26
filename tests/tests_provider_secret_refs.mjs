@@ -8,6 +8,7 @@ import {
   createProviderCredentialResolver,
   createHostedProviderSecretStoreAdapter,
   loadProviderSecretRefs,
+  publicProviderSecretStoreBackends,
   providerSecretReadiness,
   storeProviderSecret
 } from '../packages/provider-secrets/src/index.mjs';
@@ -42,6 +43,25 @@ try {
       credential_env_var: 'HOSTED_SECRET_MOCK_API_KEY'
     }
   ]);
+
+  const secretStoreBackends = publicProviderSecretStoreBackends();
+  assert.deepEqual(secretStoreBackends.map(backend => backend.backend_id), [
+    'local_file',
+    'external_command',
+    'aws_secrets_manager',
+    'gcp_secret_manager',
+    'azure_key_vault',
+    'hashicorp_vault',
+    'hosted_memory'
+  ]);
+  assert.ok(secretStoreBackends.every(backend => backend.format === 'divinity.provider_secret_store_backend.v1'));
+  assert.ok(secretStoreBackends.every(backend => backend.redacts_secret_values === true));
+  assert.ok(secretStoreBackends.every(backend => backend.redacts_deployment_secret_ids === true));
+  assert.equal(secretStoreBackends.find(backend => backend.backend_id === 'hosted_memory').production_ready, false);
+  assert.equal(secretStoreBackends.find(backend => backend.backend_id === 'hashicorp_vault').broker_command_required, true);
+  assert.ok(secretStoreBackends.find(backend => backend.backend_id === 'hashicorp_vault').configuration_env_vars.includes('DIVINITY_HASHICORP_VAULT_SECRET_PATHS'));
+  assert.equal(JSON.stringify(secretStoreBackends).includes('kv/data/divinity'), false);
+  assert.equal(JSON.stringify(secretStoreBackends).includes(process.cwd()), false);
 
   const readiness = providerSecretReadiness({
     env: {

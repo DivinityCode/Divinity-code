@@ -31,6 +31,129 @@ export const HASHICORP_VAULT_COMMAND_ARGS_ENV = 'DIVINITY_HASHICORP_VAULT_COMMAN
 export const HASHICORP_VAULT_TIMEOUT_MS_ENV = 'DIVINITY_HASHICORP_VAULT_TIMEOUT_MS';
 export const HASHICORP_VAULT_SECRET_PATHS_ENV = 'DIVINITY_HASHICORP_VAULT_SECRET_PATHS';
 
+const PROVIDER_SECRET_STORE_BACKENDS = [
+  {
+    format: 'divinity.provider_secret_store_backend.v1',
+    backend_id: 'local_file',
+    backend_kind: 'local_file',
+    display_name: 'Local encrypted file store',
+    description: 'AES-256-GCM encrypted local bootstrap store for evaluation and local API runtimes.',
+    production_ready: false,
+    broker_command_required: false,
+    configuration_env_vars: [
+      PROVIDER_SECRET_STORE_PATH_ENV,
+      PROVIDER_SECRET_STORE_KEY_ENV
+    ],
+    redacts_secret_values: true,
+    redacts_deployment_secret_ids: true,
+    test_only: false
+  },
+  {
+    format: 'divinity.provider_secret_store_backend.v1',
+    backend_id: 'external_command',
+    backend_kind: 'managed_command',
+    display_name: 'External managed secret command',
+    description: 'Deployment-managed command adapter using JSON stdin/stdout with no shell interpolation.',
+    production_ready: true,
+    broker_command_required: true,
+    configuration_env_vars: [
+      PROVIDER_SECRET_STORE_COMMAND_ENV,
+      PROVIDER_SECRET_STORE_COMMAND_ARGS_ENV,
+      PROVIDER_SECRET_STORE_COMMAND_TIMEOUT_MS_ENV
+    ],
+    redacts_secret_values: true,
+    redacts_deployment_secret_ids: true,
+    test_only: false
+  },
+  {
+    format: 'divinity.provider_secret_store_backend.v1',
+    backend_id: 'aws_secrets_manager',
+    backend_kind: 'managed_secret_store',
+    display_name: 'AWS Secrets Manager',
+    description: 'AWS Secrets Manager broker-command adapter with public secret refs mapped to deployment secret ids.',
+    production_ready: true,
+    broker_command_required: true,
+    configuration_env_vars: [
+      AWS_SECRETS_MANAGER_COMMAND_ENV,
+      AWS_SECRETS_MANAGER_COMMAND_ARGS_ENV,
+      AWS_SECRETS_MANAGER_TIMEOUT_MS_ENV,
+      AWS_SECRETS_MANAGER_SECRET_IDS_ENV
+    ],
+    redacts_secret_values: true,
+    redacts_deployment_secret_ids: true,
+    test_only: false
+  },
+  {
+    format: 'divinity.provider_secret_store_backend.v1',
+    backend_id: 'gcp_secret_manager',
+    backend_kind: 'managed_secret_store',
+    display_name: 'Google Cloud Secret Manager',
+    description: 'Google Cloud Secret Manager broker-command adapter with public secret refs mapped to deployment secret ids.',
+    production_ready: true,
+    broker_command_required: true,
+    configuration_env_vars: [
+      GCP_SECRET_MANAGER_COMMAND_ENV,
+      GCP_SECRET_MANAGER_COMMAND_ARGS_ENV,
+      GCP_SECRET_MANAGER_TIMEOUT_MS_ENV,
+      GCP_SECRET_MANAGER_SECRET_IDS_ENV
+    ],
+    redacts_secret_values: true,
+    redacts_deployment_secret_ids: true,
+    test_only: false
+  },
+  {
+    format: 'divinity.provider_secret_store_backend.v1',
+    backend_id: 'azure_key_vault',
+    backend_kind: 'managed_secret_store',
+    display_name: 'Azure Key Vault',
+    description: 'Azure Key Vault broker-command adapter with public secret refs mapped to deployment secret ids.',
+    production_ready: true,
+    broker_command_required: true,
+    configuration_env_vars: [
+      AZURE_KEY_VAULT_COMMAND_ENV,
+      AZURE_KEY_VAULT_COMMAND_ARGS_ENV,
+      AZURE_KEY_VAULT_TIMEOUT_MS_ENV,
+      AZURE_KEY_VAULT_SECRET_IDS_ENV
+    ],
+    redacts_secret_values: true,
+    redacts_deployment_secret_ids: true,
+    test_only: false
+  },
+  {
+    format: 'divinity.provider_secret_store_backend.v1',
+    backend_id: 'hashicorp_vault',
+    backend_kind: 'managed_secret_store',
+    display_name: 'HashiCorp Vault',
+    description: 'HashiCorp Vault broker-command adapter with public secret refs mapped to deployment Vault paths.',
+    production_ready: true,
+    broker_command_required: true,
+    configuration_env_vars: [
+      HASHICORP_VAULT_COMMAND_ENV,
+      HASHICORP_VAULT_COMMAND_ARGS_ENV,
+      HASHICORP_VAULT_TIMEOUT_MS_ENV,
+      HASHICORP_VAULT_SECRET_PATHS_ENV
+    ],
+    redacts_secret_values: true,
+    redacts_deployment_secret_ids: true,
+    test_only: false
+  },
+  {
+    format: 'divinity.provider_secret_store_backend.v1',
+    backend_id: 'hosted_memory',
+    backend_kind: 'hosted_operator',
+    display_name: 'Hosted memory test store',
+    description: 'In-memory hosted-style adapter for tests and local harnesses only.',
+    production_ready: false,
+    broker_command_required: false,
+    configuration_env_vars: [
+      PROVIDER_SECRET_STORE_TEST_BACKEND_ENV
+    ],
+    redacts_secret_values: true,
+    redacts_deployment_secret_ids: true,
+    test_only: true
+  }
+];
+
 const RAW_CREDENTIAL_FIELD_NAMES = new Set([
   'api_key',
   'apikey',
@@ -58,6 +181,13 @@ const ENV_VAR_PATTERN = /^[A-Z_][A-Z0-9_]*$/;
 
 function cleanString(value) {
   return String(value || '').trim();
+}
+
+export function publicProviderSecretStoreBackends() {
+  return PROVIDER_SECRET_STORE_BACKENDS.map(backend => ({
+    ...backend,
+    configuration_env_vars: [...backend.configuration_env_vars]
+  }));
 }
 
 function isPlainObject(value) {

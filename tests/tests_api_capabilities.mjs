@@ -17,6 +17,7 @@ try {
   assert.ok(catalog.execution_adapters.some(adapter => adapter.adapter === 'package_script'));
   assert.ok(catalog.runtime_adapters.some(adapter => adapter.adapter === 'claude_local'));
   assert.ok(catalog.llm_providers.some(provider => provider.provider_id === 'anthropic'));
+  assert.ok(catalog.provider_secret_store_backends.some(backend => backend.backend_id === 'external_command'));
   assert.ok(catalog.toolsets.some(toolset => toolset.toolset_id === 'approvals'));
   assert.ok(catalog.runner_isolation_profiles.some(profile => profile.profile_id === 'container_sandbox'));
   assert.ok(catalog.connector_adapters.some(adapter => adapter.adapter === 'ticket_reference'));

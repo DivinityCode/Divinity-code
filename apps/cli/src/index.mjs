@@ -28,6 +28,7 @@ import {
 import { createProviderToolCallApproval } from '../../../packages/provider-tool-approvals/src/index.mjs';
 import { createProviderToolExecution } from '../../../packages/provider-tool-executions/src/index.mjs';
 import { providerCredentialReadiness, publicLlmProviders, resolveProviderRuntime } from '../../../packages/provider-runtime/src/index.mjs';
+import { publicProviderSecretStoreBackends } from '../../../packages/provider-secrets/src/index.mjs';
 import { resolvePolicyPackForTask } from '../../../packages/policy-packs/src/index.mjs';
 import { evaluatePreflight, POLICY_PRESETS } from '../../../packages/policy-engine/src/index.mjs';
 import { publicStarterRecipes } from '../../../packages/recipes/src/index.mjs';
@@ -171,6 +172,17 @@ function providerCatalogCheck() {
   };
 }
 
+function providerSecretStoreBackendsCheck() {
+  const backends = publicProviderSecretStoreBackends();
+  const productionBackends = backends.filter(backend => backend.production_ready && !backend.test_only);
+  return {
+    check_id: 'provider_secret_store_backends',
+    ok: productionBackends.length > 0,
+    required: true,
+    summary: `${productionBackends.length} production backends: ${productionBackends.map(backend => backend.backend_id).join(', ')}`
+  };
+}
+
 function toolsetCatalogCheck() {
   const toolsets = publicToolsets();
   return {
@@ -209,6 +221,7 @@ function buildRuntimeDoctorChecks() {
     commandCheck('git', 'git', ['--version']),
     cliEntrypointCheck(),
     providerCatalogCheck(),
+    providerSecretStoreBackendsCheck(),
     toolsetCatalogCheck(),
     llmProviderCredentialsCheck()
   ];

@@ -9,5 +9,6 @@ Builds the `divinity.capabilities.v1` catalog used by CLI and API surfaces.
 - Runner isolation profiles from `packages/runner-isolation`.
 - Connector adapter metadata from `packages/connectors`.
 - LLM provider metadata from `packages/provider-runtime`.
+- Provider secret-store backend metadata from `packages/provider-secrets`.
 - Toolset metadata from `packages/toolsets`.
 - Starter recipe summaries from `packages/recipes`.

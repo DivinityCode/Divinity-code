@@ -32,7 +32,7 @@ This document defines how Builder Mode and Operator Mode expose the shared Task/
 | `run` | Task payload, preflight, status, policy pack, orchestration, activity, memory, artifacts, events | Decide whether the run is safe to continue or needs approval |
 | `status` | Local queued placeholder or API-backed run status lookup | Check lifecycle state for a stored run |
 | `approvals` / `approval` / `approve` / `reject` / `approval-comment` / `approval-comments` | API-backed approval queue, per-run approval snapshots, local structured approval decisions, and approval review comments | Exercise approval command surface, operator transitions, and review context |
-| `capabilities` | Policy presets, adapters, isolation profiles, connectors, recipes | Discover supported extension points |
+| `capabilities` | Policy presets, adapters, isolation profiles, connectors, providers, provider secret-store backends, toolsets, recipes | Discover supported extension points |
 | `recipes` | Starter recipe summaries | Select first-run workflows |
 | `doctor` | Local readiness checks | Diagnose setup before deeper work |
 | `bug` | GitHub-ready issue body and diagnostics | Report reproducible local failures |

@@ -20,6 +20,7 @@ assert.ok(result.catalog.policies.some(policy => policy.policy_id === 'safe_exec
 assert.ok(result.catalog.execution_adapters.some(adapter => adapter.adapter === 'package_script'));
 assert.ok(result.catalog.runtime_adapters.some(adapter => adapter.adapter === 'codex_local'));
 assert.ok(result.catalog.llm_providers.some(provider => provider.provider_id === 'openrouter'));
+assert.ok(result.catalog.provider_secret_store_backends.some(backend => backend.backend_id === 'hashicorp_vault'));
 assert.ok(result.catalog.toolsets.some(toolset => toolset.toolset_id === 'web'));
 assert.ok(result.catalog.runner_isolation_profiles.some(profile => profile.profile_id === 'container_sandbox'));
 assert.ok(result.catalog.connector_adapters.some(adapter => adapter.adapter === 'ci_status'));

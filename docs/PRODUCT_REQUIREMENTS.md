@@ -42,7 +42,7 @@ This baseline defines who Divinity Code is for, what work it must help them comp
 2. Route approved execution through managed workspaces and explicit runner isolation profiles.
 3. Record execution locks so concurrent execution is observable and recoverable.
 4. Preserve provenance for memory, decisions, artifacts, connector context, and verification results.
-5. Discover supported policy presets, runtime adapters, execution adapters, runner isolation profiles, connector adapters, and starter recipes through a shared capabilities contract.
+5. Discover supported policy presets, runtime adapters, execution adapters, runner isolation profiles, connector adapters, LLM providers, provider secret-store backends, toolsets, and starter recipes through a shared capabilities contract.
 
 ## MVP Requirements
 - **Contract-first surfaces:** CLI, API, dashboard, and IDE commands must share Task, Run, Preflight, Event, Artifact, Policy, and capability vocabulary.

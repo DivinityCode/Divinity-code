@@ -47,6 +47,7 @@ const runtimeChecksById = assertRequiredChecks(result, [
   'git',
   'cli_entrypoint',
   'provider_catalog',
+  'provider_secret_store_backends',
   'toolset_catalog',
   'llm_provider_credentials'
 ]);
@@ -68,12 +69,15 @@ assert.equal(runtimeChecksById.get('docker').required, false);
 assert.equal(runtimeChecksById.get('llm_provider_credentials').required, false);
 assert.equal(runtimeChecksById.get('package_manager').required, true);
 assert.equal(runtimeChecksById.get('provider_catalog').required, true);
+assert.equal(runtimeChecksById.get('provider_secret_store_backends').required, true);
 assert.equal(runtimeChecksById.get('toolset_catalog').required, true);
 assert.equal(runtimeChecksById.get('cli_entrypoint').required, true);
 assert.equal(runtimeChecksById.get('cli_entrypoint').ok, true);
 assert.match(runtimeChecksById.get('cli_entrypoint').summary, /apps\/cli\/src\/index\.mjs/);
 assert.match(runtimeChecksById.get('package_manager').summary, /(npm|pnpm)/);
 assert.match(runtimeChecksById.get('provider_catalog').summary, /providers/);
+assert.match(runtimeChecksById.get('provider_secret_store_backends').summary, /hashicorp_vault/);
+assert.match(runtimeChecksById.get('provider_secret_store_backends').summary, /production backends/);
 assert.match(runtimeChecksById.get('toolset_catalog').summary, /toolsets/);
 assert.match(runtimeChecksById.get('llm_provider_credentials').summary, /(configured|not configured)/);
 
@@ -91,6 +95,7 @@ const sourceChecksById = assertRequiredChecks(sourceResult, [
   'git',
   'cli_entrypoint',
   'provider_catalog',
+  'provider_secret_store_backends',
   'toolset_catalog',
   'llm_provider_credentials',
   'package_json',

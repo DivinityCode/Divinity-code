@@ -8,7 +8,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 - **Run centered:** operational state is anchored to a run so approvals, events, artifacts, executions, verification, audit, and observability can be correlated.
 - **Evidence carrying:** policy decisions, execution results, and summaries carry evidence references instead of relying on prose alone.
 - **Governance visible:** policy, budget, approval, audit, and liveness state are first-class data, not hidden runtime behavior.
-- **Extensible by catalog:** clients discover policy presets, runtime adapters, execution adapters, runner isolation profiles, connector adapters, LLM providers, toolsets, and recipes through capabilities.
+- **Extensible by catalog:** clients discover policy presets, runtime adapters, execution adapters, runner isolation profiles, connector adapters, LLM providers, provider secret-store backends, toolsets, and recipes through capabilities.
 
 ## Core Objects
 | Object | Contract | Owner package or surface | Role |
@@ -33,8 +33,9 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 | AgentActivityRecord | `packages/contracts/schemas/agent-activity.v1.json` | Agent activity package | Makes planner, executor, and verifier activity visible before or around execution. |
 | AuditExport | `packages/contracts/schemas/audit.v1.json` | Audit package and API export | Provides immutable audit records and timeframe export shape. |
 | ObservabilitySummary | `packages/contracts/schemas/observability.v1.json` | Observability package and dashboard | Aggregates run health, liveness, budget, risk, failure taxonomy, and org/project rollups. |
-| CapabilitiesCatalog | `packages/contracts/schemas/capabilities.v1.json` | Capabilities package, CLI/API discovery | Lists supported policies, runtime adapters, execution adapters, isolation profiles, connectors, and recipes. |
+| CapabilitiesCatalog | `packages/contracts/schemas/capabilities.v1.json` | Capabilities package, CLI/API discovery | Lists supported policies, runtime adapters, execution adapters, isolation profiles, connectors, LLM providers, provider secret-store backends, toolsets, and recipes. |
 | LlmProvider | `packages/contracts/schemas/capabilities.v1.json` | Provider runtime package, CLI/API discovery | Describes public LLM provider identity, transport, base URL, auth modes, credential env var names, default model, and capability labels without secret values. |
+| ProviderSecretStoreBackend | `packages/contracts/schemas/capabilities.v1.json` | Provider secrets package, CLI/API discovery | Describes public provider secret-store backend identity, kind, configuration env var names, production readiness, broker-command requirements, and redaction guarantees without secret values, deployment secret ids, Vault paths, local store paths, or absolute local paths. |
 | Toolset | `packages/contracts/schemas/capabilities.v1.json` | Toolsets package, CLI/API discovery | Describes tool groups, default enablement, risk level, and required policy permissions for provider-aware runtime setup. |
 | ProviderRuntime | `packages/contracts/schemas/task.v1.json` | Provider runtime package, CLI/API task assembly | Captures resolved provider transport, base URL, model, credential env var names, and configured env var names without secret values. |
 | ToolsetResolution | `packages/contracts/schemas/task.v1.json` | Toolsets package, CLI/API task assembly | Captures resolved toolsets and tool ids for the run before execution. |
@@ -89,7 +90,7 @@ This document is the Phase 0 domain model baseline for Divinity Code. It defines
 - Budget incident examples: `packages/contracts/examples/budget-incident.valid.json`, `packages/contracts/examples/budget-incident.invalid.json`
 - Approval comment examples: `packages/contracts/examples/approval-comment.valid.json`, `packages/contracts/examples/approval-comment.invalid.json`
 - Approval revision examples: `packages/contracts/examples/approval-revision.valid.json`, `packages/contracts/examples/approval-revision.invalid.json`
-- Capabilities examples, including LLM provider and toolset arrays: `packages/contracts/examples/capabilities.valid.json`, `packages/contracts/examples/capabilities.invalid.json`
+- Capabilities examples, including LLM provider, provider secret-store backend, and toolset arrays: `packages/contracts/examples/capabilities.valid.json`, `packages/contracts/examples/capabilities.invalid.json`
 - Policy schema: `packages/contracts/schemas/policy.v1.json`
 - Validation entrypoint: `tests/scripts_validate_contracts.mjs`
 - Smoke entrypoint: `tests/scripts_smoke_api.mjs`
