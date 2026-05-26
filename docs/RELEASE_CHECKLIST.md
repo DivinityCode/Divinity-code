@@ -70,6 +70,8 @@ pnpm run release:binary
 pnpm run test:binary
 pnpm run release:native-binary
 pnpm run test:native-binary
+pnpm run release:signed-native-binary
+pnpm run test:signed-native-binary
 pnpm run release:bundle
 pnpm run test:release-bundle
 pnpm run release:signatures
@@ -91,6 +93,7 @@ node -e "const a=require('./dist/release-artifacts.json'); console.log(a.artifac
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.registry_publish_readiness.status, a.registry_publish_readiness.token_configured, a.registry_publish_readiness.blockers.join(','))"
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.binary_release_readiness.status, a.binary_release_readiness.supported_targets.length, a.binary_release_readiness.blockers.join(','))"
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.binary_release_readiness.native_build_pipeline.status, a.binary_release_readiness.native_build_pipeline.command)"
+node -e "const a=require('./dist/release-artifacts.json'); console.log(a.binary_release_readiness.signed_native_binary_pipeline.status, a.binary_release_readiness.signed_native_binary_pipeline.command)"
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.release_candidate_bundle.status, a.release_candidate_bundle.output_directory, a.release_candidate_bundle.blockers.join(','))"
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.release_attestation.status, a.release_attestation.attestation_path, a.release_attestation.blockers.join(','))"
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.release_signature_artifacts.status, a.release_signature_artifacts.output_directory, a.release_signature_artifacts.blockers.join(','))"
@@ -99,6 +102,7 @@ node -e "const b=require('./dist/release-bundle/manifest.json'); console.log(b.s
 node -e "const t=require('./dist/release-bundle/attestation.json'); console.log(t.status, t.subject_count, t.signing.status)"
 node -e "const s=require('./dist/release-signatures/manifest.json'); console.log(s.status, s.signatures.length, s.blockers.join(','))"
 node -e "const n=require('./dist/native-binary/manifest.json'); console.log(n.status, n.artifacts.length, n.blockers.join(','))"
+node -e "const sn=require('./dist/signed-native-binary/manifest.json'); console.log(sn.status, sn.signatures.length, sn.blockers.join(','))"
 node -e "const p=require('./dist/release-promotion-preflight.json'); console.log(p.status, p.release_gates.length, p.blockers.join(','))"
 ```
 
@@ -110,6 +114,7 @@ node -e "const p=require('./dist/release-promotion-preflight.json'); console.log
 - [ ] Confirm `divinity.release_binary_artifacts.v1` exists under `dist/binary/`, `SHA256SUMS` matches generated launcher bytes, and `manifest.json` stores no local absolute paths or signing secret references.
 - [ ] Confirm `divinity.release_binary_readiness.v1` lists generated Node launcher targets, blocked public-download status, checksum/signing requirements, and blockers; it must not expose local paths, signing key references, or generated binary contents.
 - [ ] Confirm `divinity.release_native_binary_artifacts.v1` exists under `dist/native-binary/` when native build inputs are configured, lists Linux, macOS, and Windows native binary targets with checksums, and stores no local absolute paths, build command paths, signing key references, registry tokens, or provider credentials.
+- [ ] Confirm `divinity.release_signed_native_binary_artifacts.v1` exists under `dist/signed-native-binary/` when native build and signing inputs are configured, lists detached signatures for each native binary target, and stores no local absolute paths, build command paths, signing command paths, signing key references, signing identities, registry tokens, or provider credentials.
 - [ ] Confirm `divinity.release_candidate_bundle.v1` exists under `dist/release-bundle/`, includes the package tarball, release metadata, binary metadata, and bundle `SHA256SUMS`, and stores no local absolute paths, `node_modules` paths, registry tokens, or signing secret references.
 - [ ] Confirm `divinity.release_attestation.v1` exists under `dist/release-bundle/attestation.json`, lists package/release/binary subjects with sha256 digests, reports blocked signing status, and stores no local absolute paths, `node_modules` paths, registry tokens, signing key references, or signing identities.
 - [ ] Confirm `divinity.release_signature_artifacts.v1` exists under `dist/release-signatures/`, lists detached signatures for release metadata, package tarball, binary metadata, checksums, and attestation subjects, and stores no local absolute paths, signing command paths, signing key references, signing identities, registry tokens, or provider credentials.

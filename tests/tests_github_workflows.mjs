@@ -42,6 +42,7 @@ for (const command of [
   'npm run test:package-tarball',
   'npm run test:binary',
   'npm run test:native-binary',
+  'npm run test:signed-native-binary',
   'npm run test:release-bundle',
   'npm run test:release-promotion',
   'npm run test:release-signatures',

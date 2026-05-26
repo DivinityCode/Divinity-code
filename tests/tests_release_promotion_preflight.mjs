@@ -60,8 +60,8 @@ try {
   assert.equal(preflight.registry_publish.token_configured, false);
   assert.equal(preflight.binary_distribution.status, 'blocked');
   assert.equal(preflight.binary_distribution.artifact_type, 'signed_native_binary');
-  assert.equal(preflight.binary_distribution.build_command, 'pnpm run release:native-binary');
-  assert.equal(preflight.binary_distribution.smoke_test_command, 'pnpm run test:native-binary');
+  assert.equal(preflight.binary_distribution.build_command, 'pnpm run release:signed-native-binary');
+  assert.equal(preflight.binary_distribution.smoke_test_command, 'pnpm run test:signed-native-binary');
   assert.equal(preflight.signing.required, true);
   assert.equal(preflight.signing.status, 'blocked');
   assert.equal(preflight.signing.configuration.status, 'not_configured');
@@ -73,6 +73,7 @@ try {
   assert.equal(requiredArtifactsById.get('release_attestation').path, 'dist/release-bundle/attestation.json');
   assert.equal(requiredArtifactsById.get('binary_artifacts_manifest').path, 'dist/binary/manifest.json');
   assert.equal(requiredArtifactsById.get('native_binary_artifacts_manifest').path, 'dist/native-binary/manifest.json');
+  assert.equal(requiredArtifactsById.get('signed_native_binary_artifacts_manifest').path, 'dist/signed-native-binary/manifest.json');
   for (const artifact of preflight.required_artifacts) {
     assert.equal(Object.hasOwn(artifact, 'absolute_path'), false);
     assert.equal(artifact.required, true);
@@ -84,6 +85,7 @@ try {
     'pnpm run test:package-tarball',
     'pnpm run test:binary',
     'pnpm run test:native-binary',
+    'pnpm run test:signed-native-binary',
     'pnpm run test:release-bundle',
     'pnpm run test:release-artifacts',
     'pnpm run test:release-status',

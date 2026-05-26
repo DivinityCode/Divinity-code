@@ -19,6 +19,8 @@ assert.equal(packageJson.scripts?.['release:binary'], 'node tests/scripts_releas
 assert.equal(packageJson.scripts?.['test:binary'], 'node tests/tests_release_binary_artifacts.mjs');
 assert.equal(packageJson.scripts?.['release:native-binary'], 'node tests/scripts_release_native_binary.mjs');
 assert.equal(packageJson.scripts?.['test:native-binary'], 'node tests/tests_release_native_binary_artifacts.mjs');
+assert.equal(packageJson.scripts?.['release:signed-native-binary'], 'node tests/scripts_release_signed_native_binary.mjs');
+assert.equal(packageJson.scripts?.['test:signed-native-binary'], 'node tests/tests_release_signed_native_binary_artifacts.mjs');
 assert.equal(packageJson.scripts?.['release:bundle'], 'node tests/scripts_release_bundle.mjs');
 assert.equal(packageJson.scripts?.['test:release-bundle'], 'node tests/tests_release_candidate_bundle.mjs');
 assert.equal(packageJson.scripts?.['release:signatures'], 'node tests/scripts_release_signatures.mjs');
@@ -26,6 +28,7 @@ assert.equal(packageJson.scripts?.['test:release-signatures'], 'node tests/tests
 assert.equal(packageJson.scripts?.['release:promotion-preflight'], 'node tests/scripts_release_promotion_preflight.mjs');
 assert.equal(packageJson.scripts?.['test:release-promotion'], 'node tests/tests_release_promotion_preflight.mjs');
 assert.equal(packageJson.scripts?.['test:github-workflows'], 'node tests/tests_github_workflows.mjs');
+assert.ok(packageJson.scripts?.test.includes('node tests/tests_release_signed_native_binary_artifacts.mjs'));
 assert.ok(packageJson.files.includes('apps'));
 assert.ok(packageJson.files.includes('packages'));
 assert.ok(packageJson.files.includes('docs'));
