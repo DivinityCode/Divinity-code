@@ -17,6 +17,8 @@ assert.equal(packageJson.license, 'UNLICENSED');
 assert.equal(packageJson.scripts?.['test:package-tarball'], 'node tests/tests_package_tarball_smoke.mjs');
 assert.equal(packageJson.scripts?.['release:binary'], 'node tests/scripts_release_binary.mjs');
 assert.equal(packageJson.scripts?.['test:binary'], 'node tests/tests_release_binary_artifacts.mjs');
+assert.equal(packageJson.scripts?.['release:native-binary'], 'node tests/scripts_release_native_binary.mjs');
+assert.equal(packageJson.scripts?.['test:native-binary'], 'node tests/tests_release_native_binary_artifacts.mjs');
 assert.equal(packageJson.scripts?.['release:bundle'], 'node tests/scripts_release_bundle.mjs');
 assert.equal(packageJson.scripts?.['test:release-bundle'], 'node tests/tests_release_candidate_bundle.mjs');
 assert.equal(packageJson.scripts?.['release:signatures'], 'node tests/scripts_release_signatures.mjs');
