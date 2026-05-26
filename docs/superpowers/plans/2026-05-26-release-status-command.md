@@ -158,7 +158,7 @@ git diff --check
 rg -n '^(<{7}|={7}|>{7})'
 ```
 
-- [ ] **Step 3: Commit and publish**
+- [x] **Step 3: Commit and publish**
 
 Commit message: `feat: add release status command`
 
