@@ -58,6 +58,56 @@ assert.deepEqual(artifact.registry_publish_readiness.blockers, [
   'missing_registry_token'
 ]);
 assert.equal(JSON.stringify(artifact.registry_publish_readiness).includes(process.cwd()), false);
+assert.equal(artifact.binary_release_readiness.format, 'divinity.release_binary_readiness.v1');
+assert.equal(artifact.binary_release_readiness.status, 'blocked');
+assert.equal(artifact.binary_release_readiness.artifact_id, 'binary_download');
+assert.equal(artifact.binary_release_readiness.binary_name, 'divinity');
+assert.equal(artifact.binary_release_readiness.build_command, 'pnpm run release:binary');
+assert.equal(artifact.binary_release_readiness.smoke_test_command, 'pnpm run test:binary');
+assert.equal(artifact.binary_release_readiness.signing_required, true);
+assert.equal(artifact.binary_release_readiness.checksums_required, true);
+assert.equal(artifact.binary_release_readiness.redacts_local_paths, true);
+assert.equal(artifact.binary_release_readiness.redacts_signing_secrets, true);
+assert.deepEqual(artifact.binary_release_readiness.supported_targets, [
+  {
+    platform: 'linux',
+    arch: 'x64',
+    filename: 'divinity-linux-x64',
+    status: 'blocked'
+  },
+  {
+    platform: 'linux',
+    arch: 'arm64',
+    filename: 'divinity-linux-arm64',
+    status: 'blocked'
+  },
+  {
+    platform: 'darwin',
+    arch: 'x64',
+    filename: 'divinity-darwin-x64',
+    status: 'blocked'
+  },
+  {
+    platform: 'darwin',
+    arch: 'arm64',
+    filename: 'divinity-darwin-arm64',
+    status: 'blocked'
+  },
+  {
+    platform: 'win32',
+    arch: 'x64',
+    filename: 'divinity-win32-x64.exe',
+    status: 'blocked'
+  }
+]);
+assert.deepEqual(artifact.binary_release_readiness.blockers, [
+  'non_production_warning',
+  'missing_binary_build_pipeline',
+  'missing_binary_smoke_gate',
+  'signing_blocked'
+]);
+assert.match(artifact.binary_release_readiness.reason, /binary build, smoke, checksum, and signing pipeline/);
+assert.equal(JSON.stringify(artifact.binary_release_readiness).includes(process.cwd()), false);
 assert.equal(artifact.source_provenance.format, 'divinity.release_source_provenance.v1');
 assert.equal(artifact.source_provenance.status, 'available');
 assert.equal(artifact.source_provenance.vcs, 'git');

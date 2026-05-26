@@ -128,6 +128,7 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: release artifacts now include sha256 source integrity entries and explicit signing readiness metadata, blocked while the non-production warning and `private: true` gates remain active.
    - Bootstrap status: release signing input readiness is now explicit and redacted through absolute signing command, JSON-array args, key-reference, and identity configuration metadata, without storing those values or unblocking publishing while gates remain active.
    - Bootstrap status: release artifacts now include redacted npm registry publish readiness metadata with provenance publish commands, `NPM_TOKEN` configured state, blockers, and token/path redaction while publishing remains blocked.
+   - Bootstrap status: release artifacts now include `divinity.release_binary_readiness.v1` metadata with target filenames, future build/smoke commands, checksum/signing requirements, blockers, and path/signing-secret redaction while signed binary downloads remain blocked.
    - Next production slice: add actual published package and signed binary artifacts after the production warning and `private: true` release gates are cleared.
 4. Hosted/identity/billing boundary.
    - Non-goal for the current bootstrap: hosted identity, billing, and managed secret-store operations are not implemented until local provider/tool/runtime behavior is stable.

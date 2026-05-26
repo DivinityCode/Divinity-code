@@ -75,7 +75,7 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - Run `pnpm run test:package` to validate package metadata and the `divinity` CLI bin target.
 - Run `node apps/cli/src/index.mjs release-status` for a read-only release readiness view.
 - Run `pnpm run release:artifacts` to generate `dist/release-artifacts.json` for release-candidate review.
-- Run `pnpm run test:release-artifacts` to validate the generated release artifact manifest and install-path gates.
+- Run `pnpm run test:release-artifacts` to validate the generated release artifact manifest, install-path gates, signing, registry publish, and binary release readiness metadata.
 - Run `pnpm run test:release-status` to validate the CLI release readiness surface.
 - Run `pnpm run test:public-docs` to validate public install, quickstart, upgrade, and release checklist docs.
 - Run `pnpm run test:smoke` for the local MVP demo flow plus CLI/API smoke path.

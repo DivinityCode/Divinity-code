@@ -9,6 +9,7 @@ Builds release-readiness metadata for Divinity Code.
 - Keeps registry publishing and signed binary paths blocked while `package.json` remains `private: true` and the non-production warning is active.
 - Reports redacted signing input readiness from `DIVINITY_RELEASE_SIGNING_COMMAND`, `DIVINITY_RELEASE_SIGNING_COMMAND_ARGS`, `DIVINITY_RELEASE_SIGNING_KEY_REF`, and `DIVINITY_RELEASE_SIGNING_IDENTITY` without storing command args, key refs, identities, or key material in release metadata.
 - Reports redacted npm registry publish readiness for `npm publish --provenance --access public`, including `NPM_TOKEN` configured state, blockers, and token/path redaction without storing token values.
+- Reports `divinity.release_binary_readiness.v1` metadata for future signed binary downloads, including target filenames, build/smoke command placeholders, checksum and signing requirements, blockers, and path/signing-secret redaction.
 - Powers both `pnpm run release:artifacts` and CLI `divinity release-status`.
 
 Source provenance ignores untracked files, reports only whether tracked changes exist, and does not include changed file paths or absolute local paths. If Git metadata is unavailable, the manifest reports provenance as unavailable without failing artifact generation.
@@ -18,3 +19,5 @@ SBOM metadata omits local absolute paths, `node_modules` paths, registry URLs, a
 Signing commands must be absolute executable paths. Signing args must be a JSON array of strings. The key reference and identity are exposed only as configured booleans so release-candidate metadata can prove readiness without leaking signing secrets or identities.
 
 Registry publish readiness is metadata only. It keeps package publishing blocked while `private: true`, the non-production warning, or missing `NPM_TOKEN` readiness remains in effect, and it does not print registry tokens or local absolute paths.
+
+Binary release readiness is metadata only. It keeps the `binary_download` artifact blocked until the production warning is cleared and an actual binary build, smoke, checksum, and signing pipeline exists. It lists deterministic Linux, macOS, and Windows target filenames without reading generated binaries or signing secrets.

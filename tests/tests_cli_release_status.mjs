@@ -35,6 +35,41 @@ assert.equal(result.release.registry_publish_readiness.token_configured, false);
 assert.equal(result.release.registry_publish_readiness.redacts_token, true);
 assert.ok(result.release.registry_publish_readiness.blockers.includes('package_private'));
 assert.ok(result.release.registry_publish_readiness.blockers.includes('non_production_warning'));
+assert.equal(result.release.binary_release_readiness.format, 'divinity.release_binary_readiness.v1');
+assert.equal(result.release.binary_release_readiness.status, 'blocked');
+assert.equal(result.release.binary_release_readiness.artifact_id, 'binary_download');
+assert.equal(result.release.binary_release_readiness.binary_name, 'divinity');
+assert.equal(result.release.binary_release_readiness.build_command, 'pnpm run release:binary');
+assert.equal(result.release.binary_release_readiness.smoke_test_command, 'pnpm run test:binary');
+assert.equal(result.release.binary_release_readiness.signing_required, true);
+assert.equal(result.release.binary_release_readiness.checksums_required, true);
+assert.equal(result.release.binary_release_readiness.redacts_local_paths, true);
+assert.equal(result.release.binary_release_readiness.redacts_signing_secrets, true);
+assert.equal(result.release.binary_release_readiness.supported_targets.length, 5);
+assert.ok(result.release.binary_release_readiness.supported_targets.some(target => (
+  target.platform === 'linux' &&
+  target.arch === 'x64' &&
+  target.filename === 'divinity-linux-x64' &&
+  target.status === 'blocked'
+)));
+assert.ok(result.release.binary_release_readiness.supported_targets.some(target => (
+  target.platform === 'win32' &&
+  target.arch === 'x64' &&
+  target.filename === 'divinity-win32-x64.exe' &&
+  target.status === 'blocked'
+)));
+for (const blocker of [
+  'non_production_warning',
+  'missing_binary_build_pipeline',
+  'missing_binary_smoke_gate',
+  'signing_blocked'
+]) {
+  assert.ok(
+    result.release.binary_release_readiness.blockers.includes(blocker),
+    `missing binary release readiness blocker: ${blocker}`
+  );
+}
+assert.equal(JSON.stringify(result.release.binary_release_readiness).includes(process.cwd()), false);
 assert.equal(result.release.source_provenance.format, 'divinity.release_source_provenance.v1');
 assert.equal(result.release.source_provenance.status, 'available');
 assert.match(result.release.source_provenance.commit_sha, /^[a-f0-9]{40}$/);
