@@ -386,6 +386,72 @@ try {
     /secret id mapping/
   );
 
+  const azureManagedStorePath = path.join(tmpRoot, 'azure-managed-store.json');
+  const azureManagedSecretId = 'https://divinity-test.vault.azure.net/secrets/openrouter-api-key';
+  const azureManagedEnv = {
+    DIVINITY_PROVIDER_SECRET_REFS_PATH: manifestPath,
+    DIVINITY_PROVIDER_SECRET_STORE_BACKEND: 'azure_key_vault',
+    DIVINITY_AZURE_KEY_VAULT_COMMAND: process.execPath,
+    DIVINITY_AZURE_KEY_VAULT_COMMAND_ARGS: JSON.stringify([
+      path.resolve('tests/fixtures/provider-secret-store-command.mjs')
+    ]),
+    DIVINITY_AZURE_KEY_VAULT_SECRET_IDS: JSON.stringify({
+      [secretRef]: azureManagedSecretId
+    }),
+    DIVINITY_TEST_MANAGED_SECRET_STORE_PATH: azureManagedStorePath
+  };
+  const azureManagedRecord = storeProviderSecret({
+    env: azureManagedEnv,
+    provider_id: 'hosted_secret_mock',
+    secret_ref: secretRef,
+    credential_env_var: 'HOSTED_SECRET_MOCK_API_KEY',
+    secret_value: 'azure-managed-secret-value',
+    actor: 'operator@example.com',
+    reason: 'Authorized Azure Key Vault onboarding',
+    updated_at: '2026-05-26T13:00:00.000Z'
+  });
+  assert.equal(azureManagedRecord.format, 'divinity.provider_secret_store_record.v1');
+  assert.equal(azureManagedRecord.store_backend_id, 'azure_key_vault');
+  assert.equal(azureManagedRecord.store_backend_kind, 'managed_secret_store');
+  assert.equal(azureManagedRecord.algorithm, 'managed-by-azure-key-vault');
+  assert.equal(JSON.stringify(azureManagedRecord).includes('azure-managed-secret-value'), false);
+  assert.equal(JSON.stringify(azureManagedRecord).includes(azureManagedSecretId), false);
+
+  const azureManagedReadiness = providerSecretReadiness({
+    env: azureManagedEnv
+  });
+  assert.equal(azureManagedReadiness.store_configured, true);
+  assert.equal(azureManagedReadiness.store_backend_id, 'azure_key_vault');
+  assert.equal(azureManagedReadiness.store_backend_kind, 'managed_secret_store');
+  assert.equal(azureManagedReadiness.providers[0].credential_configured, true);
+  assert.equal(azureManagedReadiness.providers[0].credential_source, 'store');
+  assert.equal(JSON.stringify(azureManagedReadiness).includes('azure-managed-secret-value'), false);
+  assert.equal(JSON.stringify(azureManagedReadiness).includes(azureManagedSecretId), false);
+
+  const azureManagedResolver = createProviderCredentialResolver({
+    env: azureManagedEnv
+  });
+  assert.deepEqual(azureManagedResolver.configuredSecretRefs(runtime), [secretRef]);
+  assert.equal(azureManagedResolver.resolveCredential(runtime), 'azure-managed-secret-value');
+  assert.throws(
+    () => createConfiguredProviderSecretStoreAdapter({
+      env: {
+        ...azureManagedEnv,
+        DIVINITY_AZURE_KEY_VAULT_COMMAND: 'az'
+      }
+    }).configuredSecretRefs(),
+    /absolute executable path/
+  );
+  assert.throws(
+    () => createConfiguredProviderSecretStoreAdapter({
+      env: {
+        ...azureManagedEnv,
+        DIVINITY_AZURE_KEY_VAULT_SECRET_IDS: '{}'
+      }
+    }).configuredSecretRefs(),
+    /secret id mapping/
+  );
+
   assert.throws(
     () => storeProviderSecret({
       env: {

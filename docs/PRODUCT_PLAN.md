@@ -99,6 +99,7 @@ Build a best-in-class AI engineering platform that combines:
    - Bootstrap status: `DIVINITY_PROVIDER_SECRET_STORE_BACKEND=external_command` binds the API to an approved deployment secret manager command through JSON stdin/stdout, absolute executable paths, no shell interpolation, and the same redacted public metadata.
    - Bootstrap status: `DIVINITY_PROVIDER_SECRET_STORE_BACKEND=aws_secrets_manager` adds the first provider-specific managed secret-store adapter through an approved absolute broker command plus a secret id map, while keeping AWS secret ids and resolved values out of public metadata.
    - Bootstrap status: `DIVINITY_PROVIDER_SECRET_STORE_BACKEND=gcp_secret_manager` adds a Google Cloud Secret Manager adapter through the same approved broker-command contract plus a GCP secret id map, while keeping GCP secret ids and resolved values out of public metadata.
+   - Bootstrap status: `DIVINITY_PROVIDER_SECRET_STORE_BACKEND=azure_key_vault` adds an Azure Key Vault adapter through the same approved broker-command contract plus an Azure secret id map, while keeping Azure secret ids and resolved values out of public metadata.
    - Next production slice: continue hardening deployment secret-store coverage and public release packaging while preserving the same redacted adapter contract.
 2. Toolset governance.
    - Bootstrap status: public toolset metadata and default resolution are exposed through capabilities, CLI `toolsets`, API `/toolsets`, and `doctor`.
