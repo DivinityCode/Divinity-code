@@ -40,6 +40,53 @@ assert.equal(artifact.package.node_engine, packageJson.engines.node);
 assert.equal(artifact.package.package_manager, packageJson.packageManager);
 assert.deepEqual(artifact.package.bin, packageJson.bin);
 assert.equal(artifact.non_production_warning_active, true);
+assert.equal(artifact.release_gate_clearance.format, 'divinity.release_gate_clearance.v1');
+assert.equal(artifact.release_gate_clearance.status, 'blocked');
+assert.equal(artifact.release_gate_clearance.public_release_ready, false);
+assert.deepEqual(artifact.release_gate_clearance.blockers, [
+  'package_private',
+  'non_production_warning',
+  'missing_registry_token',
+  'native_binary_build_pending',
+  'signing_blocked'
+]);
+assert.equal(artifact.release_gate_clearance.redacts_local_paths, true);
+assert.equal(artifact.release_gate_clearance.redacts_registry_token, true);
+assert.equal(artifact.release_gate_clearance.redacts_signing_secrets, true);
+assert.equal(artifact.release_gate_clearance.clearance_items.length, 6);
+
+const clearanceItemsById = new Map(
+  artifact.release_gate_clearance.clearance_items.map(item => [item.item_id, item])
+);
+assert.deepEqual(clearanceItemsById.get('package_privacy'), {
+  item_id: 'package_privacy',
+  status: 'blocked',
+  blocker: 'package_private',
+  current_state: 'package.json private=true',
+  required_state: 'package publishing is explicitly enabled by an approved public release decision',
+  evidence_command: 'pnpm run test:package',
+  evidence_artifacts: ['package.json']
+});
+assert.deepEqual(clearanceItemsById.get('production_warning'), {
+  item_id: 'production_warning',
+  status: 'blocked',
+  blocker: 'non_production_warning',
+  current_state: 'README non-production warning active',
+  required_state: 'README production warning is removed only after the public readiness audit passes',
+  evidence_command: 'pnpm run test:public-docs',
+  evidence_artifacts: ['README.md', 'docs/RELEASE_CHECKLIST.md']
+});
+assert.equal(clearanceItemsById.get('registry_token').status, 'blocked');
+assert.equal(clearanceItemsById.get('registry_token').blocker, 'missing_registry_token');
+assert.equal(clearanceItemsById.get('registry_token').current_state, 'NPM_TOKEN not configured');
+assert.equal(clearanceItemsById.get('registry_token').evidence_command, 'pnpm run test:release-promotion');
+assert.equal(clearanceItemsById.get('native_binary_distribution').blocker, 'native_binary_build_pending');
+assert.equal(clearanceItemsById.get('release_signing').blocker, 'signing_blocked');
+assert.equal(clearanceItemsById.get('github_release_readiness').status, 'required');
+assert.equal(clearanceItemsById.get('github_release_readiness').evidence_command, 'pnpm run test:github-workflows');
+assert.equal(JSON.stringify(artifact.release_gate_clearance).includes(process.cwd()), false);
+assert.equal(JSON.stringify(artifact.release_gate_clearance).includes('secret://'), false);
+assert.equal(JSON.stringify(artifact.release_gate_clearance).includes('npm-secret-token-value'), false);
 assert.equal(artifact.registry_publish_readiness.format, 'divinity.release_registry_publish_readiness.v1');
 assert.equal(artifact.registry_publish_readiness.status, 'blocked');
 assert.equal(artifact.registry_publish_readiness.package_name, packageJson.name);
@@ -329,6 +376,9 @@ assert.equal(configuredSigningArtifact.artifact_signing.configuration.command_ar
 assert.equal(configuredSigningArtifact.artifact_signing.configuration.key_ref_configured, true);
 assert.equal(configuredSigningArtifact.artifact_signing.configuration.identity_configured, true);
 assert.equal(configuredSigningArtifact.artifact_signing.configuration.ready_when_release_gates_clear, true);
+assert.equal(configuredSigningArtifact.release_gate_clearance.clearance_items.find(
+  item => item.item_id === 'release_signing'
+).current_state, 'release signing inputs configured');
 assert.equal(JSON.stringify(configuredSigningArtifact).includes('secret://divinity/release/signing-key'), false);
 assert.equal(JSON.stringify(configuredSigningArtifact).includes('release@example.com'), false);
 
@@ -338,6 +388,9 @@ const configuredPublishArtifact = buildReleaseArtifactsManifest({
 });
 assert.equal(configuredPublishArtifact.registry_publish_readiness.status, 'blocked');
 assert.equal(configuredPublishArtifact.registry_publish_readiness.token_configured, true);
+assert.equal(configuredPublishArtifact.release_gate_clearance.clearance_items.find(
+  item => item.item_id === 'registry_token'
+).current_state, 'NPM_TOKEN configured');
 assert.deepEqual(configuredPublishArtifact.registry_publish_readiness.blockers, [
   'package_private',
   'non_production_warning'

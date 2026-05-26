@@ -44,6 +44,7 @@ assertIncludes(install, 'pnpm run validate:contracts', 'install guide');
 assertIncludes(install, 'pnpm run release:artifacts', 'install guide');
 assertIncludes(install, 'pnpm run release:bundle', 'install guide');
 assertIncludes(install, 'pnpm run release:promotion-preflight', 'install guide');
+assertIncludes(install, 'divinity.release_gate_clearance.v1', 'install guide');
 assertIncludes(install, 'pnpm run test:release-artifacts', 'install guide');
 assertIncludes(install, 'pnpm run test:release-bundle', 'install guide');
 assertIncludes(install, 'pnpm run test:release-promotion', 'install guide');
@@ -91,6 +92,7 @@ for (const item of [
   'pnpm run test:release-artifacts',
   'pnpm run test:release-bundle',
   'pnpm run test:release-promotion',
+  'divinity.release_gate_clearance.v1',
   'release artifact integrity and signing readiness',
   'pnpm run validate:contracts',
   'pnpm run test:deprecations',
