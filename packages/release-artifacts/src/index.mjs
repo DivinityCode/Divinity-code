@@ -5,6 +5,7 @@ import path from 'path';
 
 export const RELEASE_ARTIFACTS_FORMAT = 'divinity.release_artifacts.v1';
 export const SOURCE_PROVENANCE_FORMAT = 'divinity.release_source_provenance.v1';
+export const RELEASE_SBOM_FORMAT = 'divinity.release_sbom.v1';
 export const DEFAULT_RELEASE_ARTIFACT_OUTPUT = path.join('dist', 'release-artifacts.json');
 export const RELEASE_SIGNING_COMMAND_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND';
 export const RELEASE_SIGNING_COMMAND_ARGS_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND_ARGS';
@@ -80,6 +81,14 @@ function buildArtifactIntegrity(packageFiles, cwd) {
   };
 }
 
+function readPackageLock(root) {
+  try {
+    return JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
 function gitText({ cwd, gitCommand = 'git', args = [] } = {}) {
   try {
     return cleanString(execFileSync(gitCommand, args, {
@@ -129,6 +138,108 @@ function buildSourceProvenance({ cwd, packageJson, gitCommand = 'git' }) {
     reason: trackedStatus
       ? 'Tracked source changes were present when release metadata was generated; file paths are redacted.'
       : 'No tracked source changes were present when release metadata was generated.'
+  };
+}
+
+function packageNameFromLockPath(lockPath) {
+  const normalized = cleanString(lockPath).split(path.sep).join('/');
+  if (!normalized.startsWith('node_modules/')) return '';
+  const parts = normalized.slice('node_modules/'.length).split('/');
+  if (parts[0]?.startsWith('@')) {
+    return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : '';
+  }
+  return parts[0] || '';
+}
+
+function directDependencyType(name, packageJson) {
+  if (Object.hasOwn(packageJson.dependencies || {}, name)) return 'production';
+  if (Object.hasOwn(packageJson.devDependencies || {}, name)) return 'development';
+  if (Object.hasOwn(packageJson.optionalDependencies || {}, name)) return 'optional';
+  if (Object.hasOwn(packageJson.peerDependencies || {}, name)) return 'peer';
+  return '';
+}
+
+function requestedRange(name, packageJson) {
+  return cleanString(
+    (packageJson.dependencies || {})[name] ||
+    (packageJson.devDependencies || {})[name] ||
+    (packageJson.optionalDependencies || {})[name] ||
+    (packageJson.peerDependencies || {})[name]
+  );
+}
+
+function componentId(name, version) {
+  return `npm:${name}@${version}`;
+}
+
+function buildReleaseSbom({ packageJson, packageLock }) {
+  if (!packageLock || !packageLock.packages || typeof packageLock.packages !== 'object') {
+    return {
+      format: RELEASE_SBOM_FORMAT,
+      status: 'unavailable',
+      source: 'package-lock.json',
+      package_manager: 'npm',
+      lockfile_version: null,
+      generated_from_package_files: true,
+      redacts_local_paths: true,
+      redacts_registry_urls: true,
+      redacts_integrity_values: true,
+      component_count: 0,
+      components: [],
+      reason: 'package-lock.json was unavailable or invalid when release metadata was generated.'
+    };
+  }
+
+  const components = [{
+    component_id: componentId(packageJson.name, packageJson.version),
+    name: packageJson.name,
+    version: packageJson.version,
+    component_type: 'application',
+    dependency_type: 'root',
+    direct: false,
+    requested_range: '',
+    license: cleanString(packageJson.license)
+  }];
+
+  for (const [lockPath, entry] of Object.entries(packageLock.packages)) {
+    if (!lockPath || lockPath === '') continue;
+    const name = packageNameFromLockPath(lockPath);
+    const version = cleanString(entry?.version);
+    if (!name || !version) continue;
+    const directType = directDependencyType(name, packageJson);
+    components.push({
+      component_id: componentId(name, version),
+      name,
+      version,
+      component_type: 'library',
+      dependency_type: directType || 'transitive',
+      direct: Boolean(directType),
+      requested_range: directType ? requestedRange(name, packageJson) : '',
+      license: cleanString(entry?.license)
+    });
+  }
+
+  components.sort((left, right) => left.component_id.localeCompare(right.component_id));
+  const uniqueComponents = [];
+  const seen = new Set();
+  for (const component of components) {
+    if (seen.has(component.component_id)) continue;
+    seen.add(component.component_id);
+    uniqueComponents.push(component);
+  }
+
+  return {
+    format: RELEASE_SBOM_FORMAT,
+    status: 'generated',
+    source: 'package-lock.json',
+    package_manager: 'npm',
+    lockfile_version: packageLock.lockfileVersion || null,
+    generated_from_package_files: true,
+    redacts_local_paths: true,
+    redacts_registry_urls: true,
+    redacts_integrity_values: true,
+    component_count: uniqueComponents.length,
+    components: uniqueComponents
   };
 }
 
@@ -253,6 +364,7 @@ export function buildReleaseArtifactsManifest({
 } = {}) {
   const root = path.resolve(cwd);
   const packageJson = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const packageLock = readPackageLock(root);
   const publishingBlocked = packageJson.private === true;
   const warningReason = 'README warning marks Divinity Code as under heavy active development and not production-ready.';
 
@@ -271,6 +383,7 @@ export function buildReleaseArtifactsManifest({
     },
     non_production_warning_active: true,
     source_provenance: buildSourceProvenance({ cwd: root, packageJson, gitCommand }),
+    release_sbom: buildReleaseSbom({ packageJson, packageLock }),
     artifact_integrity: buildArtifactIntegrity(packageJson.files || [], root),
     artifact_signing: buildArtifactSigning({ publishingBlocked, warningReason, env }),
     install_paths: [

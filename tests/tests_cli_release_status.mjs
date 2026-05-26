@@ -31,6 +31,20 @@ assert.equal(result.release.source_provenance.format, 'divinity.release_source_p
 assert.equal(result.release.source_provenance.status, 'available');
 assert.match(result.release.source_provenance.commit_sha, /^[a-f0-9]{40}$/);
 assert.equal(result.release.source_provenance.redacts_paths, true);
+assert.equal(result.release.release_sbom.format, 'divinity.release_sbom.v1');
+assert.equal(result.release.release_sbom.status, 'generated');
+assert.equal(result.release.release_sbom.component_count, result.release.release_sbom.components.length);
+assert.ok(result.release.release_sbom.components.some(component => (
+  component.component_id === 'npm:divinity-code@0.1.0' &&
+  component.dependency_type === 'root'
+)));
+assert.ok(result.release.release_sbom.components.some(component => (
+  component.name === 'ajv' &&
+  component.dependency_type === 'development' &&
+  component.direct === true
+)));
+assert.equal(JSON.stringify(result.release.release_sbom).includes('node_modules/'), false);
+assert.equal(JSON.stringify(result.release.release_sbom).includes(process.cwd()), false);
 assert.equal(result.release.artifact_signing.status, 'blocked');
 assert.equal(result.release.artifact_signing.configuration.status, 'not_configured');
 

@@ -67,6 +67,8 @@ pnpm run release:artifacts
 
 Release source provenance is included in both surfaces. It reports the Git commit SHA, branch, repository URL from `package.json`, whether tracked source changes were present, and redaction flags. It ignores untracked files and does not print changed file paths or absolute local paths; if Git metadata is unavailable, provenance is marked unavailable without failing artifact generation.
 
+Release SBOM metadata is included in both surfaces as `divinity.release_sbom.v1`. It is generated from `package.json` and `package-lock.json`, and records package/dependency names, versions, direct/transitive relationship, requested ranges, and license strings when present. It omits local absolute paths, `node_modules` paths, registry URLs, and lockfile integrity values. The SBOM does not unblock registry publishing or binary downloads while release gates remain blocked.
+
 Release signing readiness is reported without leaking signing secrets. Configure `DIVINITY_RELEASE_SIGNING_COMMAND` as an absolute executable path, `DIVINITY_RELEASE_SIGNING_COMMAND_ARGS` as an optional JSON array of strings, and `DIVINITY_RELEASE_SIGNING_KEY_REF` plus `DIVINITY_RELEASE_SIGNING_IDENTITY` as deployment-managed signing references. The generated metadata reports only configured booleans and validation status; it does not store command args, key refs, identities, key material, package signatures, or binary signatures.
 
 The package remains marked `private` while the non-production warning is active. Published package and binary install paths are future release work.
