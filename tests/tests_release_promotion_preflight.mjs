@@ -58,6 +58,7 @@ try {
   assert.equal(preflight.registry_publish.provenance_required, true);
   assert.equal(preflight.registry_publish.token_env_var, 'NPM_TOKEN');
   assert.equal(preflight.registry_publish.token_configured, false);
+  assert.equal(preflight.registry_publish.dry_run_artifact_path, 'dist/release-registry-dry-run.json');
   assert.equal(preflight.binary_distribution.status, 'blocked');
   assert.equal(preflight.binary_distribution.artifact_type, 'signed_native_binary');
   assert.equal(preflight.binary_distribution.build_command, 'pnpm run release:signed-native-binary');
@@ -69,6 +70,7 @@ try {
 
   const requiredArtifactsById = new Map(preflight.required_artifacts.map(artifact => [artifact.artifact_id, artifact]));
   assert.equal(requiredArtifactsById.get('release_artifacts_manifest').path, 'dist/release-artifacts.json');
+  assert.equal(requiredArtifactsById.get('registry_publish_dry_run_report').path, 'dist/release-registry-dry-run.json');
   assert.equal(requiredArtifactsById.get('release_candidate_bundle_manifest').path, 'dist/release-bundle/manifest.json');
   assert.equal(requiredArtifactsById.get('release_attestation').path, 'dist/release-bundle/attestation.json');
   assert.equal(requiredArtifactsById.get('binary_artifacts_manifest').path, 'dist/binary/manifest.json');
@@ -83,6 +85,7 @@ try {
   for (const command of [
     'pnpm run test:package',
     'pnpm run test:package-tarball',
+    'pnpm run test:release-registry-dry-run',
     'pnpm run test:binary',
     'pnpm run test:native-binary',
     'pnpm run test:signed-native-binary',

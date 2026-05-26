@@ -53,6 +53,8 @@ assert.equal(clearanceItemsById.get('package_privacy').evidence_command, 'pnpm r
 assert.equal(clearanceItemsById.get('production_warning').status, 'blocked');
 assert.equal(clearanceItemsById.get('production_warning').evidence_command, 'pnpm run test:public-docs');
 assert.equal(clearanceItemsById.get('registry_token').current_state, 'NPM_TOKEN not configured');
+assert.equal(clearanceItemsById.get('registry_token').evidence_command, 'pnpm run test:release-registry-dry-run');
+assert.deepEqual(clearanceItemsById.get('registry_token').evidence_artifacts, ['dist/release-registry-dry-run.json']);
 assert.equal(clearanceItemsById.get('native_binary_distribution').evidence_command, 'pnpm run test:signed-native-binary');
 assert.deepEqual(clearanceItemsById.get('native_binary_distribution').evidence_artifacts, [
   'dist/signed-native-binary/manifest.json',
@@ -75,6 +77,17 @@ assert.equal(result.release.registry_publish_readiness.token_configured, false);
 assert.equal(result.release.registry_publish_readiness.redacts_token, true);
 assert.ok(result.release.registry_publish_readiness.blockers.includes('package_private'));
 assert.ok(result.release.registry_publish_readiness.blockers.includes('non_production_warning'));
+assert.equal(result.release.release_registry_publish_dry_run.format, 'divinity.release_registry_publish_dry_run.v1');
+assert.equal(result.release.release_registry_publish_dry_run.status, 'blocked');
+assert.equal(result.release.release_registry_publish_dry_run.public_release_ready, false);
+assert.equal(result.release.release_registry_publish_dry_run.registry_publish_ready, false);
+assert.equal(result.release.release_registry_publish_dry_run.command, 'pnpm run release:registry-dry-run');
+assert.equal(result.release.release_registry_publish_dry_run.smoke_test_command, 'pnpm run test:release-registry-dry-run');
+assert.equal(result.release.release_registry_publish_dry_run.token_configured, false);
+assert.equal(result.release.release_registry_publish_dry_run.dry_run_executed, false);
+assert.equal(result.release.release_registry_publish_dry_run.redacts_token, true);
+assert.equal(result.release.release_registry_publish_dry_run.redacts_local_paths, true);
+assert.equal(result.release.release_registry_publish_dry_run.redacts_npm_output, true);
 assert.equal(result.release.release_candidate_bundle.format, 'divinity.release_candidate_bundle_readiness.v1');
 assert.equal(result.release.release_candidate_bundle.status, 'blocked');
 assert.equal(result.release.release_candidate_bundle.build_command, 'pnpm run release:bundle');
@@ -170,6 +183,10 @@ assert.ok(result.release.release_promotion_preflight.required_artifacts.some(req
   required.path === 'dist/release-bundle/attestation.json'
 )));
 assert.ok(result.release.release_promotion_preflight.required_artifacts.some(required => (
+  required.artifact_id === 'registry_publish_dry_run_report' &&
+  required.path === 'dist/release-registry-dry-run.json'
+)));
+assert.ok(result.release.release_promotion_preflight.required_artifacts.some(required => (
   required.artifact_id === 'native_binary_artifacts_manifest' &&
   required.path === 'dist/native-binary/manifest.json'
 )));
@@ -180,6 +197,10 @@ assert.ok(result.release.release_promotion_preflight.required_artifacts.some(req
 assert.ok(result.release.release_promotion_preflight.release_gates.some(gate => (
   gate.gate_id === 'native_binary_artifacts' &&
   gate.command === 'pnpm run test:native-binary'
+)));
+assert.ok(result.release.release_promotion_preflight.release_gates.some(gate => (
+  gate.gate_id === 'registry_publish_dry_run' &&
+  gate.command === 'pnpm run test:release-registry-dry-run'
 )));
 assert.ok(result.release.release_promotion_preflight.release_gates.some(gate => (
   gate.gate_id === 'signed_native_binary_artifacts' &&
@@ -301,6 +322,7 @@ assert.equal(installPathsById.get('binary_download').status, 'blocked');
 for (const command of [
   'pnpm test',
   'pnpm run test:providers',
+  'pnpm run test:release-registry-dry-run',
   'pnpm run test:binary',
   'pnpm run test:native-binary',
   'pnpm run test:signed-native-binary',
@@ -384,6 +406,7 @@ const tokenConfiguredResult = runCli(['release-status'], {
   }
 });
 assert.equal(tokenConfiguredResult.release.registry_publish_readiness.token_configured, true);
+assert.equal(tokenConfiguredResult.release.release_registry_publish_dry_run.token_configured, true);
 assert.equal(tokenConfiguredResult.release.release_gate_clearance.clearance_items.find(
   item => item.item_id === 'registry_token'
 ).current_state, 'NPM_TOKEN configured');

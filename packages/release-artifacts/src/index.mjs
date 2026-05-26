@@ -7,6 +7,7 @@ export const RELEASE_ARTIFACTS_FORMAT = 'divinity.release_artifacts.v1';
 export const SOURCE_PROVENANCE_FORMAT = 'divinity.release_source_provenance.v1';
 export const RELEASE_SBOM_FORMAT = 'divinity.release_sbom.v1';
 export const RELEASE_REGISTRY_PUBLISH_READINESS_FORMAT = 'divinity.release_registry_publish_readiness.v1';
+export const RELEASE_REGISTRY_PUBLISH_DRY_RUN_FORMAT = 'divinity.release_registry_publish_dry_run.v1';
 export const RELEASE_BINARY_READINESS_FORMAT = 'divinity.release_binary_readiness.v1';
 export const RELEASE_BINARY_ARTIFACTS_FORMAT = 'divinity.release_binary_artifacts.v1';
 export const RELEASE_NATIVE_BINARY_ARTIFACTS_FORMAT = 'divinity.release_native_binary_artifacts.v1';
@@ -20,6 +21,7 @@ export const RELEASE_GATE_CLEARANCE_FORMAT = 'divinity.release_gate_clearance.v1
 export const RELEASE_SIGNATURE_ARTIFACTS_FORMAT = 'divinity.release_signature_artifacts.v1';
 export const RELEASE_SIGNATURE_ARTIFACTS_READINESS_FORMAT = 'divinity.release_signature_artifacts_readiness.v1';
 export const DEFAULT_RELEASE_ARTIFACT_OUTPUT = path.join('dist', 'release-artifacts.json');
+export const DEFAULT_RELEASE_REGISTRY_PUBLISH_DRY_RUN_OUTPUT = path.join('dist', 'release-registry-dry-run.json');
 export const DEFAULT_RELEASE_BINARY_OUTPUT = path.join('dist', 'binary');
 export const DEFAULT_RELEASE_NATIVE_BINARY_OUTPUT = path.join('dist', 'native-binary');
 export const DEFAULT_RELEASE_SIGNED_NATIVE_BINARY_OUTPUT = path.join('dist', 'signed-native-binary');
@@ -561,6 +563,75 @@ function buildRegistryPublishReadiness({
   };
 }
 
+function registryPublishDryRunNpmArgs() {
+  return [
+    'publish',
+    '--dry-run',
+    '--provenance',
+    '--access',
+    'public',
+    '--json'
+  ];
+}
+
+function buildRegistryPublishDryRunArtifact({
+  packageJson,
+  publishingBlocked,
+  warningActive = true,
+  env = process.env,
+  dryRunExecuted = false,
+  dryRunResult = null
+}) {
+  const readiness = buildRegistryPublishReadiness({
+    packageJson,
+    publishingBlocked,
+    warningActive,
+    env
+  });
+  const status = dryRunExecuted
+    ? 'executed'
+    : readiness.blockers.length
+      ? 'blocked'
+      : 'ready';
+  return {
+    format: RELEASE_REGISTRY_PUBLISH_DRY_RUN_FORMAT,
+    generated_by: 'packages/release-artifacts',
+    status,
+    public_release_ready: false,
+    registry_publish_ready: readiness.blockers.length === 0,
+    package: {
+      name: packageJson.name,
+      version: packageJson.version,
+      private: packageJson.private === true
+    },
+    registry_url: readiness.registry_url,
+    provenance_required: readiness.provenance_required,
+    publish_command: readiness.publish_command,
+    dry_run_command: readiness.dry_run_command,
+    command: 'pnpm run release:registry-dry-run',
+    smoke_test_command: 'pnpm run test:release-registry-dry-run',
+    npm_args: registryPublishDryRunNpmArgs(),
+    token_env_var: readiness.token_env_var,
+    token_configured: readiness.token_configured,
+    dry_run_executed: dryRunExecuted,
+    dry_run_result: dryRunResult || {
+      status: readiness.blockers.length ? 'skipped' : 'not_run',
+      reason: readiness.blockers.length
+        ? 'Registry dry-run is skipped while release blockers remain.'
+        : 'Registry dry-run is ready but was not executed in this metadata context.'
+    },
+    blockers: readiness.blockers,
+    redacts_token: true,
+    redacts_local_paths: true,
+    redacts_npm_output: true,
+    reason: dryRunExecuted
+      ? 'Registry publish dry-run executed without storing registry tokens, command paths, local paths, or raw npm output.'
+      : readiness.blockers.length
+        ? 'Registry publish dry-run remains blocked until package privacy, production warning, and token readiness gates clear.'
+        : 'Registry publish dry-run can execute once invoked from the release dry-run command.'
+  };
+}
+
 function buildNativeBinaryBuildPipeline({ env = process.env } = {}) {
   const configuration = buildNativeBinaryBuildConfiguration({ env });
   return {
@@ -771,6 +842,12 @@ function releasePromotionRequiredArtifacts() {
       required: true
     },
     {
+      artifact_id: 'registry_publish_dry_run_report',
+      path: DEFAULT_RELEASE_REGISTRY_PUBLISH_DRY_RUN_OUTPUT.split(path.sep).join('/'),
+      command: 'pnpm run release:registry-dry-run',
+      required: true
+    },
+    {
       artifact_id: 'release_candidate_bundle_manifest',
       path: `${DEFAULT_RELEASE_BUNDLE_OUTPUT.split(path.sep).join('/')}/manifest.json`,
       command: 'pnpm run release:bundle',
@@ -819,6 +896,11 @@ function releasePromotionGates() {
     {
       gate_id: 'package_tarball_smoke',
       command: 'pnpm run test:package-tarball',
+      required: true
+    },
+    {
+      gate_id: 'registry_publish_dry_run',
+      command: 'pnpm run test:release-registry-dry-run',
       required: true
     },
     {
@@ -931,8 +1013,8 @@ export function buildReleaseGateClearanceAudit({
         blocker: 'missing_registry_token',
         current_state: tokenConfigured ? 'NPM_TOKEN configured' : 'NPM_TOKEN not configured',
         required_state: 'operator-owned npm automation token is configured outside repository files',
-        evidence_command: 'pnpm run test:release-promotion',
-        evidence_artifacts: ['dist/release-promotion-preflight.json']
+        evidence_command: 'pnpm run test:release-registry-dry-run',
+        evidence_artifacts: ['dist/release-registry-dry-run.json']
       },
       {
         item_id: 'native_binary_distribution',
@@ -1013,6 +1095,7 @@ export function buildReleasePromotionPreflight({
       provenance_required: true,
       publish_command: 'npm publish --provenance --access public',
       dry_run_command: 'npm publish --dry-run --provenance --access public',
+      dry_run_artifact_path: DEFAULT_RELEASE_REGISTRY_PUBLISH_DRY_RUN_OUTPUT.split(path.sep).join('/'),
       token_env_var: NPM_TOKEN_ENV,
       token_configured: tokenConfigured
     },
@@ -1106,6 +1189,12 @@ export function buildReleaseArtifactsManifest({
       warningActive: true,
       env
     }),
+    release_registry_publish_dry_run: buildRegistryPublishDryRunArtifact({
+      packageJson,
+      publishingBlocked,
+      warningActive: true,
+      env
+    }),
     binary_release_readiness: buildBinaryReleaseReadiness({ warningActive: true, env }),
     registry_publish_readiness: buildRegistryPublishReadiness({
       packageJson,
@@ -1161,6 +1250,11 @@ export function buildReleaseArtifactsManifest({
       {
         gate_id: 'package_tarball_smoke',
         command: 'pnpm run test:package-tarball',
+        required: true
+      },
+      {
+        gate_id: 'registry_publish_dry_run',
+        command: 'pnpm run test:release-registry-dry-run',
         required: true
       },
       {
@@ -1277,6 +1371,73 @@ export function writeReleasePromotionPreflight({
     warningActive: true,
     env
   });
+
+  mkdirSync(path.dirname(artifactPath), { recursive: true });
+  writeFileSync(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`);
+
+  return {
+    ok: true,
+    artifact_path: artifactPath,
+    artifact
+  };
+}
+
+export function writeReleaseRegistryPublishDryRun({
+  output = DEFAULT_RELEASE_REGISTRY_PUBLISH_DRY_RUN_OUTPUT,
+  cwd = process.cwd(),
+  env = process.env,
+  packageJson = null,
+  publishingBlocked = null,
+  warningActive = true,
+  npmCommand = defaultNpmCommand(),
+  npmCommandArgsPrefix = []
+} = {}) {
+  const root = path.resolve(cwd);
+  const artifactPath = path.resolve(root, cleanString(output) || DEFAULT_RELEASE_REGISTRY_PUBLISH_DRY_RUN_OUTPUT);
+  const releasePackageJson = packageJson || JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const releasePublishingBlocked = publishingBlocked === null
+    ? releasePackageJson.private === true
+    : publishingBlocked;
+  const initialArtifact = buildRegistryPublishDryRunArtifact({
+    packageJson: releasePackageJson,
+    publishingBlocked: releasePublishingBlocked,
+    warningActive,
+    env
+  });
+
+  let artifact = initialArtifact;
+  if (initialArtifact.blockers.length === 0) {
+    const outputText = execFileSync(npmCommand, [
+      ...npmCommandArgsPrefix,
+      ...registryPublishDryRunNpmArgs()
+    ], {
+      cwd: root,
+      env,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+    let parsedJson = false;
+    try {
+      JSON.parse(outputText || '{}');
+      parsedJson = true;
+    } catch {
+      parsedJson = false;
+    }
+    artifact = buildRegistryPublishDryRunArtifact({
+      packageJson: releasePackageJson,
+      publishingBlocked: releasePublishingBlocked,
+      warningActive,
+      env,
+      dryRunExecuted: true,
+      dryRunResult: {
+        status: 'executed',
+        exit_code: 0,
+        parsed_json: parsedJson,
+        stdout_bytes: Buffer.byteLength(outputText, 'utf8'),
+        stdout_sha256: sha256Bytes(outputText)
+      }
+    });
+  }
 
   mkdirSync(path.dirname(artifactPath), { recursive: true });
   writeFileSync(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`);

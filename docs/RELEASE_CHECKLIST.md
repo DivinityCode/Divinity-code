@@ -66,6 +66,8 @@ pnpm run test:deprecations
 
 ```bash
 pnpm run release:artifacts
+pnpm run release:registry-dry-run
+pnpm run test:release-registry-dry-run
 pnpm run release:binary
 pnpm run test:binary
 pnpm run release:native-binary
@@ -91,6 +93,7 @@ node -e "const a=require('./dist/release-artifacts.json'); console.log(a.release
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.artifact_integrity.algorithm, a.artifact_integrity.files.length, a.artifact_signing.status)"
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.artifact_signing.configuration.status, a.artifact_signing.configuration.ready_when_release_gates_clear)"
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.registry_publish_readiness.status, a.registry_publish_readiness.token_configured, a.registry_publish_readiness.blockers.join(','))"
+node -e "const a=require('./dist/release-artifacts.json'); console.log(a.release_registry_publish_dry_run.status, a.release_registry_publish_dry_run.dry_run_executed, a.release_registry_publish_dry_run.blockers.join(','))"
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.binary_release_readiness.status, a.binary_release_readiness.supported_targets.length, a.binary_release_readiness.blockers.join(','))"
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.binary_release_readiness.native_build_pipeline.status, a.binary_release_readiness.native_build_pipeline.command)"
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.binary_release_readiness.signed_native_binary_pipeline.status, a.binary_release_readiness.signed_native_binary_pipeline.command)"
@@ -111,6 +114,7 @@ node -e "const p=require('./dist/release-promotion-preflight.json'); console.log
 - [ ] Confirm `divinity.release_gate_clearance.v1` reports `public_release_ready: false` while blockers remain, lists package privacy, production warning, registry token, native binary distribution, release signing, and GitHub release-readiness evidence items, and stores no local absolute paths, registry tokens, signing key references, signing identities, or signing secrets.
 - [ ] If testing release signing readiness, configure `DIVINITY_RELEASE_SIGNING_COMMAND` as an absolute executable path, `DIVINITY_RELEASE_SIGNING_COMMAND_ARGS` as a JSON array of strings, and signing key/identity references through `DIVINITY_RELEASE_SIGNING_KEY_REF` and `DIVINITY_RELEASE_SIGNING_IDENTITY`. Confirm the generated metadata reports readiness without printing those values.
 - [ ] If testing registry publish readiness, configure `NPM_TOKEN` in the environment and confirm the generated metadata reports only `token_configured: true`, never the token value.
+- [ ] Confirm `divinity.release_registry_publish_dry_run.v1` exists under `dist/release-registry-dry-run.json`, skips npm execution while blockers remain, and stores no registry token values, raw npm output, local paths, or npm executable paths.
 - [ ] Confirm `divinity.release_binary_artifacts.v1` exists under `dist/binary/`, `SHA256SUMS` matches generated launcher bytes, and `manifest.json` stores no local absolute paths or signing secret references.
 - [ ] Confirm `divinity.release_binary_readiness.v1` lists generated Node launcher targets, blocked public-download status, checksum/signing requirements, and blockers; it must not expose local paths, signing key references, or generated binary contents.
 - [ ] Confirm `divinity.release_native_binary_artifacts.v1` exists under `dist/native-binary/` when native build inputs are configured, lists Linux, macOS, and Windows native binary targets with checksums, and stores no local absolute paths, build command paths, signing key references, registry tokens, or provider credentials.

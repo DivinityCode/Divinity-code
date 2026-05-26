@@ -75,6 +75,8 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - Run `pnpm run test:package` to validate package metadata and the `divinity` CLI bin target.
 - Run `node apps/cli/src/index.mjs release-status` for a read-only release readiness view.
 - Run `pnpm run release:artifacts` to generate `dist/release-artifacts.json` for release-candidate review, including the release gate clearance audit.
+- Run `pnpm run release:registry-dry-run` to generate a fail-closed npm registry publish dry-run report without publishing while release blockers remain.
+- Run `pnpm run test:release-registry-dry-run` to validate registry dry-run blockers, command metadata, token redaction, and npm-output redaction.
 - Run `pnpm run release:binary` to generate local Node launcher artifacts and checksums for release-candidate binary smoke review.
 - Run `pnpm run test:binary` to validate those launcher artifacts without publishing signed native downloads.
 - Run `pnpm run release:native-binary` to generate native binary artifacts through a configured external build command for release-candidate review.
