@@ -50,7 +50,7 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 - This keeps bug reporting inside the builder workflow without opening a browser or mutating repository state.
 
 ## Release Readiness
-- `packages/release-artifacts` builds `divinity.release_artifacts.v1` metadata from the package manifest, package file allowlist, redacted Git source provenance, release SBOM metadata, sha256 integrity scan, install paths, release gates, signing readiness, registry publish readiness, and binary release readiness.
+- `packages/release-artifacts` builds `divinity.release_artifacts.v1` metadata from the package manifest, package file allowlist, redacted Git source provenance, release SBOM metadata, sha256 integrity scan, install paths, release gates, signing readiness, registry publish readiness, binary release readiness, and release-candidate bundle readiness.
 - CLI `release-status` returns that manifest as a read-only status surface without writing `dist/release-artifacts.json`.
 - `pnpm run release:artifacts` writes the same manifest for release-candidate review; registry and binary download paths remain blocked while `private: true` and the non-production warning are active.
 - Source provenance records commit SHA, branch, tracked-change status, repository URL from package metadata, and redaction flags. It ignores untracked files, never includes changed file paths or absolute local paths, and reports `status: "unavailable"` instead of failing artifact generation when Git metadata is unavailable.
@@ -59,6 +59,7 @@ The canonical Phase 0 object map and schema index lives in [Domain Model](DOMAIN
 - Registry publish readiness is explicit but redacted: release metadata records the future `npm publish --provenance --access public` command, dry-run command, `NPM_TOKEN` configured state, and blockers without storing registry token values or local absolute paths.
 - Binary release readiness is explicit but blocked: release metadata records the local `pnpm run release:binary` build command, `pnpm run test:binary` smoke command, generated Node launcher target filenames, checksum/signing requirements, and blockers without storing local paths, generated binary contents, or signing secrets.
 - `pnpm run release:binary` writes `divinity.release_binary_artifacts.v1`, `SHA256SUMS`, and non-native Node launcher artifacts under `dist/binary/` so release candidates have an auditable binary smoke gate before signed native downloads are enabled.
+- `pnpm run release:bundle` writes `divinity.release_candidate_bundle.v1` under `dist/release-bundle/` with the package tarball, release metadata, binary launcher metadata, and bundle checksums. The manifest stores only relative paths and redacted readiness metadata while package publishing and signed native binary downloads remain blocked.
 
 ## Capability Discovery
 - CLI `capabilities` and API `GET /capabilities` expose `divinity.capabilities.v1`.

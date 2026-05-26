@@ -11,6 +11,7 @@ Builds release-readiness metadata for Divinity Code.
 - Reports redacted npm registry publish readiness for `npm publish --provenance --access public`, including `NPM_TOKEN` configured state, blockers, and token/path redaction without storing token values.
 - Reports `divinity.release_binary_readiness.v1` metadata for future signed binary downloads, including target filenames, build/smoke command placeholders, checksum and signing requirements, blockers, and path/signing-secret redaction.
 - Generates `divinity.release_binary_artifacts.v1` local Node launcher artifacts, `SHA256SUMS`, and `manifest.json` under `dist/binary/` for release-candidate smoke checks.
+- Reports `divinity.release_candidate_bundle_readiness.v1` metadata and generates `divinity.release_candidate_bundle.v1` review bundles under `dist/release-bundle/`.
 - Powers both `pnpm run release:artifacts` and CLI `divinity release-status`.
 
 Source provenance ignores untracked files, reports only whether tracked changes exist, and does not include changed file paths or absolute local paths. If Git metadata is unavailable, the manifest reports provenance as unavailable without failing artifact generation.
@@ -22,3 +23,5 @@ Signing commands must be absolute executable paths. Signing args must be a JSON 
 Registry publish readiness is metadata only. It keeps package publishing blocked while `private: true`, the non-production warning, or missing `NPM_TOKEN` readiness remains in effect, and it does not print registry tokens or local absolute paths.
 
 Binary release readiness is metadata only. It keeps the `binary_download` artifact blocked until the production warning is cleared and signed native binaries are built. The local `release:binary` path generates Node launcher artifacts and checksums for smoke review, marks them as non-native, and does not read or store signing secrets.
+
+Release candidate bundles are local review artifacts only. `pnpm run release:bundle` writes `release-artifacts.json`, a package tarball from `npm pack`, binary launcher metadata, binary checksums, a bundle-level `SHA256SUMS`, and `manifest.json` under `dist/release-bundle/`. The bundle manifest stores relative paths, sha256 values, byte counts, and blockers without local absolute paths, `node_modules` paths, registry tokens, or signing secret references. `pnpm run test:release-bundle` verifies those files and keeps public package publishing plus signed native binary downloads blocked until release gates clear.
