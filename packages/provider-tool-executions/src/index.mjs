@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
@@ -7,6 +8,14 @@ function stableIdPart(value) {
 
 function cleanString(value) {
   return String(value || '').trim();
+}
+
+function sha256Bytes(value) {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+function cleanExpectedSha256(value) {
+  return cleanString(value);
 }
 
 function assertRequired(value, label) {
@@ -494,6 +503,14 @@ function writeFileExecution({
   const targetInput = cleanString(argument_values.path);
   const target = path.resolve(root, targetInput);
   const content = String(argument_values.content ?? '');
+  const expectedSha256 = cleanExpectedSha256(argument_values.expected_sha256);
+  const failedPreconditionMetadata = {
+    path_redacted: true,
+    content_redacted: true,
+    expected_sha256_checked: true,
+    expected_sha256_matched: false,
+    expected_sha256_redacted: true
+  };
   if (!targetInput || !isPathInside(target, root) || target === root) {
     return executionEnvelope({
       run_id,
@@ -536,6 +553,65 @@ function writeFileExecution({
       index
     });
   }
+  if (expectedSha256 && !/^[a-f0-9]{64}$/.test(expectedSha256)) {
+    return executionEnvelope({
+      run_id,
+      approval,
+      argument_keys,
+      status: 'failed',
+      adapter: 'write_file',
+      actor,
+      reason,
+      started_at,
+      completed_at,
+      output_summary: 'write_file failed; content redacted',
+      output_metadata: failedPreconditionMetadata,
+      operator_summary,
+      error: 'write_file expected_sha256 must be a lowercase 64-character sha256 hex digest',
+      index
+    });
+  }
+  if (expectedSha256) {
+    let existingContent;
+    try {
+      existingContent = fs.readFileSync(target);
+    } catch {
+      return executionEnvelope({
+        run_id,
+        approval,
+        argument_keys,
+        status: 'failed',
+        adapter: 'write_file',
+        actor,
+        reason,
+        started_at,
+        completed_at,
+        output_summary: 'write_file failed; content redacted',
+        output_metadata: failedPreconditionMetadata,
+        operator_summary,
+        error: 'write_file expected_sha256 target was unavailable',
+        index
+      });
+    }
+    if (sha256Bytes(existingContent) !== expectedSha256) {
+      return executionEnvelope({
+        run_id,
+        approval,
+        argument_keys,
+        status: 'failed',
+        adapter: 'write_file',
+        actor,
+        reason,
+        started_at,
+        completed_at,
+        output_summary: 'write_file failed; content redacted',
+        output_metadata: failedPreconditionMetadata,
+        operator_summary,
+        error: 'write_file expected_sha256 did not match current file content',
+        index
+      });
+    }
+  }
 
   try {
     fs.mkdirSync(path.dirname(target), { recursive: true });
@@ -555,7 +631,12 @@ function writeFileExecution({
         bytes_written: Buffer.byteLength(content, 'utf8'),
         line_count: content.split(/\r?\n/).length,
         path_redacted: true,
-        content_redacted: true
+        content_redacted: true,
+        ...(expectedSha256 ? {
+          expected_sha256_checked: true,
+          expected_sha256_matched: true,
+          expected_sha256_redacted: true
+        } : {})
       },
       operator_summary,
       index

@@ -1,10 +1,15 @@
 import assert from 'assert/strict';
+import { createHash } from 'crypto';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 
 import { createProviderToolCallApproval } from '../packages/provider-tool-approvals/src/index.mjs';
 import { createProviderToolExecution } from '../packages/provider-tool-executions/src/index.mjs';
+
+function sha256(value) {
+  return createHash('sha256').update(value).digest('hex');
+}
 
 const tmpRoot = mkdtempSync(path.join(tmpdir(), 'divinity-provider-tool-executions-'));
 const workspaceRoot = path.join(tmpRoot, 'workspace');
@@ -21,6 +26,9 @@ const secretListIgnoredPath = path.join(secretListScope, 'dist', 'secret-list-ig
 const secretWriteScope = 'secret-write-scope';
 const secretWritePath = path.join(secretWriteScope, 'secret-write-target.md');
 const secretWriteContents = 'secret provider write file contents';
+const guardedWritePath = path.join(secretWriteScope, 'guarded-write-target.md');
+const guardedOriginalContents = 'original guarded content';
+const guardedReplacementContents = 'guarded replacement content';
 
 mkdirSync(workspaceRoot, { recursive: true });
 mkdirSync(path.join(workspaceRoot, secretSearchScope), { recursive: true });
@@ -313,13 +321,139 @@ try {
   assert.equal(JSON.stringify(writeExecution).includes(secretWritePath), false);
   assert.equal(JSON.stringify(writeExecution).includes(secretWriteContents), false);
 
+  writeFileSync(path.join(workspaceRoot, guardedWritePath), guardedOriginalContents);
+  const guardedWriteApproval = createProviderToolCallApproval({
+    run_id: 'run_tool_execution',
+    tool_call_id: 'call_guarded_write_file_1',
+    provider_id: 'custom_openai_compatible',
+    transport: 'chat_completions',
+    name: 'write_file',
+    argument_keys: ['path', 'content', 'expected_sha256'],
+    arguments_redacted: true,
+    decision: 'approve',
+    actor: 'operator@example.com',
+    reason: 'Repository file write with stale-file guard is approved.',
+    decided_at: '2026-05-26T12:05:00Z',
+    index: 9
+  });
+
+  const guardedWriteExecution = createProviderToolExecution({
+    run_id: 'run_tool_execution',
+    approval: guardedWriteApproval,
+    argument_values: {
+      path: guardedWritePath,
+      content: guardedReplacementContents,
+      expected_sha256: sha256(guardedOriginalContents)
+    },
+    workspace_root: workspaceRoot,
+    actor: 'operator@example.com',
+    reason: 'Execute the approved guarded write request.',
+    operator_summary: 'Operator reviewed the guarded write request: file precondition matches.',
+    started_at: '2026-05-26T12:05:01Z',
+    completed_at: '2026-05-26T12:05:02Z',
+    index: 9
+  });
+
+  assert.equal(guardedWriteExecution.status, 'completed');
+  assert.equal(guardedWriteExecution.adapter, 'write_file');
+  assert.deepEqual(guardedWriteExecution.argument_keys, ['content', 'expected_sha256', 'path']);
+  assert.equal(guardedWriteExecution.output_metadata.expected_sha256_checked, true);
+  assert.equal(guardedWriteExecution.output_metadata.expected_sha256_matched, true);
+  assert.equal(guardedWriteExecution.output_metadata.expected_sha256_redacted, true);
+  assert.equal(readFileSync(path.join(workspaceRoot, guardedWritePath), 'utf8'), guardedReplacementContents);
+  assert.equal(JSON.stringify(guardedWriteExecution).includes(guardedWritePath), false);
+  assert.equal(JSON.stringify(guardedWriteExecution).includes(guardedOriginalContents), false);
+  assert.equal(JSON.stringify(guardedWriteExecution).includes(guardedReplacementContents), false);
+  assert.equal(JSON.stringify(guardedWriteExecution).includes(sha256(guardedOriginalContents)), false);
+
+  const staleWriteExecution = createProviderToolExecution({
+    run_id: 'run_tool_execution',
+    approval: guardedWriteApproval,
+    argument_values: {
+      path: guardedWritePath,
+      content: 'stale content must not be written',
+      expected_sha256: sha256(guardedOriginalContents)
+    },
+    workspace_root: workspaceRoot,
+    actor: 'operator@example.com',
+    reason: 'Reject stale guarded write request.',
+    started_at: '2026-05-26T12:05:03Z',
+    completed_at: '2026-05-26T12:05:04Z',
+    index: 10
+  });
+
+  assert.equal(staleWriteExecution.status, 'failed');
+  assert.equal(staleWriteExecution.adapter, 'write_file');
+  assert.match(staleWriteExecution.error, /expected_sha256/);
+  assert.equal(staleWriteExecution.output_metadata.expected_sha256_checked, true);
+  assert.equal(staleWriteExecution.output_metadata.expected_sha256_matched, false);
+  assert.equal(staleWriteExecution.output_metadata.expected_sha256_redacted, true);
+  assert.equal(readFileSync(path.join(workspaceRoot, guardedWritePath), 'utf8'), guardedReplacementContents);
+  assert.equal(JSON.stringify(staleWriteExecution).includes(guardedWritePath), false);
+  assert.equal(JSON.stringify(staleWriteExecution).includes('stale content must not be written'), false);
+  assert.equal(JSON.stringify(staleWriteExecution).includes(sha256(guardedOriginalContents)), false);
+
+  const invalidGuardWriteExecution = createProviderToolExecution({
+    run_id: 'run_tool_execution',
+    approval: guardedWriteApproval,
+    argument_values: {
+      path: guardedWritePath,
+      content: 'invalid guard content must not be written',
+      expected_sha256: 'not-a-sha'
+    },
+    workspace_root: workspaceRoot,
+    actor: 'operator@example.com',
+    reason: 'Reject invalid guarded write request.',
+    started_at: '2026-05-26T12:05:05Z',
+    completed_at: '2026-05-26T12:05:06Z',
+    index: 11
+  });
+
+  assert.equal(invalidGuardWriteExecution.status, 'failed');
+  assert.equal(invalidGuardWriteExecution.adapter, 'write_file');
+  assert.match(invalidGuardWriteExecution.error, /expected_sha256/);
+  assert.equal(invalidGuardWriteExecution.output_metadata.expected_sha256_checked, true);
+  assert.equal(invalidGuardWriteExecution.output_metadata.expected_sha256_matched, false);
+  assert.equal(invalidGuardWriteExecution.output_metadata.expected_sha256_redacted, true);
+  assert.equal(readFileSync(path.join(workspaceRoot, guardedWritePath), 'utf8'), guardedReplacementContents);
+  assert.equal(JSON.stringify(invalidGuardWriteExecution).includes(guardedWritePath), false);
+  assert.equal(JSON.stringify(invalidGuardWriteExecution).includes('invalid guard content must not be written'), false);
+  assert.equal(JSON.stringify(invalidGuardWriteExecution).includes('not-a-sha'), false);
+
+  const uppercaseGuardWriteExecution = createProviderToolExecution({
+    run_id: 'run_tool_execution',
+    approval: guardedWriteApproval,
+    argument_values: {
+      path: guardedWritePath,
+      content: 'uppercase guard content must not be written',
+      expected_sha256: sha256(guardedReplacementContents).toUpperCase()
+    },
+    workspace_root: workspaceRoot,
+    actor: 'operator@example.com',
+    reason: 'Reject uppercase guarded write request.',
+    started_at: '2026-05-26T12:05:07Z',
+    completed_at: '2026-05-26T12:05:08Z',
+    index: 12
+  });
+
+  assert.equal(uppercaseGuardWriteExecution.status, 'failed');
+  assert.equal(uppercaseGuardWriteExecution.adapter, 'write_file');
+  assert.match(uppercaseGuardWriteExecution.error, /expected_sha256/);
+  assert.equal(uppercaseGuardWriteExecution.output_metadata.expected_sha256_checked, true);
+  assert.equal(uppercaseGuardWriteExecution.output_metadata.expected_sha256_matched, false);
+  assert.equal(uppercaseGuardWriteExecution.output_metadata.expected_sha256_redacted, true);
+  assert.equal(readFileSync(path.join(workspaceRoot, guardedWritePath), 'utf8'), guardedReplacementContents);
+  assert.equal(JSON.stringify(uppercaseGuardWriteExecution).includes(guardedWritePath), false);
+  assert.equal(JSON.stringify(uppercaseGuardWriteExecution).includes('uppercase guard content must not be written'), false);
+  assert.equal(JSON.stringify(uppercaseGuardWriteExecution).includes(sha256(guardedReplacementContents).toUpperCase()), false);
+
   const writeTraversal = createProviderToolExecution({
     run_id: 'run_tool_execution',
     approval: writeApproval,
     argument_values: { path: '../outside-write.md', content: secretWriteContents },
     workspace_root: workspaceRoot,
     reason: 'Write path traversal must fail closed.',
-    index: 9
+    index: 13
   });
 
   assert.equal(writeTraversal.status, 'failed');
@@ -334,7 +468,7 @@ try {
     argument_values: { path: '.git/config', content: secretWriteContents },
     workspace_root: workspaceRoot,
     reason: 'Protected workspace paths must fail closed.',
-    index: 10
+    index: 14
   });
 
   assert.equal(protectedWrite.status, 'failed');

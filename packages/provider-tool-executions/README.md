@@ -11,7 +11,7 @@ Current adapters:
 - `read_file`: reads a workspace-relative file after path containment checks and stores only output summary metadata such as byte and line counts.
 - `search_files`: searches workspace-relative files after path containment checks and stores only redacted counts for scanned files, matches, and matching files.
 - `list_files`: lists workspace-relative file tree shape after path containment checks and stores only redacted counts for files, directories, and maximum depth.
-- `write_file`: writes full replacement content to a workspace-relative file after path containment checks, blocks protected `.git` and `node_modules` paths, and stores only byte/line counts plus path/content redaction flags.
+- `write_file`: writes full replacement content to a workspace-relative file after path containment checks, blocks protected `.git` and `node_modules` paths, optionally enforces an approved `expected_sha256` match before writing, and stores only byte/line counts plus path/content/hash redaction flags.
 - unsupported tools: return a `blocked` execution record instead of executing.
 
-Execution records are audit evidence. They are not automatic model-driven tool loops, do not reconstruct redacted provider arguments, and do not persist file contents or file paths.
+Execution records are audit evidence. They are not automatic model-driven tool loops, do not reconstruct redacted provider arguments, and do not persist file contents, file paths, or approved precondition hashes.

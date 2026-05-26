@@ -149,7 +149,12 @@ const TOOL_SCHEMAS = {
       type: 'object',
       properties: {
         path: { type: 'string', description: 'Repository-relative file path to write.' },
-        content: { type: 'string', description: 'Complete file content to write.' }
+        content: { type: 'string', description: 'Complete file content to write.' },
+        expected_sha256: {
+          type: 'string',
+          pattern: '^[a-f0-9]{64}$',
+          description: 'Optional sha256 digest of the current file content; when supplied, the write fails if the file changed after approval.'
+        }
       },
       required: ['path', 'content'],
       additionalProperties: false

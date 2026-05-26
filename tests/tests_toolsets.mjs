@@ -77,6 +77,8 @@ const writeFileSchema = defaultResolved.tool_schemas.find(tool => tool.name === 
 assert.equal(writeFileSchema.description, 'Write full replacement content to a repository file after policy approval.');
 assert.deepEqual(writeFileSchema.input_schema.required, ['path', 'content']);
 assert.equal(writeFileSchema.input_schema.properties.content.type, 'string');
+assert.equal(writeFileSchema.input_schema.properties.expected_sha256.type, 'string');
+assert.equal(writeFileSchema.input_schema.properties.expected_sha256.pattern, '^[a-f0-9]{64}$');
 assert.equal(defaultResolved.toolsets.some(toolset => toolset.toolset_id === 'terminal'), false);
 assert.ok(defaultResolved.policy_permissions.includes('file:read'));
 assert.ok(defaultResolved.policy_permissions.includes('file:write'));
