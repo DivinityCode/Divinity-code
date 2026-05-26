@@ -77,9 +77,9 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - Run `pnpm run release:artifacts` to generate `dist/release-artifacts.json` for release-candidate review.
 - Run `pnpm run release:binary` to generate local Node launcher artifacts and checksums for release-candidate binary smoke review.
 - Run `pnpm run test:binary` to validate those launcher artifacts without publishing signed native downloads.
-- Run `pnpm run release:bundle` to assemble a local release-candidate review bundle with the package tarball, release metadata, binary launcher artifacts, and checksums.
-- Run `pnpm run test:release-bundle` to validate the bundle manifest, redaction guarantees, package tarball, binary metadata, and checksums without publishing.
-- Run `pnpm run test:release-artifacts` to validate the generated release artifact manifest, install-path gates, signing, registry publish, binary release readiness, and bundle readiness metadata.
+- Run `pnpm run release:bundle` to assemble a local release-candidate review bundle with the package tarball, release metadata, binary launcher artifacts, release attestation, and checksums.
+- Run `pnpm run test:release-bundle` to validate the bundle manifest, attestation, redaction guarantees, package tarball, binary metadata, and checksums without publishing.
+- Run `pnpm run test:release-artifacts` to validate the generated release artifact manifest, install-path gates, signing, registry publish, binary release readiness, bundle readiness metadata, and attestation readiness metadata.
 - Run `pnpm run test:release-status` to validate the CLI release readiness surface.
 - Run `pnpm run test:public-docs` to validate public install, quickstart, upgrade, and release checklist docs.
 - Run `pnpm run test:smoke` for the local MVP demo flow plus CLI/API smoke path.
