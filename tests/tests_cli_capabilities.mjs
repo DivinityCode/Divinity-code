@@ -21,6 +21,7 @@ assert.ok(result.catalog.execution_adapters.some(adapter => adapter.adapter === 
 assert.ok(result.catalog.runtime_adapters.some(adapter => adapter.adapter === 'codex_local'));
 assert.ok(result.catalog.llm_providers.some(provider => provider.provider_id === 'openrouter'));
 assert.ok(result.catalog.provider_secret_store_backends.some(backend => backend.backend_id === 'hashicorp_vault'));
+assert.ok(result.catalog.provider_secret_store_backends.some(backend => backend.backend_id === 'onepassword_secrets_automation'));
 assert.ok(result.catalog.toolsets.some(toolset => toolset.toolset_id === 'web'));
 assert.ok(result.catalog.runner_isolation_profiles.some(profile => profile.profile_id === 'container_sandbox'));
 assert.ok(result.catalog.connector_adapters.some(adapter => adapter.adapter === 'ci_status'));

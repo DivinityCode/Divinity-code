@@ -30,6 +30,10 @@ export const HASHICORP_VAULT_COMMAND_ENV = 'DIVINITY_HASHICORP_VAULT_COMMAND';
 export const HASHICORP_VAULT_COMMAND_ARGS_ENV = 'DIVINITY_HASHICORP_VAULT_COMMAND_ARGS';
 export const HASHICORP_VAULT_TIMEOUT_MS_ENV = 'DIVINITY_HASHICORP_VAULT_TIMEOUT_MS';
 export const HASHICORP_VAULT_SECRET_PATHS_ENV = 'DIVINITY_HASHICORP_VAULT_SECRET_PATHS';
+export const ONEPASSWORD_COMMAND_ENV = 'DIVINITY_ONEPASSWORD_COMMAND';
+export const ONEPASSWORD_COMMAND_ARGS_ENV = 'DIVINITY_ONEPASSWORD_COMMAND_ARGS';
+export const ONEPASSWORD_TIMEOUT_MS_ENV = 'DIVINITY_ONEPASSWORD_TIMEOUT_MS';
+export const ONEPASSWORD_SECRET_IDS_ENV = 'DIVINITY_ONEPASSWORD_SECRET_IDS';
 
 const PROVIDER_SECRET_STORE_BACKENDS = [
   {
@@ -132,6 +136,24 @@ const PROVIDER_SECRET_STORE_BACKENDS = [
       HASHICORP_VAULT_COMMAND_ARGS_ENV,
       HASHICORP_VAULT_TIMEOUT_MS_ENV,
       HASHICORP_VAULT_SECRET_PATHS_ENV
+    ],
+    redacts_secret_values: true,
+    redacts_deployment_secret_ids: true,
+    test_only: false
+  },
+  {
+    format: 'divinity.provider_secret_store_backend.v1',
+    backend_id: 'onepassword_secrets_automation',
+    backend_kind: 'managed_secret_store',
+    display_name: '1Password Secrets Automation',
+    description: '1Password broker-command adapter with public secret refs mapped to deployment secret ids.',
+    production_ready: true,
+    broker_command_required: true,
+    configuration_env_vars: [
+      ONEPASSWORD_COMMAND_ENV,
+      ONEPASSWORD_COMMAND_ARGS_ENV,
+      ONEPASSWORD_TIMEOUT_MS_ENV,
+      ONEPASSWORD_SECRET_IDS_ENV
     ],
     redacts_secret_values: true,
     redacts_deployment_secret_ids: true,
@@ -449,6 +471,59 @@ function vaultSecretPathMapFrom({ env = process.env } = {}) {
       throw new Error(`${HASHICORP_VAULT_SECRET_PATHS_ENV} secret path mapping entries must use secret:// refs and non-empty Vault paths`);
     }
     normalized[cleanSecretRef] = cleanSecretPath;
+  }
+  return normalized;
+}
+
+function onePasswordCommandFrom({ env = process.env } = {}) {
+  return cleanString(env[ONEPASSWORD_COMMAND_ENV]);
+}
+
+function onePasswordCommandArgsFrom({ env = process.env } = {}) {
+  const rawArgs = cleanString(env[ONEPASSWORD_COMMAND_ARGS_ENV]);
+  if (!rawArgs) return [];
+  let parsed;
+  try {
+    parsed = JSON.parse(rawArgs);
+  } catch {
+    throw new Error(`${ONEPASSWORD_COMMAND_ARGS_ENV} must be a JSON array of strings`);
+  }
+  if (!Array.isArray(parsed) || parsed.some(value => typeof value !== 'string')) {
+    throw new Error(`${ONEPASSWORD_COMMAND_ARGS_ENV} must be a JSON array of strings`);
+  }
+  return parsed;
+}
+
+function onePasswordCommandTimeoutFrom({ env = process.env } = {}) {
+  const rawTimeout = cleanString(env[ONEPASSWORD_TIMEOUT_MS_ENV]);
+  if (!rawTimeout) return 5000;
+  const timeout = Number(rawTimeout);
+  if (!Number.isInteger(timeout) || timeout < 100 || timeout > 30000) {
+    throw new Error(`${ONEPASSWORD_TIMEOUT_MS_ENV} must be an integer between 100 and 30000`);
+  }
+  return timeout;
+}
+
+function onePasswordSecretIdMapFrom({ env = process.env } = {}) {
+  const rawMap = cleanString(env[ONEPASSWORD_SECRET_IDS_ENV]);
+  if (!rawMap) throw new Error(`${ONEPASSWORD_SECRET_IDS_ENV} secret id mapping is required`);
+  let parsed;
+  try {
+    parsed = JSON.parse(rawMap);
+  } catch {
+    throw new Error(`${ONEPASSWORD_SECRET_IDS_ENV} secret id mapping must be a JSON object`);
+  }
+  if (!isPlainObject(parsed) || Object.keys(parsed).length === 0) {
+    throw new Error(`${ONEPASSWORD_SECRET_IDS_ENV} secret id mapping must be a non-empty JSON object`);
+  }
+  const normalized = {};
+  for (const [secretRef, secretId] of Object.entries(parsed)) {
+    const cleanSecretRef = cleanString(secretRef);
+    const cleanSecretId = cleanString(secretId);
+    if (!SECRET_REF_PATTERN.test(cleanSecretRef) || !cleanSecretId) {
+      throw new Error(`${ONEPASSWORD_SECRET_IDS_ENV} secret id mapping entries must use secret:// refs and non-empty secret ids`);
+    }
+    normalized[cleanSecretRef] = cleanSecretId;
   }
   return normalized;
 }
@@ -1351,6 +1426,119 @@ export function createHashicorpVaultProviderSecretStoreAdapter({ env = process.e
   };
 }
 
+function runOnePasswordSecretStoreCommand({ env, action, payload }) {
+  const commandPath = onePasswordCommandFrom({ env });
+  if (!commandPath) throw new Error(`${ONEPASSWORD_COMMAND_ENV} is required for onepassword_secrets_automation provider secret store backend`);
+  if (!path.isAbsolute(commandPath)) {
+    throw new Error(`${ONEPASSWORD_COMMAND_ENV} must be an absolute executable path`);
+  }
+
+  const request = {
+    action,
+    provider: 'onepassword_secrets_automation',
+    ...payload
+  };
+  const commandArgs = onePasswordCommandArgsFrom({ env });
+  const commandTimeoutMs = onePasswordCommandTimeoutFrom({ env });
+
+  let output;
+  try {
+    output = execFileSync(commandPath, commandArgs, {
+      input: `${JSON.stringify(request)}\n`,
+      encoding: 'utf8',
+      timeout: commandTimeoutMs,
+      maxBuffer: 1024 * 1024,
+      env
+    });
+  } catch {
+    throw new Error(`1Password Secrets Automation command failed for action ${action}`);
+  }
+
+  let result;
+  try {
+    result = JSON.parse(output || '{}');
+  } catch {
+    throw new Error(`1Password Secrets Automation command returned invalid JSON for action ${action}`);
+  }
+  if (result.ok !== true) {
+    throw new Error(`1Password Secrets Automation command failed for action ${action}`);
+  }
+  return result;
+}
+
+export function createOnePasswordProviderSecretStoreAdapter({ env = process.env } = {}) {
+  return {
+    backend_id: 'onepassword_secrets_automation',
+    backend_kind: 'managed_secret_store',
+    storeConfigured() {
+      if (!onePasswordCommandFrom({ env })) return false;
+      return Object.keys(onePasswordSecretIdMapFrom({ env })).length > 0;
+    },
+    configuredSecretRefs() {
+      if (!this.storeConfigured()) return new Set();
+      const secretIdMap = onePasswordSecretIdMapFrom({ env });
+      const allowedSecretRefs = new Set(Object.keys(secretIdMap));
+      const result = runOnePasswordSecretStoreCommand({
+        env,
+        action: 'configured_refs',
+        payload: { secret_ids: secretIdMap }
+      });
+      const secretRefs = Array.isArray(result.secret_refs) ? result.secret_refs : [];
+      return new Set(secretRefs.map(cleanString).filter(secretRef => allowedSecretRefs.has(secretRef)));
+    },
+    resolveSecret(secretRef) {
+      if (!this.storeConfigured()) return '';
+      const cleanSecretRef = cleanString(secretRef);
+      const secretIdMap = onePasswordSecretIdMapFrom({ env });
+      const secretId = secretIdMap[cleanSecretRef];
+      if (!secretId) return '';
+      const result = runOnePasswordSecretStoreCommand({
+        env,
+        action: 'resolve',
+        payload: {
+          secret_ref: cleanSecretRef,
+          secret_id: secretId
+        }
+      });
+      return cleanString(result.secret_value);
+    },
+    storeSecret({
+      provider,
+      secret_value,
+      actor,
+      reason,
+      updated_at
+    }) {
+      const secretIdMap = onePasswordSecretIdMapFrom({ env });
+      const secretId = secretIdMap[provider.secret_ref];
+      if (!secretId) {
+        throw new Error(`${ONEPASSWORD_SECRET_IDS_ENV} secret id mapping is required for ${provider.secret_ref}`);
+      }
+      runOnePasswordSecretStoreCommand({
+        env,
+        action: 'store',
+        payload: {
+          provider_id: provider.provider_id,
+          secret_ref: provider.secret_ref,
+          secret_id: secretId,
+          credential_env_var: provider.credential_env_var,
+          secret_value,
+          actor,
+          reason,
+          updated_at
+        }
+      });
+      return publicStoreRecord({
+        ...provider,
+        algorithm: 'managed-by-onepassword-secrets-automation',
+        updated_at,
+        updated_by: actor,
+        reason
+      }, this);
+    }
+  };
+}
+
 export function createConfiguredProviderSecretStoreAdapter({ env = process.env } = {}) {
   const backend = storeBackendFrom({ env });
   if (backend === 'local_file') {
@@ -1378,6 +1566,9 @@ export function createConfiguredProviderSecretStoreAdapter({ env = process.env }
   }
   if (backend === 'hashicorp_vault') {
     return createHashicorpVaultProviderSecretStoreAdapter({ env });
+  }
+  if (backend === 'onepassword_secrets_automation') {
+    return createOnePasswordProviderSecretStoreAdapter({ env });
   }
   throw new Error(`unsupported provider secret store backend: ${backend}`);
 }

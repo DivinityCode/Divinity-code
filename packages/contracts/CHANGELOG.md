@@ -1,5 +1,8 @@
 # Contracts Changelog
 
+## v1.45.0
+- Expanded `CapabilitiesCatalog.provider_secret_store_backends` with `onepassword_secrets_automation` so 1Password-backed managed secret-store support is contract-visible without exposing deployment secret ids or credential values.
+
 ## v1.44.0
 - Added `provider_secret_store_backends` to `CapabilitiesCatalog` so provider secret-store backend discovery is contract-visible without secret values, deployment secret ids, Vault paths, local store paths, or absolute local paths.
 

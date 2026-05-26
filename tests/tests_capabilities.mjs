@@ -65,11 +65,13 @@ assert.deepEqual(catalog.provider_secret_store_backends.map(backend => backend.b
   'gcp_secret_manager',
   'azure_key_vault',
   'hashicorp_vault',
+  'onepassword_secrets_automation',
   'hosted_memory'
 ]);
 assert.ok(catalog.provider_secret_store_backends.every(backend => backend.format === 'divinity.provider_secret_store_backend.v1'));
 assert.equal(catalog.provider_secret_store_backends.find(backend => backend.backend_id === 'hosted_memory').production_ready, false);
 assert.equal(catalog.provider_secret_store_backends.find(backend => backend.backend_id === 'external_command').broker_command_required, true);
+assert.equal(catalog.provider_secret_store_backends.find(backend => backend.backend_id === 'onepassword_secrets_automation').broker_command_required, true);
 
 assert.deepEqual(catalog.toolsets.map(toolset => toolset.toolset_id), [
   'web',
