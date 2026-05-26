@@ -42,6 +42,9 @@ jobs:
       - name: Validate binary artifact smoke
         run: npm run test:binary
 
+      - name: Validate native binary artifacts
+        run: npm run test:native-binary
+
       - name: Validate release bundle
         run: npm run test:release-bundle
 
