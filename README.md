@@ -77,6 +77,8 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - Run `pnpm run release:artifacts` to generate `dist/release-artifacts.json` for release-candidate review, including the release gate clearance audit.
 - Run `pnpm run release:binary` to generate local Node launcher artifacts and checksums for release-candidate binary smoke review.
 - Run `pnpm run test:binary` to validate those launcher artifacts without publishing signed native downloads.
+- Run `pnpm run release:native-binary` to generate native binary artifacts through a configured external build command for release-candidate review.
+- Run `pnpm run test:native-binary` to validate native binary artifact checksums, target coverage, and build-command/path redaction without publishing downloads.
 - Run `pnpm run release:bundle` to assemble a local release-candidate review bundle with the package tarball, release metadata, binary launcher artifacts, release attestation, and checksums.
 - Run `pnpm run test:release-bundle` to validate the bundle manifest, attestation, redaction guarantees, package tarball, binary metadata, and checksums without publishing.
 - Run `pnpm run release:signatures` to generate local redacted release-candidate signatures for the bundle subjects when deployment-managed signing inputs are configured.

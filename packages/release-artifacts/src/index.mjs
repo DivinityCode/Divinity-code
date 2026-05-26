@@ -9,6 +9,7 @@ export const RELEASE_SBOM_FORMAT = 'divinity.release_sbom.v1';
 export const RELEASE_REGISTRY_PUBLISH_READINESS_FORMAT = 'divinity.release_registry_publish_readiness.v1';
 export const RELEASE_BINARY_READINESS_FORMAT = 'divinity.release_binary_readiness.v1';
 export const RELEASE_BINARY_ARTIFACTS_FORMAT = 'divinity.release_binary_artifacts.v1';
+export const RELEASE_NATIVE_BINARY_ARTIFACTS_FORMAT = 'divinity.release_native_binary_artifacts.v1';
 export const RELEASE_CANDIDATE_BUNDLE_FORMAT = 'divinity.release_candidate_bundle.v1';
 export const RELEASE_CANDIDATE_BUNDLE_READINESS_FORMAT = 'divinity.release_candidate_bundle_readiness.v1';
 export const RELEASE_ATTESTATION_FORMAT = 'divinity.release_attestation.v1';
@@ -19,6 +20,7 @@ export const RELEASE_SIGNATURE_ARTIFACTS_FORMAT = 'divinity.release_signature_ar
 export const RELEASE_SIGNATURE_ARTIFACTS_READINESS_FORMAT = 'divinity.release_signature_artifacts_readiness.v1';
 export const DEFAULT_RELEASE_ARTIFACT_OUTPUT = path.join('dist', 'release-artifacts.json');
 export const DEFAULT_RELEASE_BINARY_OUTPUT = path.join('dist', 'binary');
+export const DEFAULT_RELEASE_NATIVE_BINARY_OUTPUT = path.join('dist', 'native-binary');
 export const DEFAULT_RELEASE_BUNDLE_OUTPUT = path.join('dist', 'release-bundle');
 export const DEFAULT_RELEASE_SIGNATURE_OUTPUT = path.join('dist', 'release-signatures');
 export const DEFAULT_RELEASE_PROMOTION_PREFLIGHT_OUTPUT = path.join('dist', 'release-promotion-preflight.json');
@@ -27,6 +29,8 @@ export const RELEASE_SIGNING_COMMAND_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND';
 export const RELEASE_SIGNING_COMMAND_ARGS_ENV = 'DIVINITY_RELEASE_SIGNING_COMMAND_ARGS';
 export const RELEASE_SIGNING_KEY_REF_ENV = 'DIVINITY_RELEASE_SIGNING_KEY_REF';
 export const RELEASE_SIGNING_IDENTITY_ENV = 'DIVINITY_RELEASE_SIGNING_IDENTITY';
+export const NATIVE_BINARY_BUILD_COMMAND_ENV = 'DIVINITY_NATIVE_BINARY_BUILD_COMMAND';
+export const NATIVE_BINARY_BUILD_COMMAND_ARGS_ENV = 'DIVINITY_NATIVE_BINARY_BUILD_COMMAND_ARGS';
 
 const BINARY_RELEASE_TARGETS = [
   {
@@ -53,6 +57,34 @@ const BINARY_RELEASE_TARGETS = [
     platform: 'win32',
     arch: 'x64',
     filename: 'divinity-win32-x64.cmd'
+  }
+];
+
+const NATIVE_BINARY_RELEASE_TARGETS = [
+  {
+    platform: 'linux',
+    arch: 'x64',
+    filename: 'divinity-linux-x64'
+  },
+  {
+    platform: 'linux',
+    arch: 'arm64',
+    filename: 'divinity-linux-arm64'
+  },
+  {
+    platform: 'darwin',
+    arch: 'x64',
+    filename: 'divinity-darwin-x64'
+  },
+  {
+    platform: 'darwin',
+    arch: 'arm64',
+    filename: 'divinity-darwin-arm64'
+  },
+  {
+    platform: 'win32',
+    arch: 'x64',
+    filename: 'divinity-win32-x64.exe'
   }
 ];
 
@@ -339,6 +371,42 @@ function parseSigningCommandArgs({ env = process.env } = {}) {
   return JSON.parse(rawArgs);
 }
 
+function nativeBinaryBuildCommandArgsStatus({ env = process.env } = {}) {
+  const rawArgs = cleanString(env[NATIVE_BINARY_BUILD_COMMAND_ARGS_ENV]);
+  if (!rawArgs) {
+    return {
+      configured: false,
+      valid: true
+    };
+  }
+  try {
+    const parsed = JSON.parse(rawArgs);
+    if (!Array.isArray(parsed) || parsed.some(value => typeof value !== 'string')) {
+      return {
+        configured: true,
+        valid: false,
+        reason: `${NATIVE_BINARY_BUILD_COMMAND_ARGS_ENV} must be a JSON array of strings`
+      };
+    }
+  } catch {
+    return {
+      configured: true,
+      valid: false,
+      reason: `${NATIVE_BINARY_BUILD_COMMAND_ARGS_ENV} must be a JSON array of strings`
+    };
+  }
+  return {
+    configured: true,
+    valid: true
+  };
+}
+
+function parseNativeBinaryBuildCommandArgs({ env = process.env } = {}) {
+  const rawArgs = cleanString(env[NATIVE_BINARY_BUILD_COMMAND_ARGS_ENV]);
+  if (!rawArgs) return [];
+  return JSON.parse(rawArgs);
+}
+
 function buildSigningConfiguration({ env = process.env } = {}) {
   const command = cleanString(env[RELEASE_SIGNING_COMMAND_ENV]);
   const keyRefConfigured = Boolean(cleanString(env[RELEASE_SIGNING_KEY_REF_ENV]));
@@ -383,6 +451,43 @@ function buildSigningConfiguration({ env = process.env } = {}) {
     reason: configured
       ? 'Release signing inputs are configured but release gates still control publishing and signing.'
       : 'Release signing command, key reference, and identity are not fully configured.'
+  };
+}
+
+function buildNativeBinaryBuildConfiguration({ env = process.env } = {}) {
+  const command = cleanString(env[NATIVE_BINARY_BUILD_COMMAND_ENV]);
+  const commandArgs = nativeBinaryBuildCommandArgsStatus({ env });
+  const commandConfigured = Boolean(command);
+  const commandAbsolute = commandConfigured ? path.isAbsolute(command) : false;
+
+  const base = {
+    command_env_var: NATIVE_BINARY_BUILD_COMMAND_ENV,
+    command_args_env_var: NATIVE_BINARY_BUILD_COMMAND_ARGS_ENV,
+    command_configured: commandConfigured,
+    command_absolute: commandAbsolute,
+    command_args_configured: commandArgs.configured
+  };
+
+  if (commandConfigured && !commandAbsolute) {
+    return {
+      ...base,
+      status: 'invalid',
+      reason: `${NATIVE_BINARY_BUILD_COMMAND_ENV} must be an absolute executable path`
+    };
+  }
+  if (!commandArgs.valid) {
+    return {
+      ...base,
+      status: 'invalid',
+      reason: commandArgs.reason
+    };
+  }
+  return {
+    ...base,
+    status: commandConfigured ? 'configured' : 'not_configured',
+    reason: commandConfigured
+      ? 'Native binary build command is configured but release gates still control public distribution.'
+      : 'Native binary build command is not configured.'
   };
 }
 
@@ -454,7 +559,26 @@ function buildRegistryPublishReadiness({
   };
 }
 
-function buildBinaryReleaseReadiness({ warningActive = true } = {}) {
+function buildNativeBinaryBuildPipeline({ env = process.env } = {}) {
+  const configuration = buildNativeBinaryBuildConfiguration({ env });
+  return {
+    status: configuration.status,
+    command: 'pnpm run release:native-binary',
+    smoke_test_command: 'pnpm run test:native-binary',
+    artifact_format: RELEASE_NATIVE_BINARY_ARTIFACTS_FORMAT,
+    artifact_type: 'native_binary',
+    command_env_var: NATIVE_BINARY_BUILD_COMMAND_ENV,
+    command_args_env_var: NATIVE_BINARY_BUILD_COMMAND_ARGS_ENV,
+    command_configured: configuration.command_configured,
+    command_absolute: configuration.command_absolute,
+    command_args_configured: configuration.command_args_configured,
+    redacts_local_paths: true,
+    redacts_build_command: true,
+    reason: configuration.reason
+  };
+}
+
+function buildBinaryReleaseReadiness({ warningActive = true, env = process.env } = {}) {
   const blockers = [
     ...(warningActive ? ['non_production_warning'] : []),
     'native_binary_build_pending',
@@ -482,6 +606,7 @@ function buildBinaryReleaseReadiness({ warningActive = true } = {}) {
       status: 'available',
       command: 'pnpm run test:binary'
     },
+    native_build_pipeline: buildNativeBinaryBuildPipeline({ env }),
     supported_targets: BINARY_RELEASE_TARGETS.map(target => ({
       ...target,
       status: 'generated',
@@ -625,6 +750,12 @@ function releasePromotionRequiredArtifacts() {
       required: true
     },
     {
+      artifact_id: 'native_binary_artifacts_manifest',
+      path: `${DEFAULT_RELEASE_NATIVE_BINARY_OUTPUT.split(path.sep).join('/')}/manifest.json`,
+      command: 'pnpm run release:native-binary',
+      required: true
+    },
+    {
       artifact_id: 'release_signature_artifacts_manifest',
       path: `${DEFAULT_RELEASE_SIGNATURE_OUTPUT.split(path.sep).join('/')}/manifest.json`,
       command: 'pnpm run release:signatures',
@@ -654,6 +785,11 @@ function releasePromotionGates() {
     {
       gate_id: 'binary_artifact_smoke',
       command: 'pnpm run test:binary',
+      required: true
+    },
+    {
+      gate_id: 'native_binary_artifacts',
+      command: 'pnpm run test:native-binary',
       required: true
     },
     {
@@ -714,6 +850,7 @@ export function buildReleaseGateClearanceAudit({
 } = {}) {
   const tokenConfigured = Boolean(cleanString(env[NPM_TOKEN_ENV]));
   const signingConfiguration = buildSigningConfiguration({ env });
+  const nativeBinaryBuildConfiguration = buildNativeBinaryBuildConfiguration({ env });
   const blockers = promotionPreflightBlockers({
     publishingBlocked,
     warningActive,
@@ -757,10 +894,14 @@ export function buildReleaseGateClearanceAudit({
         item_id: 'native_binary_distribution',
         status: 'blocked',
         blocker: 'native_binary_build_pending',
-        current_state: 'local Node launcher artifacts only',
+        current_state: nativeBinaryBuildConfiguration.status === 'configured'
+          ? 'native binary build inputs configured'
+          : nativeBinaryBuildConfiguration.status === 'invalid'
+            ? 'native binary build inputs invalid'
+            : 'local Node launcher artifacts only',
         required_state: 'signed native binary artifacts are built, checksummed, smoke-tested, and attached to release distribution',
-        evidence_command: 'pnpm run test:binary',
-        evidence_artifacts: ['dist/binary/manifest.json', 'dist/binary/SHA256SUMS']
+        evidence_command: 'pnpm run test:native-binary',
+        evidence_artifacts: ['dist/native-binary/manifest.json', 'dist/native-binary/SHA256SUMS']
       },
       {
         item_id: 'release_signing',
@@ -835,7 +976,8 @@ export function buildReleasePromotionPreflight({
       status: 'blocked',
       artifact_type: 'signed_native_binary',
       binary_name: 'divinity',
-      build_command: 'pnpm run release:binary',
+      build_command: 'pnpm run release:native-binary',
+      smoke_test_command: 'pnpm run test:native-binary',
       attestation_path: `${DEFAULT_RELEASE_BUNDLE_OUTPUT.split(path.sep).join('/')}/attestation.json`,
       public_download_status: 'blocked',
       reason: 'Signed native binary distribution remains blocked until native packaging and signing gates are implemented and release blockers clear.'
@@ -920,7 +1062,7 @@ export function buildReleaseArtifactsManifest({
       warningActive: true,
       env
     }),
-    binary_release_readiness: buildBinaryReleaseReadiness({ warningActive: true }),
+    binary_release_readiness: buildBinaryReleaseReadiness({ warningActive: true, env }),
     registry_publish_readiness: buildRegistryPublishReadiness({
       packageJson,
       publishingBlocked,
@@ -980,6 +1122,11 @@ export function buildReleaseArtifactsManifest({
       {
         gate_id: 'binary_artifact_smoke',
         command: 'pnpm run test:binary',
+        required: true
+      },
+      {
+        gate_id: 'native_binary_artifacts',
+        command: 'pnpm run test:native-binary',
         required: true
       },
       {
@@ -1171,6 +1318,145 @@ export function writeReleaseBinaryArtifacts({
     redacts_local_paths: true,
     redacts_signing_secrets: true,
     reason: 'Generated artifacts are local Node launchers for release-candidate smoke checks; signed native binary downloads are still blocked by release gates.',
+    artifacts
+  };
+
+  const manifestPath = path.join(outputDirectory, 'manifest.json');
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  return {
+    ok: true,
+    output_directory: outputDirectory,
+    checksum_path: checksumPath,
+    manifest_path: manifestPath,
+    manifest
+  };
+}
+
+function nativeBinaryBuildRequest({ outputDirectory }) {
+  return {
+    format: 'divinity.release_native_binary_build_request.v1',
+    output_directory: outputDirectory,
+    binary_name: 'divinity',
+    targets: NATIVE_BINARY_RELEASE_TARGETS
+  };
+}
+
+function safeRelativeOutputPath(outputDirectory, artifactPath) {
+  const normalized = cleanString(artifactPath).replace(/\\/g, '/');
+  if (!normalized || path.isAbsolute(normalized) || normalized.split('/').includes('..')) {
+    throw new Error(`native binary build returned an unsafe artifact path: ${artifactPath}`);
+  }
+  const absolutePath = path.resolve(outputDirectory, normalized);
+  const relativePath = normalizedRelativePath(outputDirectory, absolutePath);
+  if (relativePath.startsWith('../') || relativePath === '..') {
+    throw new Error(`native binary build returned an artifact outside the output directory: ${artifactPath}`);
+  }
+  return {
+    relativePath,
+    absolutePath
+  };
+}
+
+function runNativeBinaryBuildCommand({ outputDirectory, command, commandArgs }) {
+  const output = execFileSync(command, commandArgs, {
+    input: `${JSON.stringify(nativeBinaryBuildRequest({ outputDirectory }))}\n`,
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe']
+  });
+  const response = JSON.parse(output || '{}');
+  if (response.ok !== true || !Array.isArray(response.artifacts)) {
+    throw new Error('native binary build command did not return an artifact list');
+  }
+  return response;
+}
+
+function nativeBinaryArtifactEntries({ outputDirectory, buildResponse }) {
+  const artifactsByTarget = new Map(
+    buildResponse.artifacts.map(artifact => [`${artifact.platform}/${artifact.arch}`, artifact])
+  );
+  return NATIVE_BINARY_RELEASE_TARGETS.map(target => {
+    const artifact = artifactsByTarget.get(`${target.platform}/${target.arch}`);
+    if (!artifact) {
+      throw new Error(`native binary build did not return ${target.platform}/${target.arch}`);
+    }
+    if (artifact.native_binary !== true || artifact.artifact_type !== 'native_binary') {
+      throw new Error(`native binary build returned a non-native artifact for ${target.platform}/${target.arch}`);
+    }
+    if (cleanString(artifact.filename) !== target.filename) {
+      throw new Error(`native binary build returned an unexpected filename for ${target.platform}/${target.arch}`);
+    }
+    const { relativePath, absolutePath } = safeRelativeOutputPath(outputDirectory, artifact.path);
+    const bytes = statSync(absolutePath).size;
+    return {
+      platform: target.platform,
+      arch: target.arch,
+      filename: target.filename,
+      path: relativePath,
+      artifact_type: 'native_binary',
+      native_binary: true,
+      status: 'generated',
+      public_download_status: 'blocked',
+      bytes,
+      sha256: sha256Absolute(absolutePath)
+    };
+  });
+}
+
+function nativeBinaryArtifactBlockers({ packageJson }) {
+  return [
+    ...(packageJson.private === true ? ['package_private'] : []),
+    'non_production_warning',
+    'signing_blocked'
+  ];
+}
+
+export function writeReleaseNativeBinaryArtifacts({
+  output = DEFAULT_RELEASE_NATIVE_BINARY_OUTPUT,
+  cwd = process.cwd(),
+  env = process.env
+} = {}) {
+  const root = path.resolve(cwd);
+  const outputDirectory = path.resolve(root, cleanString(output) || DEFAULT_RELEASE_NATIVE_BINARY_OUTPUT);
+  const buildConfiguration = buildNativeBinaryBuildConfiguration({ env });
+  if (buildConfiguration.status !== 'configured') {
+    throw new Error(buildConfiguration.reason);
+  }
+
+  mkdirSync(outputDirectory, { recursive: true });
+  const buildResponse = runNativeBinaryBuildCommand({
+    outputDirectory,
+    command: cleanString(env[NATIVE_BINARY_BUILD_COMMAND_ENV]),
+    commandArgs: parseNativeBinaryBuildCommandArgs({ env })
+  });
+  const artifacts = nativeBinaryArtifactEntries({ outputDirectory, buildResponse });
+
+  const checksumPath = path.join(outputDirectory, 'SHA256SUMS');
+  writeFileSync(
+    checksumPath,
+    `${artifacts.map(artifact => `${artifact.sha256}  ${artifact.path}`).join('\n')}\n`
+  );
+
+  const packageJson = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const manifest = {
+    format: RELEASE_NATIVE_BINARY_ARTIFACTS_FORMAT,
+    generated_by: 'packages/release-artifacts',
+    status: 'generated',
+    artifact_type: 'native_binary',
+    native_binary: true,
+    public_download_ready: false,
+    binary_name: 'divinity',
+    output_directory: DEFAULT_RELEASE_NATIVE_BINARY_OUTPUT.split(path.sep).join('/'),
+    checksums_file: 'SHA256SUMS',
+    checksum_algorithm: 'sha256',
+    signing_required: true,
+    signature_status: 'unsigned',
+    build_configuration: buildNativeBinaryBuildPipeline({ env }),
+    blockers: nativeBinaryArtifactBlockers({ packageJson }),
+    redacts_local_paths: true,
+    redacts_build_command: true,
+    redacts_signing_secrets: true,
+    reason: 'Generated native binary artifacts are local release-candidate outputs only; public downloads remain blocked by release gates and signing.',
     artifacts
   };
 
