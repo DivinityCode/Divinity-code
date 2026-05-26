@@ -77,6 +77,8 @@ Bootstrap development is integrated on `main`. The repo now includes contract va
 - Run `pnpm run release:artifacts` to generate `dist/release-artifacts.json` for release-candidate review, including the release gate clearance audit.
 - Run `pnpm run release:public-readiness-audit` to generate `dist/release-public-readiness-audit.json` with the package privacy and README warning decision audit before clearing public distribution gates.
 - Run `pnpm run test:public-readiness-audit` to validate the audit stays blocked, side-effect-free, and redacted while release blockers remain.
+- Run `pnpm run release:environment-readiness` to generate `dist/release-environment-readiness.json` with redacted operator input readiness for registry, GitHub Release, native build, signing, and explicit publish confirmation gates.
+- Run `pnpm run test:release-environment-readiness` to validate the environment report stays side-effect-free and does not serialize token values, release tag values, signing refs, identities, command paths, or local paths.
 - Run `pnpm run release:registry-dry-run` to generate a fail-closed npm registry publish dry-run report without publishing while release blockers remain.
 - Run `pnpm run test:release-registry-dry-run` to validate registry dry-run blockers, command metadata, token redaction, and npm-output redaction.
 - Run `pnpm run release:binary` to generate local Node launcher artifacts and checksums for release-candidate binary smoke review.

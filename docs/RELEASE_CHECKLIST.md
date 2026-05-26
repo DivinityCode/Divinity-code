@@ -68,6 +68,8 @@ pnpm run test:deprecations
 pnpm run release:artifacts
 pnpm run release:public-readiness-audit
 pnpm run test:public-readiness-audit
+pnpm run release:environment-readiness
+pnpm run test:release-environment-readiness
 pnpm run release:registry-dry-run
 pnpm run test:release-registry-dry-run
 pnpm run release:binary-attachments
@@ -97,6 +99,7 @@ node -e "const a=require('./dist/release-artifacts.json'); console.log(a.source_
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.release_sbom.status, a.release_sbom.component_count, a.release_sbom.redacts_local_paths)"
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.release_gate_clearance.status, a.release_gate_clearance.public_release_ready, a.release_gate_clearance.blockers.join(','))"
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.release_public_readiness_audit.status, a.release_public_readiness_audit.decision_required, a.release_public_readiness_audit.blockers.join(','))"
+node -e "const a=require('./dist/release-artifacts.json'); console.log(a.release_environment_readiness.status, a.release_environment_readiness.environment_ready, a.release_environment_readiness.blockers.join(','))"
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.artifact_integrity.algorithm, a.artifact_integrity.files.length, a.artifact_signing.status)"
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.artifact_signing.configuration.status, a.artifact_signing.configuration.ready_when_release_gates_clear)"
 node -e "const a=require('./dist/release-artifacts.json'); console.log(a.registry_publish_readiness.status, a.registry_publish_readiness.token_configured, a.registry_publish_readiness.blockers.join(','))"
@@ -115,6 +118,7 @@ node -e "const s=require('./dist/release-signatures/manifest.json'); console.log
 node -e "const n=require('./dist/native-binary/manifest.json'); console.log(n.status, n.artifacts.length, n.blockers.join(','))"
 node -e "const sn=require('./dist/signed-native-binary/manifest.json'); console.log(sn.status, sn.signatures.length, sn.blockers.join(','))"
 node -e "const r=require('./dist/release-public-readiness-audit.json'); console.log(r.status, r.decision_required, r.blockers.join(','))"
+node -e "const e=require('./dist/release-environment-readiness.json'); console.log(e.status, e.environment_ready, e.blockers.join(','))"
 node -e "const p=require('./dist/release-promotion-preflight.json'); console.log(p.status, p.release_gates.length, p.blockers.join(','))"
 node -e "const x=require('./dist/release-promotion-execution.json'); console.log(x.status, x.execution_attempted, x.blockers.join(','))"
 ```
@@ -123,6 +127,7 @@ node -e "const x=require('./dist/release-promotion-execution.json'); console.log
 - [ ] Confirm `divinity.release_sbom.v1` was generated from `package.json` and `package-lock.json`, includes package/dependency names, versions, direct/transitive relationship, requested ranges, and license strings when present, and does not expose local absolute paths, `node_modules` paths, registry URLs, or lockfile integrity values.
 - [ ] Confirm `divinity.release_gate_clearance.v1` reports `public_release_ready: false` while blockers remain, lists package privacy, production warning, registry token, GitHub release token/tag readiness, native binary distribution, release signing, and GitHub release-readiness evidence items, and stores no local absolute paths, registry tokens, GitHub release tokens, signing key references, signing identities, or signing secrets.
 - [ ] Confirm `divinity.release_public_readiness_audit.v1` exists under `dist/release-public-readiness-audit.json`, reports package privacy and README warning decision state, stays blocked while public release blockers remain, and stores no local absolute paths, registry tokens, GitHub release tokens, release tag values, signing key references, signing identities, or signing secrets.
+- [ ] Confirm `divinity.release_environment_readiness.v1` exists under `dist/release-environment-readiness.json`, reports configured-state metadata for registry tokens, GitHub Release tokens, release tag, explicit publish confirmation, native build inputs, and signing inputs, and stores no local absolute paths, registry tokens, GitHub release tokens, release tag values, signing key references, signing identities, command paths, or provider credentials.
 - [ ] If testing release signing readiness, configure `DIVINITY_RELEASE_SIGNING_COMMAND` as an absolute executable path, `DIVINITY_RELEASE_SIGNING_COMMAND_ARGS` as a JSON array of strings, and signing key/identity references through `DIVINITY_RELEASE_SIGNING_KEY_REF` and `DIVINITY_RELEASE_SIGNING_IDENTITY`. Confirm the generated metadata reports readiness without printing those values.
 - [ ] If testing registry publish readiness, configure `NPM_TOKEN` in the environment and confirm the generated metadata reports only `token_configured: true`, never the token value.
 - [ ] Confirm `divinity.release_registry_publish_dry_run.v1` exists under `dist/release-registry-dry-run.json`, skips npm execution while blockers remain, and stores no registry token values, raw npm output, local paths, or npm executable paths.
