@@ -194,7 +194,7 @@ if rg -n '^(<{7}|={7}|>{7})' . --glob '!node_modules'; then exit 1; else test "$
 root_files=$(find . -maxdepth 1 -type f \( -name 'tests_*.mjs' -o -name 'scripts_*.mjs' \) -print); test -z "$root_files" && test ! -e .divinity.json && test ! -e .divinity-provider-limits.json && test ! -e .divinity-provider-usage.json && git check-ignore -q dist/release-artifacts.json
 ```
 
-- [ ] **Step 3: Commit and publish**
+- [x] **Step 3: Commit and publish**
 
 Commit message: `feat: add gcp secret store adapter`
 
