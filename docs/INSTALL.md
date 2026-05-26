@@ -65,6 +65,8 @@ pnpm run release:artifacts
 
 `release-status` prints the same `divinity.release_artifacts.v1` metadata as JSON. `release:artifacts` writes `dist/release-artifacts.json` with source-checkout, local pnpm-link, package-registry, and binary-download paths. Registry and binary paths remain blocked in both surfaces while the package is private and the non-production warning is active.
 
+Release signing readiness is reported without leaking signing secrets. Configure `DIVINITY_RELEASE_SIGNING_COMMAND` as an absolute executable path, `DIVINITY_RELEASE_SIGNING_COMMAND_ARGS` as an optional JSON array of strings, and `DIVINITY_RELEASE_SIGNING_KEY_REF` plus `DIVINITY_RELEASE_SIGNING_IDENTITY` as deployment-managed signing references. The generated metadata reports only configured booleans and validation status; it does not store command args, key refs, identities, key material, package signatures, or binary signatures.
+
 The package remains marked `private` while the non-production warning is active. Published package and binary install paths are future release work.
 
 ## Verify The Install
