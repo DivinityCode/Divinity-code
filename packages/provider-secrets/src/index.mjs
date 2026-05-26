@@ -9,6 +9,7 @@ export const PROVIDER_SECRET_REFS_PATH_ENV = 'DIVINITY_PROVIDER_SECRET_REFS_PATH
 export const PROVIDER_SECRET_STORE_PATH_ENV = 'DIVINITY_PROVIDER_SECRET_STORE_PATH';
 export const PROVIDER_SECRET_STORE_KEY_ENV = 'DIVINITY_PROVIDER_SECRET_STORE_KEY';
 export const PROVIDER_SECRET_STORE_BACKEND_ENV = 'DIVINITY_PROVIDER_SECRET_STORE_BACKEND';
+export const PROVIDER_SECRET_STORE_TEST_BACKEND_ENV = 'DIVINITY_ENABLE_TEST_SECRET_STORE_BACKEND';
 
 const RAW_CREDENTIAL_FIELD_NAMES = new Set([
   'api_key',
@@ -59,6 +60,10 @@ function storeKeyFrom({ storeKey = '', env = process.env } = {}) {
 
 function storeBackendFrom({ env = process.env, storeBackend = '' } = {}) {
   return cleanString(storeBackend || env[PROVIDER_SECRET_STORE_BACKEND_ENV] || 'local_file');
+}
+
+function testBackendEnabled({ env = process.env } = {}) {
+  return ['1', 'true', 'yes'].includes(cleanString(env[PROVIDER_SECRET_STORE_TEST_BACKEND_ENV]).toLowerCase());
 }
 
 function assertNoRawCredentialFields(value, path = 'provider secret refs manifest') {
@@ -413,6 +418,11 @@ export function createConfiguredProviderSecretStoreAdapter({ env = process.env }
     return createLocalProviderSecretStoreAdapter({ env });
   }
   if (backend === 'hosted_memory') {
+    if (!testBackendEnabled({ env })) {
+      throw new Error(
+        `test-only provider secret store backend hosted_memory requires ${PROVIDER_SECRET_STORE_TEST_BACKEND_ENV}=1; managed hosted secret stores must be injected as approved adapters`
+      );
+    }
     return createHostedProviderSecretStoreAdapter({ backend_id: backend });
   }
   throw new Error(`unsupported provider secret store backend: ${backend}`);
